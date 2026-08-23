@@ -32,9 +32,16 @@ import type { RouteView } from "@/lib/maps";
 export function QuoteWidget({
   trip,
   routes,
+  lockRoute = false,
+  cta = "Continue to booking",
+  className,
 }: {
   trip: TripState;
   routes: RouteView[];
+  /** Route pages already committed to a route; only the rest is adjustable. */
+  lockRoute?: boolean;
+  cta?: string;
+  className?: string;
 }) {
   const animatedPrice = useCountUp(trip.price);
   const duration = formatDuration(trip.route.durationMin);
@@ -42,24 +49,26 @@ export function QuoteWidget({
   return (
     <div
       id="quote"
-      className="bg-card shadow-raised scroll-mt-20 rounded-xl border p-4 sm:p-5"
+      className={`bg-card shadow-raised scroll-mt-20 rounded-xl border p-4 sm:p-5 ${className ?? ""}`}
     >
       <div className="grid gap-3 sm:grid-cols-2">
         {/* Route spans the row: it is the decision everything else follows. */}
-        <Field label="Route" htmlFor="q-route" className="sm:col-span-2">
-          <Select value={trip.routeSlug} onValueChange={trip.setRouteSlug}>
-            <SelectTrigger id="q-route" className="h-11 w-full">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              {routes.map((r) => (
-                <SelectItem key={r.slug} value={r.slug}>
-                  {routeTitle(r)}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </Field>
+        {!lockRoute && (
+          <Field label="Route" htmlFor="q-route" className="sm:col-span-2">
+            <Select value={trip.routeSlug} onValueChange={trip.setRouteSlug}>
+              <SelectTrigger id="q-route" className="h-11 w-full">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {routes.map((r) => (
+                  <SelectItem key={r.slug} value={r.slug}>
+                    {routeTitle(r)}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </Field>
+        )}
 
         <Field label="Date" htmlFor="q-date">
           <input
@@ -134,7 +143,7 @@ export function QuoteWidget({
           className="press bg-brand text-brand-foreground hover:bg-brand-hover h-12 w-full shrink-0 text-base sm:w-auto"
         >
           <Link href={trip.href}>
-            Continue to booking
+            {cta}
             <ArrowRightIcon className="size-4" aria-hidden />
           </Link>
         </Button>
@@ -173,8 +182,11 @@ export function VehicleToggle({ trip }: { trip: TripState }) {
                 isSelected ? "bg-card shadow-card" : "hover:bg-card/60",
               ].join(" ")}
             >
-              <span className="block truncate text-xs font-medium">{name}</span>
-              <span className="tabular block text-xs font-semibold">
+              {/* Wraps rather than truncates: the rail is narrow and the name matters. */}
+              <span className="block text-xs leading-tight font-medium">
+                {name}
+              </span>
+              <span className="tabular mt-0.5 block text-xs font-semibold">
                 {formatNad(fare)}
               </span>
             </button>
