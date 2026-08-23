@@ -6,9 +6,9 @@ import type { RouteView } from "@/lib/maps";
 
 export function SiteFooter({ routes = [] }: { routes?: RouteView[] }) {
   return (
-    <footer className="border-border/60 mt-24 border-t">
-      <div className="mx-auto max-w-6xl px-5 py-14 sm:px-8">
-        <div className="grid gap-10 sm:grid-cols-2 lg:grid-cols-3">
+    <footer className="mt-12 border-t">
+      <div className="mx-auto max-w-5xl px-4 py-8 sm:px-6">
+        <div className="grid gap-8 sm:grid-cols-2 lg:grid-cols-3">
           <div className="space-y-3">
             <p className="font-semibold tracking-tight">{SITE.name}</p>
             <p className="text-muted-foreground max-w-xs text-sm leading-relaxed">
@@ -53,10 +53,10 @@ export function SiteFooter({ routes = [] }: { routes?: RouteView[] }) {
             <ul className="space-y-2 text-sm">
               <li>
                 <Link
-                  href="/#how"
+                  href="/corporate"
                   className="text-muted-foreground hover:text-foreground transition"
                 >
-                  How it works
+                  Corporate &amp; groups
                 </Link>
               </li>
               <li>
@@ -71,7 +71,7 @@ export function SiteFooter({ routes = [] }: { routes?: RouteView[] }) {
           </nav>
         </div>
 
-        <Separator className="my-10" />
+        <Separator className="my-6" />
 
         <p className="text-muted-foreground text-xs">
           &copy; {new Date().getFullYear()} {SITE.name}. Transfers are fulfilled
