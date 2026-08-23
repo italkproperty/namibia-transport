@@ -3,7 +3,7 @@ export const SITE = {
   name: "Namibia Transport",
   tagline: "Private transfers across Namibia",
   description:
-    "Fixed-price private transfers across Namibia — airport pickups, coastal runs and intercity drives, with licensed local drivers and no meter.",
+    "Fixed-price private transfers across Namibia — airport pickups, coastal runs and intercity drives, with professional local drivers and no meter.",
   url: process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000",
   supportWhatsapp: process.env.NEXT_PUBLIC_SUPPORT_WHATSAPP ?? "",
 } as const;
@@ -12,7 +12,7 @@ export const SITE = {
 export const INCLUSIONS = [
   {
     title: "One fixed price",
-    body: "Quoted per vehicle before you book. No meter, no surge, no airport surcharge.",
+    body: "Quoted in full before you book. No meter, no surge, no airport surcharge.",
   },
   {
     title: "Meet & greet",
@@ -23,8 +23,8 @@ export const INCLUSIONS = [
     body: "We track your inbound flight and adjust the pickup when it moves.",
   },
   {
-    title: "Licensed local drivers",
-    body: "Vetted Namibian partner drivers with valid permits and insured vehicles.",
+    title: "Professional local drivers",
+    body: "Vetted Namibian partner drivers who know the roads they drive.",
   },
   {
     title: "Reachable around the clock",

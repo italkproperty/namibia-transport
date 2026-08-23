@@ -115,6 +115,27 @@ export const enquiryStatusEnum = pgEnum("enquiry_status", [
   "lost",
 ]);
 
+/**
+ * How a route's fixed_price is charged. Airport transfers sell per seat;
+ * long-distance private transfers sell the whole vehicle.
+ */
+export const pricingUnitEnum = pgEnum("pricing_unit", [
+  "per_vehicle",
+  "per_person",
+]);
+
+/** Corporate quote pipeline — the raw material for the future CRM. */
+export const quoteStatusEnum = pgEnum("quote_status", [
+  "draft",
+  "quoted",
+  "sent",
+  "negotiating",
+  "accepted",
+  "rejected",
+  "expired",
+  "fulfilled",
+]);
+
 /* -------------------------------------------------------------------------- */
 /* Catalogue                                                                   */
 /* -------------------------------------------------------------------------- */
@@ -134,6 +155,8 @@ export const routes = pgTable(
     category: routeCategoryEnum("category").notNull(),
     /** Fare for the baseline vehicle class; multipliers scale from here. */
     fixedPrice: money("fixed_price").notNull(),
+    /** What one unit of fixed_price buys: the whole vehicle, or one seat. */
+    pricingUnit: pricingUnitEnum("pricing_unit").notNull().default("per_vehicle"),
     currency: currency(),
     /** What the partner driver earns; customer_price minus this is our margin. */
     defaultDriverPayout: money("default_driver_payout").notNull(),
@@ -516,6 +539,101 @@ export const corporateEnquiries = pgTable(
   ]
 );
 
+/**
+ * A structured corporate quotation, priced by the server from the routes
+ * table. One quote may carry many line items and eventually become many
+ * bookings — or none. The status pipeline is what turns quoting into demand
+ * data: industries asking, routes requested, values, and conversion.
+ */
+export const corporateQuotes = pgTable(
+  "corporate_quotes",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    /** Human-facing quotation number, e.g. NT-Q-2026-8H3K2M. */
+    quoteNumber: text("quote_number").notNull(),
+    companyName: text("company_name").notNull(),
+    contactName: text("contact_name").notNull(),
+    contactPosition: text("contact_position"),
+    email: text("email"),
+    whatsapp: text("whatsapp"),
+    industry: text("industry"),
+    companyRegistration: text("company_registration"),
+    billingAddress: text("billing_address"),
+    /** Selected service slugs, e.g. ["airport_transfers","site_transport"]. */
+    services: jsonb("services").notNull(),
+    passengers: integer("passengers"),
+    vehicles: smallint("vehicles").notNull().default(1),
+    /** Free text — corporate travel dates are rarely a clean range. */
+    datesNote: text("dates_note"),
+    frequency: text("frequency"),
+    tripsCount: integer("trips_count").notNull().default(1),
+    includeReturn: boolean("include_return").notNull().default(false),
+    notes: text("notes"),
+    subtotal: money("subtotal").notNull(),
+    vatRate: numeric("vat_rate", { precision: 5, scale: 4 })
+      .notNull()
+      .default("0"),
+    vatAmount: money("vat_amount").notNull().default("0.00"),
+    total: money("total").notNull(),
+    currency: currency(),
+    /** True while any requested service could not be auto-priced. */
+    isEstimate: boolean("is_estimate").notNull().default(true),
+    status: quoteStatusEnum("status").notNull().default("quoted"),
+    validUntil: timestamp("valid_until", { withTimezone: true }),
+    acquisitionSource: text("acquisition_source"),
+    ...timestamps,
+  },
+  (t) => [
+    uniqueIndex("corporate_quotes_number_key").on(t.quoteNumber),
+    index("corporate_quotes_status_idx").on(t.status),
+    index("corporate_quotes_created_at_idx").on(t.createdAt),
+  ]
+);
+
+export const corporateQuoteItems = pgTable(
+  "corporate_quote_items",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    quoteId: uuid("quote_id")
+      .notNull()
+      .references(() => corporateQuotes.id, { onDelete: "cascade" }),
+    description: text("description").notNull(),
+    quantity: integer("quantity").notNull().default(1),
+    /** Null for items that need manual pricing before the quote is formal. */
+    unitPrice: money("unit_price"),
+    lineTotal: money("line_total"),
+    currency: currency(),
+    sortOrder: smallint("sort_order").notNull().default(0),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (t) => [index("corporate_quote_items_quote_idx").on(t.quoteId)]
+);
+
+/**
+ * Real customer reviews only. Nothing renders publicly until a row is
+ * explicitly published — the site must never show fabricated social proof.
+ */
+export const reviews = pgTable(
+  "reviews",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    bookingId: uuid("booking_id").references(() => bookings.id, {
+      onDelete: "set null",
+    }),
+    authorName: text("author_name").notNull(),
+    authorContext: text("author_context"),
+    rating: smallint("rating").notNull(),
+    body: text("body").notNull(),
+    /** Where it came from: "google", "whatsapp", "direct". */
+    source: text("source").notNull().default("direct"),
+    isPublished: boolean("is_published").notNull().default(false),
+    ...timestamps,
+  },
+  (t) => [index("reviews_published_idx").on(t.isPublished)]
+);
+
 /* -------------------------------------------------------------------------- */
 /* Inferred types                                                              */
 /* -------------------------------------------------------------------------- */
@@ -532,11 +650,17 @@ export type Payment = typeof payments.$inferSelect;
 export type NewPayment = typeof payments.$inferInsert;
 
 export type CorporateEnquiry = typeof corporateEnquiries.$inferSelect;
+export type CorporateQuote = typeof corporateQuotes.$inferSelect;
+export type NewCorporateQuote = typeof corporateQuotes.$inferInsert;
+export type CorporateQuoteItem = typeof corporateQuoteItems.$inferSelect;
+export type Review = typeof reviews.$inferSelect;
 export type NewCorporateEnquiry = typeof corporateEnquiries.$inferInsert;
 
 export type RouteCategory = (typeof routeCategoryEnum.enumValues)[number];
 export type EnquiryNeed = (typeof enquiryNeedEnum.enumValues)[number];
 export type EnquiryStatus = (typeof enquiryStatusEnum.enumValues)[number];
+export type PricingUnit = (typeof pricingUnitEnum.enumValues)[number];
+export type QuoteStatus = (typeof quoteStatusEnum.enumValues)[number];
 export type BookingStatus = (typeof bookingStatusEnum.enumValues)[number];
 export type CustomerType = (typeof customerTypeEnum.enumValues)[number];
 export type PaymentStatus = (typeof paymentStatusEnum.enumValues)[number];

@@ -49,6 +49,7 @@ async function main() {
             destinationLabel: route.destinationLabel,
             category: route.category,
             fixedPrice: route.fixedPrice,
+            pricingUnit: route.pricingUnit ?? "per_vehicle",
             defaultDriverPayout: route.defaultDriverPayout,
             isActive: route.isActive,
             distanceKm: route.distanceKm,

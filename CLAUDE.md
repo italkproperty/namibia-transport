@@ -8,7 +8,8 @@ NOT a fleet owner.
 
 Brand: Namibia Transport
 Primary route to launch first: Hosea Kutako International Airport (WDH) → Windhoek CBD
-Launch price for that route (fixed): N$650 per private sedan (up to 3 passengers)
+Launch price for that route (fixed): N$650 per person. Airport transfers are priced
+per person; long-distance/intercity transfers are priced per vehicle.
 
 ## Non-negotiable constraints (Namibia-specific — do not "helpfully" ignore these)
 - **Payments:** Stripe is NOT available to Namibian entities. Do NOT add Stripe, Paddle, or

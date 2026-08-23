@@ -12,7 +12,7 @@ import {
 import { formatDuration } from "@/lib/format";
 import { listRoutes, listVehicleClasses } from "@/lib/maps";
 import { formatNad } from "@/lib/money";
-import { computeFare } from "@/lib/pricing";
+import { computeFare, unitFare } from "@/lib/pricing";
 import { dropoffOptions, pickupOptions } from "@/lib/places";
 import { routeTitle } from "@/lib/route-content";
 import { SITE } from "@/lib/site";
@@ -62,7 +62,7 @@ export default async function BookPage({ searchParams }: PageProps) {
     vehicleClasses.find((c) => c.id === trip.vehicleClassId) ?? vehicleClasses[0];
 
   // Display only. The Server Action recomputes this before writing anything.
-  const fare = computeFare(route, vehicleClass);
+  const fare = computeFare(route, vehicleClass, trip.passengers);
   const duration = formatDuration(route.durationMin);
 
   const utm = ["utm_source", "utm_medium", "utm_campaign"]
@@ -115,7 +115,9 @@ export default async function BookPage({ searchParams }: PageProps) {
                   {formatNad(fare.customerPrice)}
                 </p>
                 <p className="text-muted-foreground mt-1 text-xs">
-                  per vehicle, up to {vehicleClass.capacity} passengers
+                  {route.pricingUnit === "per_person"
+                    ? `${formatNad(unitFare(route, vehicleClass))} per person × ${trip.passengers}`
+                    : `per vehicle, up to ${vehicleClass.capacity} passengers`}
                 </p>
               </div>
             </aside>

@@ -1,4 +1,4 @@
-import type { RouteCategory } from "@/db/schema";
+import type { PricingUnit, RouteCategory } from "@/db/schema";
 
 export type LatLng = { lat: number; lng: number };
 
@@ -15,6 +15,8 @@ export type RouteView = {
   category: RouteCategory;
   /** Decimal strings, e.g. "650.00". */
   fixedPrice: string;
+  /** What one unit of fixedPrice buys: the whole vehicle, or one seat. */
+  pricingUnit: PricingUnit;
   defaultDriverPayout: string;
   currency: string;
   isActive: boolean;

@@ -9,7 +9,7 @@ import {
   type TripParams,
 } from "@/lib/booking/trip-params";
 import type { RouteView, VehicleClassView } from "@/lib/maps";
-import { computeFare } from "@/lib/pricing";
+import { computeFare, pricingUnitLabel, unitFare } from "@/lib/pricing";
 
 /**
  * Shared trip state. The widget, the route quick-select and the sticky bar are
@@ -27,9 +27,13 @@ export type TripState = {
   route: RouteView;
   vehicleClass: VehicleClassView;
   vehicleClasses: VehicleClassView[];
-  /** Price per vehicle class, so a toggle can show both figures at once. */
+  /** Total per vehicle class at the current party size. */
   fares: Map<string, number>;
+  /** Price for one unit (seat or vehicle) per class, party size ignored. */
+  unitFares: Map<string, number>;
   price: number;
+  /** "per person" | "per vehicle" for the selected route. */
+  unitLabel: string;
   maxPassengers: number;
   href: string;
   trip: TripParams;
@@ -60,14 +64,20 @@ export function useTrip(
   const vehicleClass =
     vehicleClasses.find((c) => c.id === vehicleClassId) ?? vehicleClasses[0];
 
+  // Totals for the current party size; unit prices for the class toggle.
   const fares = React.useMemo(() => {
     if (!route) return new Map<string, number>();
     return new Map(
       vehicleClasses.map((c) => [
         c.id,
-        Number(computeFare(route, c).customerPrice),
+        Number(computeFare(route, c, passengers).customerPrice),
       ])
     );
+  }, [route, vehicleClasses, passengers]);
+
+  const unitFares = React.useMemo(() => {
+    if (!route) return new Map<string, number>();
+    return new Map(vehicleClasses.map((c) => [c.id, unitFare(route, c)]));
   }, [route, vehicleClasses]);
 
   // A party too big for the chosen class should move the class, not error.
@@ -97,7 +107,9 @@ export function useTrip(
     vehicleClass,
     vehicleClasses,
     fares,
+    unitFares,
     price: fares.get(vehicleClass.id) ?? 0,
+    unitLabel: pricingUnitLabel(route),
     maxPassengers: Math.max(...vehicleClasses.map((c) => c.capacity), 1),
     href: bookingHref(trip),
     trip,

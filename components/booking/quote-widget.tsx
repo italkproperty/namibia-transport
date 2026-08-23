@@ -132,7 +132,9 @@ export function QuoteWidget({
             {formatNad(animatedPrice)}
           </p>
           <p className="text-muted-foreground mt-1 text-xs">
-            per vehicle, up to {trip.vehicleClass.capacity} passengers
+            {trip.route.pricingUnit === "per_person"
+              ? `${formatNad(trip.unitFares.get(trip.vehicleClass.id) ?? 0)} per person × ${trip.passengers}`
+              : `per vehicle, up to ${trip.vehicleClass.capacity} passengers`}
             {duration ? ` · about ${duration}` : ""}
           </p>
         </div>
@@ -187,7 +189,11 @@ export function VehicleToggle({ trip }: { trip: TripState }) {
                 {name}
               </span>
               <span className="tabular mt-0.5 block text-xs font-semibold">
-                {formatNad(fare)}
+                {formatNad(trip.unitFares.get(id) ?? fare)}
+                <span className="text-muted-foreground font-normal">
+                  {" "}
+                  {trip.unitLabel}
+                </span>
               </span>
             </button>
           );

@@ -91,7 +91,7 @@ export async function createBooking(
     return { ok: false, message: "Choose a pickup time in the future." };
   }
 
-  const fare = computeFare(route, vehicleClass);
+  const fare = computeFare(route, vehicleClass, values.passengers);
   const db = getDb();
 
   try {

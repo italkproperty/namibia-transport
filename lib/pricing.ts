@@ -6,6 +6,13 @@ import type { FareQuote, RouteView, VehicleClassView } from "@/lib/maps/types";
  * price preview and the server action call the exact same function. If these
  * ever disagreed, a customer would be shown one price and charged another.
  *
+ * Two pricing units exist:
+ *   per_person  — airport transfers: fixed_price buys one seat, so the fare
+ *                 scales with the party size (N$650/person into Windhoek).
+ *   per_vehicle — long-distance private transfers: fixed_price buys the whole
+ *                 car, whatever the party size.
+ * The vehicle-class multiplier applies to the unit price in both cases.
+ *
  * The server still recomputes from the database on submit — this module makes
  * the two agree, it does not make the client's number trustworthy.
  */
@@ -18,9 +25,17 @@ function roundToRand(amount: number): number {
 export function computeFare(
   route: Pick<
     RouteView,
-    "id" | "slug" | "fixedPrice" | "defaultDriverPayout" | "currency" | "distanceKm" | "durationMin"
+    | "id"
+    | "slug"
+    | "fixedPrice"
+    | "pricingUnit"
+    | "defaultDriverPayout"
+    | "currency"
+    | "distanceKm"
+    | "durationMin"
   >,
-  vehicleClass: Pick<VehicleClassView, "id" | "slug" | "priceMultiplier">
+  vehicleClass: Pick<VehicleClassView, "id" | "slug" | "priceMultiplier">,
+  passengers = 1
 ): FareQuote {
   const multiplier = Number(vehicleClass.priceMultiplier);
   if (!Number.isFinite(multiplier) || multiplier <= 0) {
@@ -29,10 +44,16 @@ export function computeFare(
     );
   }
 
-  const customerPrice = roundToRand(Number(route.fixedPrice) * multiplier);
-  const driverPayout = roundToRand(
+  const seats =
+    route.pricingUnit === "per_person" ? Math.max(1, Math.floor(passengers)) : 1;
+
+  const unitPrice = roundToRand(Number(route.fixedPrice) * multiplier);
+  const unitPayout = roundToRand(
     Number(route.defaultDriverPayout) * multiplier
   );
+
+  const customerPrice = unitPrice * seats;
+  const driverPayout = unitPayout * seats;
 
   return {
     routeId: route.id,
@@ -44,4 +65,19 @@ export function computeFare(
     distanceKm: route.distanceKm,
     durationMin: route.durationMin,
   };
+}
+
+/** The per-unit price shown next to a class, before party size is applied. */
+export function unitFare(
+  route: Pick<RouteView, "fixedPrice">,
+  vehicleClass: Pick<VehicleClassView, "priceMultiplier">
+): number {
+  return roundToRand(
+    Number(route.fixedPrice) * Number(vehicleClass.priceMultiplier)
+  );
+}
+
+/** "per person" | "per vehicle" — the label that must accompany every price. */
+export function pricingUnitLabel(route: Pick<RouteView, "pricingUnit">): string {
+  return route.pricingUnit === "per_person" ? "per person" : "per vehicle";
 }

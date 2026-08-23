@@ -75,7 +75,7 @@ export function SiteFooter({ routes = [] }: { routes?: RouteView[] }) {
 
         <p className="text-muted-foreground text-xs">
           &copy; {new Date().getFullYear()} {SITE.name}. Transfers are fulfilled
-          by independent licensed Namibian partner drivers.
+          by vetted independent Namibian partner drivers.
         </p>
       </div>
     </footer>

@@ -10,6 +10,7 @@ import type { TripParams } from "@/lib/booking/trip-params";
 import { formatDuration, shortPlace } from "@/lib/format";
 import type { RouteView, VehicleClassView } from "@/lib/maps";
 import { formatNad } from "@/lib/money";
+import { pricingUnitLabel, unitFare } from "@/lib/pricing";
 
 /**
  * Widget, quick-select and sticky bar are three views of one selection, so
@@ -52,12 +53,9 @@ export function HomeQuote({
         <ul className="grid gap-2 sm:grid-cols-3">
           {routes.map((route) => {
             const isSelected = route.slug === trip.routeSlug;
-            const fare = trip.fares.get(trip.vehicleClass.id);
-            const routeFare =
-              route.slug === trip.routeSlug
-                ? fare
-                : Number(route.fixedPrice) *
-                  Number(trip.vehicleClass.priceMultiplier);
+            // Chips advertise the from-price for one unit (seat or vehicle).
+            const routeFare = unitFare(route, trip.vehicleClass);
+            const unitLabel = pricingUnitLabel(route);
             const duration = formatDuration(route.durationMin);
 
             return (
@@ -78,7 +76,11 @@ export function HomeQuote({
                   </span>
                   <span className="mt-1.5 flex items-baseline gap-2">
                     <span className="tabular text-brand text-lg font-semibold">
-                      {formatNad(Math.round(routeFare ?? 0))}
+                      {formatNad(routeFare)}
+                      <span className="text-muted-foreground text-xs font-normal">
+                        {" "}
+                        {unitLabel}
+                      </span>
                     </span>
                     {duration && (
                       <span className="text-muted-foreground text-xs">
@@ -93,7 +95,8 @@ export function HomeQuote({
         </ul>
 
         <p className="text-muted-foreground mt-2 text-xs">
-          Prices are per vehicle.{" "}
+          Airport transfers are priced per person; long-distance transfers per
+          vehicle.{" "}
           <Link
             href={`/transfers/${trip.route.slug}`}
             className="underline underline-offset-2"

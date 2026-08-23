@@ -12,7 +12,7 @@ const TRUST = [
   "Fixed prices",
   "Meet & greet",
   "Flight monitoring",
-  "Licensed drivers",
+  "Professional drivers",
   "24/7 support",
 ];
 
