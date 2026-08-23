@@ -1,7 +1,7 @@
 export * from "./types";
 export {
   getRouteBySlug,
-  listActiveRoutes,
-  quoteFareBySlug,
-  quoteFareForRoute,
+  listRoutes,
+  listVehicleClasses,
+  quoteFare,
 } from "./fares";

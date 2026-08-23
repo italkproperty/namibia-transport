@@ -1,76 +1,207 @@
 import "server-only";
 
-import { and, eq } from "drizzle-orm";
+import { asc, eq } from "drizzle-orm";
 
-import { db } from "@/db";
-import { routes, type Route } from "@/db/schema";
+import { getDb, isDatabaseConfigured } from "@/db";
+import { routes, vehicleClasses } from "@/db/schema";
+import {
+  CATALOG_ROUTES,
+  CATALOG_ROUTES_BY_SLUG,
+  CATALOG_VEHICLE_CLASSES,
+} from "@/lib/catalog";
 import { toMoneyString } from "@/lib/money";
 
-import type { FareQuote } from "./types";
+import type {
+  CatalogSource,
+  FareQuote,
+  RouteView,
+  VehicleClassView,
+} from "./types";
 
 /**
- * Fallback rate used only when a route has no fixed price. Replaced by
- * pricing_rules + Mapbox distances once dynamic quoting lands.
+ * Catalogue reads fall back to lib/catalog.ts when no database is reachable,
+ * so the marketing site and booking form work before Supabase is provisioned.
+ * The fallback is safe because the seed writes those exact rows, IDs included
+ * — and it covers reads only. Writing a booking still requires a database, so
+ * nothing can be sold at a guessed price.
  */
-const FALLBACK_RATE_PER_KM = 18;
-const FALLBACK_MINIMUM_FARE = 250;
 
-export async function getRouteBySlug(slug: string): Promise<Route | null> {
-  const [route] = await db
-    .select()
-    .from(routes)
-    .where(and(eq(routes.slug, slug), eq(routes.isActive, true)))
-    .limit(1);
+let warnedAboutFallback = false;
 
-  return route ?? null;
+function noteFallback(reason: string) {
+  if (!warnedAboutFallback) {
+    warnedAboutFallback = true;
+    console.warn(
+      `[catalog] serving the static catalogue (${reason}). Run \`npm run db:seed\` once a database is configured.`
+    );
+  }
 }
 
-export async function listActiveRoutes(): Promise<Route[]> {
-  return db.select().from(routes).where(eq(routes.isActive, true));
+/* ------------------------------------------------------------------ mapping */
+
+type CatalogRoute = (typeof CATALOG_ROUTES)[number];
+type CatalogVehicleClass = (typeof CATALOG_VEHICLE_CLASSES)[number];
+
+function catalogRouteToView(route: CatalogRoute): RouteView {
+  return {
+    id: route.id as string,
+    slug: route.slug,
+    originLabel: route.originLabel,
+    destinationLabel: route.destinationLabel,
+    category: route.category,
+    fixedPrice: route.fixedPrice as string,
+    defaultDriverPayout: route.defaultDriverPayout as string,
+    currency: route.currency ?? "NAD",
+    isActive: route.isActive ?? false,
+    distanceKm: (route.distanceKm as string | undefined) ?? null,
+    durationMin: route.durationMin ?? null,
+    seoTitle: route.seoTitle ?? null,
+    seoDescription: route.seoDescription ?? null,
+    seoBody: route.seoBody ?? null,
+  };
 }
 
-/**
- * Authoritative fare for a route. Always call this on the server: a price that
- * arrived from the client is an input to validate, never a value to trust.
- */
-export function quoteFareForRoute(route: Route): FareQuote {
-  if (route.fixedPrice !== null) {
-    return {
-      routeId: route.id,
-      routeSlug: route.slug,
-      source: "fixed_route",
-      fareTotal: toMoneyString(Number(route.fixedPrice)),
-      currency: route.currency,
-      distanceKm: route.distanceKm,
-      durationMin: route.durationMin,
-    };
+function catalogVehicleClassToView(
+  vehicleClass: CatalogVehicleClass
+): VehicleClassView {
+  return {
+    id: vehicleClass.id as string,
+    slug: vehicleClass.slug,
+    name: vehicleClass.name,
+    description: vehicleClass.description ?? null,
+    capacity: vehicleClass.capacity,
+    luggageCapacity: vehicleClass.luggageCapacity ?? 2,
+    priceMultiplier: (vehicleClass.priceMultiplier as string) ?? "1.00",
+  };
+}
+
+/* ------------------------------------------------------------------- reads */
+
+export async function listRoutes(
+  options: { activeOnly?: boolean } = {}
+): Promise<{ routes: RouteView[]; source: CatalogSource }> {
+  const { activeOnly = true } = options;
+
+  const fallback = () => ({
+    routes: CATALOG_ROUTES.map(catalogRouteToView).filter(
+      (route) => !activeOnly || route.isActive
+    ),
+    source: "fallback" as const,
+  });
+
+  if (!isDatabaseConfigured()) {
+    noteFallback("DATABASE_URL is not set");
+    return fallback();
   }
 
-  const distanceKm = route.distanceKm === null ? null : Number(route.distanceKm);
-  if (distanceKm === null) {
+  try {
+    const query = getDb().select().from(routes).orderBy(asc(routes.sortOrder));
+    const rows = await (activeOnly
+      ? query.where(eq(routes.isActive, true))
+      : query);
+
+    // An empty table means "not seeded yet", not "no routes exist".
+    if (rows.length === 0) {
+      noteFallback("the routes table is empty");
+      return fallback();
+    }
+
+    return { routes: rows, source: "database" };
+  } catch (error) {
+    noteFallback(`the database is unreachable: ${describe(error)}`);
+    return fallback();
+  }
+}
+
+export async function getRouteBySlug(slug: string): Promise<RouteView | null> {
+  const fallback = () => {
+    const route = CATALOG_ROUTES_BY_SLUG.get(slug);
+    return route ? catalogRouteToView(route) : null;
+  };
+
+  if (!isDatabaseConfigured()) {
+    noteFallback("DATABASE_URL is not set");
+    return fallback();
+  }
+
+  try {
+    const [row] = await getDb()
+      .select()
+      .from(routes)
+      .where(eq(routes.slug, slug))
+      .limit(1);
+
+    return row ?? fallback();
+  } catch (error) {
+    noteFallback(`the database is unreachable: ${describe(error)}`);
+    return fallback();
+  }
+}
+
+export async function listVehicleClasses(): Promise<VehicleClassView[]> {
+  const fallback = () =>
+    CATALOG_VEHICLE_CLASSES.map(catalogVehicleClassToView);
+
+  if (!isDatabaseConfigured()) {
+    return fallback();
+  }
+
+  try {
+    const rows = await getDb()
+      .select()
+      .from(vehicleClasses)
+      .where(eq(vehicleClasses.isActive, true))
+      .orderBy(asc(vehicleClasses.sortOrder));
+
+    return rows.length > 0 ? rows : fallback();
+  } catch {
+    return fallback();
+  }
+}
+
+/* ----------------------------------------------------------------- pricing */
+
+/**
+ * The single source of truth for what a trip costs. Always call this on the
+ * server: a price arriving from the client is an input to validate, never a
+ * value to trust.
+ *
+ * The driver payout scales with the same multiplier as the fare, so our
+ * contribution margin holds across vehicle classes.
+ */
+export function quoteFare(
+  route: RouteView,
+  vehicleClass: VehicleClassView
+): FareQuote {
+  const multiplier = Number(vehicleClass.priceMultiplier);
+  if (!Number.isFinite(multiplier) || multiplier <= 0) {
     throw new Error(
-      `Route ${route.slug} has neither a fixed price nor a distance to price from`
+      `Vehicle class ${vehicleClass.slug} has an invalid price multiplier`
     );
   }
 
-  const fare = Math.max(
-    FALLBACK_MINIMUM_FARE,
-    Math.ceil((distanceKm * FALLBACK_RATE_PER_KM) / 10) * 10
+  const customerPrice = roundToRand(Number(route.fixedPrice) * multiplier);
+  const driverPayout = roundToRand(
+    Number(route.defaultDriverPayout) * multiplier
   );
 
   return {
     routeId: route.id,
-    routeSlug: route.slug,
-    source: "distance",
-    fareTotal: toMoneyString(fare),
+    vehicleClassId: vehicleClass.id,
+    customerPrice: toMoneyString(customerPrice),
+    driverPayout: toMoneyString(driverPayout),
+    contribution: toMoneyString(customerPrice - driverPayout),
     currency: route.currency,
     distanceKm: route.distanceKm,
     durationMin: route.durationMin,
   };
 }
 
-/** Convenience wrapper: look the route up and price it in one call. */
-export async function quoteFareBySlug(slug: string): Promise<FareQuote | null> {
-  const route = await getRouteBySlug(slug);
-  return route ? quoteFareForRoute(route) : null;
+/** Fares are quoted in whole Namibian dollars — no stray cents in the UI. */
+function roundToRand(amount: number): number {
+  return Math.round(amount);
+}
+
+function describe(error: unknown): string {
+  return error instanceof Error ? error.message : String(error);
 }

@@ -1,12 +1,16 @@
 import { drizzle } from "drizzle-orm/postgres-js";
 import postgres from "postgres";
 
+import { CATALOG_ROUTES, CATALOG_VEHICLE_CLASSES } from "../lib/catalog";
 import { requireDatabaseUrl } from "./env";
 import { routes, vehicleClasses } from "./schema";
 
 /**
- * Idempotent seed for the launch catalogue. Safe to re-run: every insert is an
- * upsert keyed on the natural slug, so no rows are ever deleted.
+ * Seeds the launch catalogue from lib/catalog.ts.
+ *
+ * Idempotent and non-destructive: every write is an upsert keyed on the
+ * natural slug, and no row is ever deleted. Safe to re-run after editing a
+ * price or adding a route.
  *
  *   npm run db:seed
  */
@@ -15,62 +19,55 @@ async function main() {
   const db = drizzle(client);
 
   try {
-    const [sedan] = await db
-      .insert(vehicleClasses)
-      .values({
-        slug: "private-sedan",
-        name: "Private Sedan",
-        description:
-          "Air-conditioned sedan for up to 3 passengers, with meet & greet at arrivals.",
-        capacityPassengers: 3,
-        capacityLuggage: 3,
-        sortOrder: 10,
-      })
-      .onConflictDoUpdate({
-        target: vehicleClasses.slug,
-        set: {
-          name: "Private Sedan",
-          capacityPassengers: 3,
-          capacityLuggage: 3,
-          updatedAt: new Date(),
-        },
-      })
-      .returning();
+    for (const vehicleClass of CATALOG_VEHICLE_CLASSES) {
+      await db
+        .insert(vehicleClasses)
+        .values(vehicleClass)
+        .onConflictDoUpdate({
+          target: vehicleClasses.slug,
+          set: {
+            name: vehicleClass.name,
+            description: vehicleClass.description,
+            capacity: vehicleClass.capacity,
+            luggageCapacity: vehicleClass.luggageCapacity,
+            priceMultiplier: vehicleClass.priceMultiplier,
+            sortOrder: vehicleClass.sortOrder,
+            updatedAt: new Date(),
+          },
+        });
+      console.info(`  vehicle class  ${vehicleClass.name}`);
+    }
 
-    const [route] = await db
-      .insert(routes)
-      .values({
-        slug: "hosea-kutako-to-windhoek",
-        originName: "Hosea Kutako International Airport",
-        originCode: "WDH",
-        destinationName: "Windhoek CBD",
-        distanceKm: "45.00",
-        durationMin: 45,
-        fixedPrice: "650.00",
-        currency: "NAD",
-        sortOrder: 10,
-        seoTitle:
-          "Hosea Kutako Airport to Windhoek Transfer — Fixed Price Private Car",
-        seoDescription:
-          "Book a private airport transfer from Hosea Kutako International Airport (WDH) to Windhoek CBD. Fixed price, meet & greet, flight monitoring and licensed local drivers.",
-        heroHeadline: "Airport transfers from Hosea Kutako to Windhoek",
-        heroSubheadline:
-          "A private car waiting when you land. One fixed price, no meter, no surprises.",
-      })
-      .onConflictDoUpdate({
-        target: routes.slug,
-        set: {
-          fixedPrice: "650.00",
-          distanceKm: "45.00",
-          durationMin: 45,
-          updatedAt: new Date(),
-        },
-      })
-      .returning();
+    for (const route of CATALOG_ROUTES) {
+      await db
+        .insert(routes)
+        .values(route)
+        .onConflictDoUpdate({
+          target: routes.slug,
+          set: {
+            originLabel: route.originLabel,
+            destinationLabel: route.destinationLabel,
+            category: route.category,
+            fixedPrice: route.fixedPrice,
+            defaultDriverPayout: route.defaultDriverPayout,
+            isActive: route.isActive,
+            distanceKm: route.distanceKm,
+            durationMin: route.durationMin,
+            sortOrder: route.sortOrder,
+            seoTitle: route.seoTitle,
+            seoDescription: route.seoDescription,
+            seoBody: route.seoBody,
+            updatedAt: new Date(),
+          },
+        });
+      console.info(
+        `  route          ${route.originLabel} -> ${route.destinationLabel}` +
+          `  N$${route.fixedPrice}  ${route.isActive ? "live" : "hidden"}`
+      );
+    }
 
-    console.info(`Seeded vehicle class: ${sedan.name} (${sedan.slug})`);
     console.info(
-      `Seeded route: ${route.originName} -> ${route.destinationName} (${route.slug}) at N$${route.fixedPrice}`
+      `\nSeeded ${CATALOG_VEHICLE_CLASSES.length} vehicle classes and ${CATALOG_ROUTES.length} routes.`
     );
   } finally {
     await client.end();

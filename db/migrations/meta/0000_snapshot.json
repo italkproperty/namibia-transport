@@ -1,5 +1,5 @@
 {
-  "id": "918364b8-1cbf-4359-a0a8-89df84a9b61e",
+  "id": "60c14a25-aa1a-4c1c-9224-5abf8df5dcb9",
   "prevId": "00000000-0000-0000-0000-000000000000",
   "version": "7",
   "dialect": "postgresql",
@@ -224,12 +224,6 @@
           "primaryKey": false,
           "notNull": true
         },
-        "customer_id": {
-          "name": "customer_id",
-          "type": "uuid",
-          "primaryKey": false,
-          "notNull": true
-        },
         "route_id": {
           "name": "route_id",
           "type": "uuid",
@@ -242,41 +236,29 @@
           "primaryKey": false,
           "notNull": false
         },
-        "pickup_point": {
-          "name": "pickup_point",
+        "customer_id": {
+          "name": "customer_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "pickup_label": {
+          "name": "pickup_label",
           "type": "text",
           "primaryKey": false,
           "notNull": true
         },
-        "dropoff_point": {
-          "name": "dropoff_point",
+        "dropoff_label": {
+          "name": "dropoff_label",
           "type": "text",
           "primaryKey": false,
           "notNull": true
-        },
-        "pickup_notes": {
-          "name": "pickup_notes",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "dropoff_notes": {
-          "name": "dropoff_notes",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
         },
         "scheduled_at": {
           "name": "scheduled_at",
           "type": "timestamp with time zone",
           "primaryKey": false,
           "notNull": true
-        },
-        "flight_number": {
-          "name": "flight_number",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
         },
         "passengers": {
           "name": "passengers",
@@ -285,19 +267,43 @@
           "notNull": true,
           "default": 1
         },
-        "luggage": {
-          "name": "luggage",
+        "luggage_count": {
+          "name": "luggage_count",
           "type": "smallint",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 0
+        },
+        "flight_number": {
+          "name": "flight_number",
+          "type": "text",
           "primaryKey": false,
           "notNull": false
         },
-        "status": {
-          "name": "status",
-          "type": "booking_status",
-          "typeSchema": "public",
+        "customer_price": {
+          "name": "customer_price",
+          "type": "numeric(10, 2)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "driver_payout": {
+          "name": "driver_payout",
+          "type": "numeric(10, 2)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "contribution": {
+          "name": "contribution",
+          "type": "numeric(10, 2)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "currency": {
+          "name": "currency",
+          "type": "char(3)",
           "primaryKey": false,
           "notNull": true,
-          "default": "'draft'"
+          "default": "'NAD'"
         },
         "distance_km": {
           "name": "distance_km",
@@ -311,28 +317,49 @@
           "primaryKey": false,
           "notNull": false
         },
-        "fare_total": {
-          "name": "fare_total",
-          "type": "numeric(10, 2)",
+        "acquisition_source": {
+          "name": "acquisition_source",
+          "type": "text",
           "primaryKey": false,
-          "notNull": true
+          "notNull": false
         },
-        "currency": {
-          "name": "currency",
-          "type": "char(3)",
+        "is_return": {
+          "name": "is_return",
+          "type": "boolean",
           "primaryKey": false,
           "notNull": true,
-          "default": "'NAD'"
+          "default": false
         },
-        "promo_code_id": {
-          "name": "promo_code_id",
-          "type": "uuid",
+        "is_repeat_customer": {
+          "name": "is_repeat_customer",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": false
+        },
+        "status": {
+          "name": "status",
+          "type": "booking_status",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'pending_payment'"
+        },
+        "cancellation_reason": {
+          "name": "cancellation_reason",
+          "type": "text",
           "primaryKey": false,
           "notNull": false
         },
         "notes": {
           "name": "notes",
           "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "promo_code_id": {
+          "name": "promo_code_id",
+          "type": "uuid",
           "primaryKey": false,
           "notNull": false
         },
@@ -363,6 +390,21 @@
             }
           ],
           "isUnique": true,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "bookings_route_idx": {
+          "name": "bookings_route_idx",
+          "columns": [
+            {
+              "expression": "route_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
           "concurrently": false,
           "method": "btree",
           "with": {}
@@ -411,22 +453,24 @@
           "concurrently": false,
           "method": "btree",
           "with": {}
+        },
+        "bookings_created_at_idx": {
+          "name": "bookings_created_at_idx",
+          "columns": [
+            {
+              "expression": "created_at",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
         }
       },
       "foreignKeys": {
-        "bookings_customer_id_customers_id_fk": {
-          "name": "bookings_customer_id_customers_id_fk",
-          "tableFrom": "bookings",
-          "tableTo": "customers",
-          "columnsFrom": [
-            "customer_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "restrict",
-          "onUpdate": "no action"
-        },
         "bookings_route_id_routes_id_fk": {
           "name": "bookings_route_id_routes_id_fk",
           "tableFrom": "bookings",
@@ -451,6 +495,19 @@
             "id"
           ],
           "onDelete": "set null",
+          "onUpdate": "no action"
+        },
+        "bookings_customer_id_customers_id_fk": {
+          "name": "bookings_customer_id_customers_id_fk",
+          "tableFrom": "bookings",
+          "tableTo": "customers",
+          "columnsFrom": [
+            "customer_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "restrict",
           "onUpdate": "no action"
         },
         "bookings_promo_code_id_promo_codes_id_fk": {
@@ -490,23 +547,25 @@
           "primaryKey": false,
           "notNull": true
         },
-        "whatsapp": {
-          "name": "whatsapp",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
-        },
         "email": {
           "name": "email",
           "type": "text",
           "primaryKey": false,
           "notNull": false
         },
-        "phone": {
-          "name": "phone",
+        "whatsapp": {
+          "name": "whatsapp",
           "type": "text",
           "primaryKey": false,
-          "notNull": false
+          "notNull": true
+        },
+        "customer_type": {
+          "name": "customer_type",
+          "type": "customer_type",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'tourist'"
         },
         "locale": {
           "name": "locale",
@@ -552,8 +611,8 @@
           "method": "btree",
           "with": {}
         },
-        "customers_email_key": {
-          "name": "customers_email_key",
+        "customers_email_idx": {
+          "name": "customers_email_idx",
           "columns": [
             {
               "expression": "email",
@@ -562,7 +621,22 @@
               "nulls": "last"
             }
           ],
-          "isUnique": true,
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "customers_type_idx": {
+          "name": "customers_type_idx",
+          "columns": [
+            {
+              "expression": "customer_type",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
           "concurrently": false,
           "method": "btree",
           "with": {}
@@ -1388,29 +1462,50 @@
           "primaryKey": false,
           "notNull": true
         },
-        "origin_name": {
-          "name": "origin_name",
+        "origin_label": {
+          "name": "origin_label",
           "type": "text",
           "primaryKey": false,
           "notNull": true
         },
-        "origin_code": {
-          "name": "origin_code",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "destination_name": {
-          "name": "destination_name",
+        "destination_label": {
+          "name": "destination_label",
           "type": "text",
           "primaryKey": false,
           "notNull": true
         },
-        "destination_code": {
-          "name": "destination_code",
-          "type": "text",
+        "category": {
+          "name": "category",
+          "type": "route_category",
+          "typeSchema": "public",
           "primaryKey": false,
-          "notNull": false
+          "notNull": true
+        },
+        "fixed_price": {
+          "name": "fixed_price",
+          "type": "numeric(10, 2)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "currency": {
+          "name": "currency",
+          "type": "char(3)",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'NAD'"
+        },
+        "default_driver_payout": {
+          "name": "default_driver_payout",
+          "type": "numeric(10, 2)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "is_active": {
+          "name": "is_active",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": false
         },
         "distance_km": {
           "name": "distance_km",
@@ -1423,26 +1518,6 @@
           "type": "integer",
           "primaryKey": false,
           "notNull": false
-        },
-        "fixed_price": {
-          "name": "fixed_price",
-          "type": "numeric(10, 2)",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "currency": {
-          "name": "currency",
-          "type": "char(3)",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "'NAD'"
-        },
-        "is_active": {
-          "name": "is_active",
-          "type": "boolean",
-          "primaryKey": false,
-          "notNull": true,
-          "default": true
         },
         "sort_order": {
           "name": "sort_order",
@@ -1463,14 +1538,8 @@
           "primaryKey": false,
           "notNull": false
         },
-        "hero_headline": {
-          "name": "hero_headline",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "hero_subheadline": {
-          "name": "hero_subheadline",
+        "seo_body": {
+          "name": "seo_body",
           "type": "text",
           "primaryKey": false,
           "notNull": false
@@ -1520,6 +1589,21 @@
           "concurrently": false,
           "method": "btree",
           "with": {}
+        },
+        "routes_category_idx": {
+          "name": "routes_category_idx",
+          "columns": [
+            {
+              "expression": "category",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
         }
       },
       "foreignKeys": {},
@@ -1558,25 +1642,25 @@
           "primaryKey": false,
           "notNull": false
         },
-        "capacity_passengers": {
-          "name": "capacity_passengers",
+        "capacity": {
+          "name": "capacity",
           "type": "smallint",
           "primaryKey": false,
           "notNull": true
         },
-        "capacity_luggage": {
-          "name": "capacity_luggage",
+        "luggage_capacity": {
+          "name": "luggage_capacity",
           "type": "smallint",
           "primaryKey": false,
           "notNull": true,
           "default": 2
         },
-        "sort_order": {
-          "name": "sort_order",
-          "type": "smallint",
+        "price_multiplier": {
+          "name": "price_multiplier",
+          "type": "numeric(4, 2)",
           "primaryKey": false,
           "notNull": true,
-          "default": 0
+          "default": "'1.00'"
         },
         "is_active": {
           "name": "is_active",
@@ -1584,6 +1668,13 @@
           "primaryKey": false,
           "notNull": true,
           "default": true
+        },
+        "sort_order": {
+          "name": "sort_order",
+          "type": "smallint",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 0
         },
         "created_at": {
           "name": "created_at",
@@ -1788,14 +1879,19 @@
       "name": "booking_status",
       "schema": "public",
       "values": [
-        "draft",
         "pending_payment",
         "confirmed",
         "assigned",
-        "en_route",
         "completed",
-        "cancelled",
-        "no_show"
+        "cancelled"
+      ]
+    },
+    "public.customer_type": {
+      "name": "customer_type",
+      "schema": "public",
+      "values": [
+        "tourist",
+        "corporate"
       ]
     },
     "public.discount_type": {
@@ -1836,6 +1932,16 @@
         "per_km",
         "multiplier",
         "flat_surcharge"
+      ]
+    },
+    "public.route_category": {
+      "name": "route_category",
+      "schema": "public",
+      "values": [
+        "airport",
+        "intercity",
+        "city",
+        "corporate"
       ]
     }
   },

@@ -15,9 +15,13 @@ import {
 } from "drizzle-orm/pg-core";
 
 /**
- * Full data model for the transfer marketplace. Phase 1 only reads/writes
- * routes, vehicle_classes, customers, bookings and payments — the rest are
- * defined up front so later phases are migrations, not redesigns.
+ * Namibia Transport is a demand-aggregation platform, not a single product.
+ * The schema is shaped around that: routes carry a `category` so airport
+ * transfers, intercity runs and corporate accounts share one pipeline, and
+ * every booking records the full economics (what the customer paid, what the
+ * driver is paid, what we keep) so route profitability is queryable from day
+ * one. Tables the current UI does not touch yet are defined anyway — growth
+ * should be a migration, never a rewrite.
  *
  * Money is `numeric(10, 2)` and surfaces in TypeScript as a string, which keeps
  * NAD amounts exact (no float drift). Parse/format via lib/money.ts.
@@ -41,15 +45,25 @@ const money = (name: string) => numeric(name, { precision: 10, scale: 2 });
 /* Enums                                                                       */
 /* -------------------------------------------------------------------------- */
 
+/** What kind of demand a route serves. Drives copy, SEO and reporting. */
+export const routeCategoryEnum = pgEnum("route_category", [
+  "airport",
+  "intercity",
+  "city",
+  "corporate",
+]);
+
 export const bookingStatusEnum = pgEnum("booking_status", [
-  "draft",
   "pending_payment",
   "confirmed",
   "assigned",
-  "en_route",
   "completed",
   "cancelled",
-  "no_show",
+]);
+
+export const customerTypeEnum = pgEnum("customer_type", [
+  "tourist",
+  "corporate",
 ]);
 
 export const paymentStatusEnum = pgEnum("payment_status", [
@@ -89,6 +103,42 @@ export const discountTypeEnum = pgEnum("discount_type", ["percent", "fixed"]);
 /* Catalogue                                                                   */
 /* -------------------------------------------------------------------------- */
 
+/**
+ * A sellable origin→destination pair. Powers fixed pricing, the booking form
+ * and the programmatic SEO page at /transfers/[slug]. Rows with is_active
+ * false are schema-ready but hidden from customers.
+ */
+export const routes = pgTable(
+  "routes",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    slug: text("slug").notNull(),
+    originLabel: text("origin_label").notNull(),
+    destinationLabel: text("destination_label").notNull(),
+    category: routeCategoryEnum("category").notNull(),
+    /** Fare for the baseline vehicle class; multipliers scale from here. */
+    fixedPrice: money("fixed_price").notNull(),
+    currency: currency(),
+    /** What the partner driver earns; customer_price minus this is our margin. */
+    defaultDriverPayout: money("default_driver_payout").notNull(),
+    isActive: boolean("is_active").notNull().default(false),
+    /** Nullable until Mapbox provides real figures; used for "≈4 hours" copy. */
+    distanceKm: numeric("distance_km", { precision: 8, scale: 2 }),
+    durationMin: integer("duration_min"),
+    sortOrder: smallint("sort_order").notNull().default(0),
+    seoTitle: text("seo_title"),
+    seoDescription: text("seo_description"),
+    /** Long-form route copy rendered on the landing page. */
+    seoBody: text("seo_body"),
+    ...timestamps,
+  },
+  (t) => [
+    uniqueIndex("routes_slug_key").on(t.slug),
+    index("routes_is_active_idx").on(t.isActive),
+    index("routes_category_idx").on(t.category),
+  ]
+);
+
 export const vehicleClasses = pgTable(
   "vehicle_classes",
   {
@@ -97,43 +147,20 @@ export const vehicleClasses = pgTable(
     name: text("name").notNull(),
     description: text("description"),
     /** Seats we sell, not seats fitted. */
-    capacityPassengers: smallint("capacity_passengers").notNull(),
-    capacityLuggage: smallint("capacity_luggage").notNull().default(2),
-    sortOrder: smallint("sort_order").notNull().default(0),
+    capacity: smallint("capacity").notNull(),
+    luggageCapacity: smallint("luggage_capacity").notNull().default(2),
+    /** Applied to a route's fixed_price. 1.0 is the baseline class. */
+    priceMultiplier: numeric("price_multiplier", {
+      precision: 4,
+      scale: 2,
+    })
+      .notNull()
+      .default("1.00"),
     isActive: boolean("is_active").notNull().default(true),
+    sortOrder: smallint("sort_order").notNull().default(0),
     ...timestamps,
   },
   (t) => [uniqueIndex("vehicle_classes_slug_key").on(t.slug)]
-);
-
-export const routes = pgTable(
-  "routes",
-  {
-    id: uuid("id").primaryKey().defaultRandom(),
-    /** Powers both the fixed-price lookup and the /[slug] SEO page. */
-    slug: text("slug").notNull(),
-    originName: text("origin_name").notNull(),
-    /** IATA code where the origin is an airport, e.g. WDH. */
-    originCode: text("origin_code"),
-    destinationName: text("destination_name").notNull(),
-    destinationCode: text("destination_code"),
-    distanceKm: numeric("distance_km", { precision: 8, scale: 2 }),
-    durationMin: integer("duration_min"),
-    /** Fixed fare for the default vehicle class; null falls back to per-km. */
-    fixedPrice: money("fixed_price"),
-    currency: currency(),
-    isActive: boolean("is_active").notNull().default(true),
-    sortOrder: smallint("sort_order").notNull().default(0),
-    seoTitle: text("seo_title"),
-    seoDescription: text("seo_description"),
-    heroHeadline: text("hero_headline"),
-    heroSubheadline: text("hero_subheadline"),
-    ...timestamps,
-  },
-  (t) => [
-    uniqueIndex("routes_slug_key").on(t.slug),
-    index("routes_is_active_idx").on(t.isActive),
-  ]
 );
 
 export const addOns = pgTable(
@@ -176,7 +203,7 @@ export const promoCodes = pgTable(
 );
 
 /**
- * Modifiers layered on top of a route's fixed price (night surcharge, class
+ * Modifiers layered on top of a route's fixed price (night surcharge, seasonal
  * uplift, per-km fallback). Applied in `priority` order, lowest first.
  */
 export const pricingRules = pgTable(
@@ -216,17 +243,18 @@ export const customers = pgTable(
   {
     id: uuid("id").primaryKey().defaultRandom(),
     fullName: text("full_name").notNull(),
-    /** E.164, the primary contact channel. */
-    whatsapp: text("whatsapp"),
     email: text("email"),
-    phone: text("phone"),
+    /** E.164, the primary contact channel. */
+    whatsapp: text("whatsapp").notNull(),
+    customerType: customerTypeEnum("customer_type").notNull().default("tourist"),
     locale: text("locale").notNull().default("en"),
     notes: text("notes"),
     ...timestamps,
   },
   (t) => [
     uniqueIndex("customers_whatsapp_key").on(t.whatsapp),
-    uniqueIndex("customers_email_key").on(t.email),
+    index("customers_email_idx").on(t.email),
+    index("customers_type_idx").on(t.customerType),
   ]
 );
 
@@ -285,11 +313,8 @@ export const bookings = pgTable(
   "bookings",
   {
     id: uuid("id").primaryKey().defaultRandom(),
-    /** Human-facing reference shown to the traveller, e.g. NT-7Q4K2M. */
+    /** Short human code shown to the traveller, e.g. NT-7Q4K2M. */
     ref: text("ref").notNull(),
-    customerId: uuid("customer_id")
-      .notNull()
-      .references(() => customers.id, { onDelete: "restrict" }),
     routeId: uuid("route_id").references(() => routes.id, {
       onDelete: "set null",
     }),
@@ -297,32 +322,50 @@ export const bookings = pgTable(
       () => vehicleClasses.id,
       { onDelete: "set null" }
     ),
-    pickupPoint: text("pickup_point").notNull(),
-    dropoffPoint: text("dropoff_point").notNull(),
-    /** Free-text landmark/notes — Namibian street addresses are unreliable. */
-    pickupNotes: text("pickup_notes"),
-    dropoffNotes: text("dropoff_notes"),
+    customerId: uuid("customer_id")
+      .notNull()
+      .references(() => customers.id, { onDelete: "restrict" }),
+    pickupLabel: text("pickup_label").notNull(),
+    dropoffLabel: text("dropoff_label").notNull(),
     scheduledAt: timestamp("scheduled_at", { withTimezone: true }).notNull(),
-    flightNumber: text("flight_number"),
     passengers: smallint("passengers").notNull().default(1),
-    luggage: smallint("luggage"),
-    status: bookingStatusEnum("status").notNull().default("draft"),
-    /** Snapshotted at booking time so later price edits never rewrite history. */
+    luggageCount: smallint("luggage_count").notNull().default(0),
+    flightNumber: text("flight_number"),
+
+    /* Economics — all snapshotted, so later price edits never rewrite history. */
+    /** What the customer pays. */
+    customerPrice: money("customer_price").notNull(),
+    /** What the partner driver is paid. */
+    driverPayout: money("driver_payout").notNull(),
+    /** customer_price - driver_payout, computed server-side and persisted. */
+    contribution: money("contribution").notNull(),
+    currency: currency(),
+
+    /** Nullable until Mapbox lands. */
     distanceKm: numeric("distance_km", { precision: 8, scale: 2 }),
     durationMin: integer("duration_min"),
-    fareTotal: money("fare_total").notNull(),
-    currency: currency(),
+
+    /* Attribution and segmentation. */
+    /** UTM campaign or referrer host — which channel produced this booking. */
+    acquisitionSource: text("acquisition_source"),
+    isReturn: boolean("is_return").notNull().default(false),
+    isRepeatCustomer: boolean("is_repeat_customer").notNull().default(false),
+
+    status: bookingStatusEnum("status").notNull().default("pending_payment"),
+    cancellationReason: text("cancellation_reason"),
+    notes: text("notes"),
     promoCodeId: uuid("promo_code_id").references(() => promoCodes.id, {
       onDelete: "set null",
     }),
-    notes: text("notes"),
     ...timestamps,
   },
   (t) => [
     uniqueIndex("bookings_ref_key").on(t.ref),
+    index("bookings_route_idx").on(t.routeId),
     index("bookings_customer_idx").on(t.customerId),
     index("bookings_status_idx").on(t.status),
     index("bookings_scheduled_at_idx").on(t.scheduledAt),
+    index("bookings_created_at_idx").on(t.createdAt),
   ]
 );
 
@@ -345,7 +388,10 @@ export const bookingAddOns = pgTable(
       .defaultNow(),
   },
   (t) => [
-    uniqueIndex("booking_add_ons_booking_add_on_key").on(t.bookingId, t.addOnId),
+    uniqueIndex("booking_add_ons_booking_add_on_key").on(
+      t.bookingId,
+      t.addOnId
+    ),
   ]
 );
 
@@ -387,7 +433,6 @@ export const dispatchAssignments = pgTable(
       onDelete: "set null",
     }),
     status: assignmentStatusEnum("status").notNull().default("offered"),
-    /** What the partner driver is paid for this trip. */
     payoutAmount: money("payout_amount"),
     currency: currency(),
     assignedAt: timestamp("assigned_at", { withTimezone: true })
@@ -435,11 +480,15 @@ export const flightStatusEvents = pgTable(
 export type Route = typeof routes.$inferSelect;
 export type NewRoute = typeof routes.$inferInsert;
 export type VehicleClass = typeof vehicleClasses.$inferSelect;
+export type NewVehicleClass = typeof vehicleClasses.$inferInsert;
 export type Customer = typeof customers.$inferSelect;
 export type NewCustomer = typeof customers.$inferInsert;
 export type Booking = typeof bookings.$inferSelect;
 export type NewBooking = typeof bookings.$inferInsert;
 export type Payment = typeof payments.$inferSelect;
 export type NewPayment = typeof payments.$inferInsert;
+
+export type RouteCategory = (typeof routeCategoryEnum.enumValues)[number];
 export type BookingStatus = (typeof bookingStatusEnum.enumValues)[number];
+export type CustomerType = (typeof customerTypeEnum.enumValues)[number];
 export type PaymentStatus = (typeof paymentStatusEnum.enumValues)[number];
