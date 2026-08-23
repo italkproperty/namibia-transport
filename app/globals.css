@@ -3,72 +3,108 @@
 
 @custom-variant dark (&:is(.dark *));
 
+/**
+ * Product tokens, not editorial ones.
+ *
+ * Every foreground/background pair below is measured against WCAG AA at 4.5:1
+ * — the accent is the tight one at 4.85:1 on the base and 4.92:1 for its own
+ * ink, so darken `--accent` before you lighten it.
+ *
+ * The accent earns its place on exactly two things: primary actions and live
+ * prices. Anything else that wants to be orange should be neutral instead.
+ */
 :root {
-  --radius: 0.75rem;
+  --radius: 0.5rem;
 
-  /* Warm stone neutrals — Namibian sand rather than clinical grey. */
-  --background: oklch(0.993 0.003 85);
-  --foreground: oklch(0.185 0.012 65);
+  /* Warm neutral base with crisp white surfaces on top. */
+  --background: oklch(0.985 0.004 75); /* #fcfaf7 */
+  --foreground: oklch(0.205 0.008 60); /* #1a1614 */
   --card: oklch(1 0 0);
-  --card-foreground: oklch(0.185 0.012 65);
+  --card-foreground: oklch(0.205 0.008 60);
   --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.185 0.012 65);
+  --popover-foreground: oklch(0.205 0.008 60);
 
-  /* Deep ink primary: high contrast, quiet. */
-  --primary: oklch(0.22 0.018 60);
-  --primary-foreground: oklch(0.985 0.004 85);
+  /* Near-black primary: buttons that are not the money action. */
+  --primary: oklch(0.205 0.008 60);
+  --primary-foreground: oklch(0.99 0.004 75);
 
-  --secondary: oklch(0.965 0.008 85);
-  --secondary-foreground: oklch(0.26 0.015 62);
-  --muted: oklch(0.965 0.008 85);
-  --muted-foreground: oklch(0.52 0.014 68);
+  --secondary: oklch(0.965 0.005 75);
+  --secondary-foreground: oklch(0.265 0.008 60);
+  --muted: oklch(0.965 0.005 75);
+  --muted-foreground: oklch(0.505 0.012 65); /* #6a635e — 5.6:1 */
 
-  /* Single ochre accent — used sparingly, never as a background wash. */
-  --accent: oklch(0.955 0.022 75);
-  --accent-foreground: oklch(0.34 0.058 62);
-  --brand: oklch(0.62 0.115 58);
-  --brand-foreground: oklch(0.99 0.004 85);
+  --accent: oklch(0.965 0.005 75);
+  --accent-foreground: oklch(0.265 0.008 60);
 
-  --destructive: oklch(0.577 0.245 27.325);
-  --destructive-foreground: oklch(0.985 0 0);
-  --border: oklch(0.915 0.008 82);
-  --input: oklch(0.905 0.009 82);
-  --ring: oklch(0.62 0.115 58);
+  /* The one decisive accent. #bc4b00 */
+  --brand: oklch(0.555 0.165 47);
+  --brand-foreground: oklch(0.99 0.004 75);
+  --brand-hover: oklch(0.5 0.155 47);
+  --brand-subtle: oklch(0.965 0.022 60);
+
+  /* Semantic states. */
+  --success: oklch(0.52 0.13 152); /* #137d41 */
+  --success-subtle: oklch(0.96 0.03 152);
+  --destructive: oklch(0.505 0.19 27); /* #b91c1e */
+  --destructive-foreground: oklch(0.99 0.004 75);
+  --destructive-subtle: oklch(0.96 0.025 27);
+  --warning: oklch(0.53 0.13 70);
+  --warning-subtle: oklch(0.96 0.04 75);
+
+  --border: oklch(0.905 0.006 75); /* #e2dfdb */
+  --input: oklch(0.885 0.007 75);
+  --ring: oklch(0.555 0.165 47);
+
+  /* Functional motion only. Nothing decorative. */
+  --ease: cubic-bezier(0.2, 0, 0, 1);
+  --duration-fast: 150ms;
+  --duration: 200ms;
 }
 
 .dark {
-  --background: oklch(0.165 0.011 62);
-  --foreground: oklch(0.96 0.006 85);
-  --card: oklch(0.215 0.013 62);
-  --card-foreground: oklch(0.96 0.006 85);
-  --popover: oklch(0.215 0.013 62);
-  --popover-foreground: oklch(0.96 0.006 85);
+  --background: oklch(0.175 0.008 60);
+  --foreground: oklch(0.97 0.004 75);
+  --card: oklch(0.225 0.009 60);
+  --card-foreground: oklch(0.97 0.004 75);
+  --popover: oklch(0.225 0.009 60);
+  --popover-foreground: oklch(0.97 0.004 75);
 
-  --primary: oklch(0.94 0.008 85);
-  --primary-foreground: oklch(0.2 0.013 62);
+  --primary: oklch(0.97 0.004 75);
+  --primary-foreground: oklch(0.205 0.008 60);
 
-  --secondary: oklch(0.27 0.014 62);
-  --secondary-foreground: oklch(0.96 0.006 85);
-  --muted: oklch(0.27 0.014 62);
-  --muted-foreground: oklch(0.72 0.012 75);
+  --secondary: oklch(0.275 0.01 60);
+  --secondary-foreground: oklch(0.97 0.004 75);
+  --muted: oklch(0.275 0.01 60);
+  --muted-foreground: oklch(0.735 0.011 70);
 
-  --accent: oklch(0.3 0.024 65);
-  --accent-foreground: oklch(0.92 0.03 78);
-  --brand: oklch(0.72 0.105 62);
-  --brand-foreground: oklch(0.19 0.013 62);
+  --accent: oklch(0.29 0.012 60);
+  --accent-foreground: oklch(0.97 0.004 75);
 
-  --destructive: oklch(0.704 0.191 22.216);
-  --destructive-foreground: oklch(0.985 0 0);
+  --brand: oklch(0.7 0.15 52);
+  --brand-foreground: oklch(0.185 0.008 60);
+  --brand-hover: oklch(0.75 0.145 52);
+  --brand-subtle: oklch(0.3 0.05 50);
+
+  --success: oklch(0.72 0.16 152);
+  --success-subtle: oklch(0.3 0.05 152);
+  --destructive: oklch(0.68 0.19 25);
+  --destructive-foreground: oklch(0.185 0.008 60);
+  --destructive-subtle: oklch(0.3 0.06 25);
+  --warning: oklch(0.78 0.13 75);
+  --warning-subtle: oklch(0.3 0.05 75);
+
   --border: oklch(1 0 0 / 12%);
   --input: oklch(1 0 0 / 16%);
-  --ring: oklch(0.72 0.105 62);
+  --ring: oklch(0.7 0.15 52);
 }
 
 @theme inline {
-  --radius-sm: calc(var(--radius) - 4px);
-  --radius-md: calc(var(--radius) - 2px);
+  --radius-sm: calc(var(--radius) - 3px);
+  --radius-md: calc(var(--radius) - 1px);
   --radius-lg: var(--radius);
   --radius-xl: calc(var(--radius) + 4px);
+  --radius-2xl: calc(var(--radius) + 8px);
+
   --color-background: var(--background);
   --color-foreground: var(--foreground);
   --color-card: var(--card);
@@ -83,61 +119,89 @@
   --color-muted-foreground: var(--muted-foreground);
   --color-accent: var(--accent);
   --color-accent-foreground: var(--accent-foreground);
+  --color-brand: var(--brand);
+  --color-brand-foreground: var(--brand-foreground);
+  --color-brand-hover: var(--brand-hover);
+  --color-brand-subtle: var(--brand-subtle);
+  --color-success: var(--success);
+  --color-success-subtle: var(--success-subtle);
+  --color-warning: var(--warning);
+  --color-warning-subtle: var(--warning-subtle);
   --color-destructive: var(--destructive);
   --color-destructive-foreground: var(--destructive-foreground);
+  --color-destructive-subtle: var(--destructive-subtle);
   --color-border: var(--border);
   --color-input: var(--input);
   --color-ring: var(--ring);
-  --color-brand: var(--brand);
-  --color-brand-foreground: var(--brand-foreground);
-  --font-display: var(--font-display);
+
+  /* One family, everywhere. */
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
+
+  /* Tight, confident scale. Headings are semibold, never light. */
+  --text-display: 2.25rem;
+  --text-display--line-height: 1.1;
+  --text-display--letter-spacing: -0.025em;
+  --text-display--font-weight: 600;
+
+  --shadow-card: 0 1px 2px oklch(0.2 0.01 60 / 0.05), 0 1px 3px oklch(0.2 0.01 60 / 0.06);
+  --shadow-raised: 0 2px 4px oklch(0.2 0.01 60 / 0.05), 0 4px 12px oklch(0.2 0.01 60 / 0.08);
+  --shadow-sticky: 0 -1px 3px oklch(0.2 0.01 60 / 0.06), 0 -4px 16px oklch(0.2 0.01 60 / 0.08);
 }
 
 @layer base {
   * {
     @apply border-border outline-ring/50;
   }
+
   body {
     @apply bg-background text-foreground;
-  }
-}
-
-@layer base {
-  /* A tighter optical scale than Tailwind's defaults at display sizes. */
-  .font-display {
-    font-family: var(--font-display), ui-serif, Georgia, serif;
-    font-weight: 400;
-    letter-spacing: -0.015em;
+    font-feature-settings: "cv11";
   }
 
-  /* Numerals in tables and prices should line up column to column. */
+  /* Headings carry weight, not flourish. */
+  h1,
+  h2,
+  h3,
+  h4 {
+    @apply font-semibold tracking-tight;
+    text-wrap: balance;
+  }
+
+  /* Prices, counts and table figures must not jitter as they change. */
   .tabular {
     font-variant-numeric: tabular-nums;
+    font-feature-settings: "tnum";
   }
 }
 
 @layer utilities {
-  /* Load-in motion. Honours reduced-motion; never gates content visibility. */
-  @keyframes rise {
-    from {
-      opacity: 0;
-      transform: translateY(0.75rem);
-    }
-    to {
-      opacity: 1;
-      transform: none;
-    }
+  /* Reserves the price's line box so a quote never shifts the layout. */
+  .price-slot {
+    display: inline-block;
+    min-height: 1em;
   }
 
-  .animate-rise {
-    animation: rise 0.7s cubic-bezier(0.16, 1, 0.3, 1) both;
+  /* Functional press feedback on anything tappable. */
+  .press {
+    transition:
+      transform var(--duration-fast) var(--ease),
+      background-color var(--duration-fast) var(--ease),
+      border-color var(--duration-fast) var(--ease),
+      box-shadow var(--duration-fast) var(--ease);
+  }
+
+  .press:active {
+    transform: scale(0.985);
   }
 
   @media (prefers-reduced-motion: reduce) {
-    .animate-rise {
-      animation: none;
+    .press {
+      transition-duration: 1ms;
+    }
+
+    .press:active {
+      transform: none;
     }
   }
 }

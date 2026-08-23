@@ -23,7 +23,7 @@ export function RouteCard({ route }: { route: RouteView }) {
         {CATEGORY_LABEL[route.category]}
       </Badge>
 
-      <h3 className="font-display text-2xl leading-snug text-balance">
+      <h3 className="text-2xl leading-snug text-balance">
         <Link
           href={`/transfers/${route.slug}`}
           className="focus-visible:ring-ring rounded-sm focus-visible:ring-[3px] focus-visible:outline-none"

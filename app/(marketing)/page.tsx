@@ -66,7 +66,7 @@ export default async function HomePage() {
             </p>
 
             <h1
-              className="font-display animate-rise mt-5 max-w-4xl text-[2.75rem] leading-[1.06] text-balance sm:text-6xl lg:text-7xl"
+              className="animate-rise mt-5 max-w-4xl text-[2.75rem] leading-[1.06] text-balance sm:text-6xl lg:text-7xl"
               style={{ animationDelay: "60ms" }}
             >
               Someone is waiting when you land.
@@ -121,7 +121,7 @@ export default async function HomePage() {
             <div>
               <h2
                 id="routes-heading"
-                className="font-display text-3xl sm:text-4xl"
+                className="text-3xl sm:text-4xl"
               >
                 Popular routes
               </h2>
@@ -152,7 +152,7 @@ export default async function HomePage() {
           className="border-border/60 scroll-mt-20 border-y"
         >
           <div className="mx-auto max-w-6xl px-5 py-20 sm:px-8 sm:py-28">
-            <h2 id="how-heading" className="font-display text-3xl sm:text-4xl">
+            <h2 id="how-heading" className="text-3xl sm:text-4xl">
               How it works
             </h2>
 
@@ -188,7 +188,7 @@ export default async function HomePage() {
             <div>
               <h2
                 id="included-heading"
-                className="font-display text-3xl sm:text-4xl text-balance"
+                className="text-3xl sm:text-4xl text-balance"
               >
                 What every transfer includes
               </h2>
@@ -214,7 +214,7 @@ export default async function HomePage() {
         {/* -------------------------------------------------------------- cta */}
         <section className="mx-auto max-w-6xl px-5 pb-8 sm:px-8">
           <div className="bg-primary text-primary-foreground rounded-3xl px-8 py-14 sm:px-14 sm:py-20">
-            <h2 className="font-display max-w-2xl text-3xl text-balance sm:text-4xl">
+            <h2 className="max-w-2xl text-3xl text-balance sm:text-4xl">
               Tell us when you land. We will take it from there.
             </h2>
             <p className="text-primary-foreground/70 mt-4 max-w-lg text-pretty">

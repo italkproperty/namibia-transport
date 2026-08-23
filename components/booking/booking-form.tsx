@@ -664,7 +664,7 @@ export function BookingForm({
         {/* ------------------------------------------------------- summary */}
         <aside className="lg:sticky lg:top-24">
           <div className="border-border/70 bg-card rounded-2xl border p-6 shadow-[0_2px_24px_-12px_oklch(0_0_0/0.18)]">
-            <h2 className="font-display text-xl">Your booking</h2>
+            <h2 className="text-xl">Your booking</h2>
 
             <dl className="mt-5 space-y-3 text-sm">
               <div className="flex justify-between gap-4">

@@ -58,7 +58,7 @@ export default async function BookPage({ searchParams }: PageProps) {
         <div className="mx-auto max-w-6xl px-5 py-12 sm:px-8 sm:py-16">
           {routeOptions.length === 0 || !initialSlug ? (
             <div className="border-border mx-auto max-w-lg rounded-2xl border border-dashed p-10 text-center">
-              <h1 className="font-display text-2xl">
+              <h1 className="text-2xl">
                 Bookings are not open yet
               </h1>
               <p className="text-muted-foreground mt-3 text-sm">
@@ -74,7 +74,7 @@ export default async function BookPage({ searchParams }: PageProps) {
           ) : (
             <>
               <header className="max-w-2xl">
-                <h1 className="font-display text-4xl sm:text-5xl">
+                <h1 className="text-4xl sm:text-5xl">
                   Book your transfer
                 </h1>
                 <p className="text-muted-foreground mt-4 text-pretty">

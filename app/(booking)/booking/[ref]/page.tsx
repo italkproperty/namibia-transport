@@ -47,7 +47,7 @@ export default async function BookingConfirmationPage({ params }: PageProps) {
             <CheckIcon className="size-5" aria-hidden />
           </div>
 
-          <h1 className="font-display mt-6 text-4xl text-balance sm:text-5xl">
+          <h1 className="mt-6 text-4xl text-balance sm:text-5xl">
             You&rsquo;re booked, {detail.customerName.split(" ")[0]}.
           </h1>
           <p className="text-muted-foreground mt-4 text-lg text-pretty">
@@ -60,7 +60,7 @@ export default async function BookingConfirmationPage({ params }: PageProps) {
             <p className="text-muted-foreground text-xs tracking-wider uppercase">
               Booking reference
             </p>
-            <p className="tabular font-display mt-1 text-4xl tracking-tight">
+            <p className="tabular mt-1 text-4xl tracking-tight">
               {booking.ref}
             </p>
 
@@ -148,7 +148,7 @@ export default async function BookingConfirmationPage({ params }: PageProps) {
 
           {/* ------------------------------------------------ what to expect */}
           <section aria-labelledby="expect-heading" className="mt-12">
-            <h2 id="expect-heading" className="font-display text-2xl">
+            <h2 id="expect-heading" className="text-2xl">
               What happens next
             </h2>
             <ul className="mt-5 space-y-4">

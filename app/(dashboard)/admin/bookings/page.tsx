@@ -88,7 +88,7 @@ export default async function AdminBookingsPage({ searchParams }: PageProps) {
     return (
       <Shell>
         <div className="border-border mx-auto max-w-md rounded-2xl border border-dashed p-8">
-          <h1 className="font-display text-2xl">Admin is not configured</h1>
+          <h1 className="text-2xl">Admin is not configured</h1>
           <p className="text-muted-foreground mt-3 text-sm leading-relaxed">
             Set <code className="text-foreground">ADMIN_PASSWORD</code> in your
             environment to open this view. It stays closed until you do.
@@ -102,7 +102,7 @@ export default async function AdminBookingsPage({ searchParams }: PageProps) {
     return (
       <Shell>
         <div className="border-border/70 bg-card mx-auto max-w-sm rounded-2xl border p-8">
-          <h1 className="font-display text-2xl">Dispatch</h1>
+          <h1 className="text-2xl">Dispatch</h1>
           <p className="text-muted-foreground mt-2 mb-6 text-sm">
             Internal view. Sign in to continue.
           </p>
@@ -164,7 +164,7 @@ export default async function AdminBookingsPage({ searchParams }: PageProps) {
     >
       <div className="space-y-8">
         <div>
-          <h1 className="font-display text-3xl">Bookings</h1>
+          <h1 className="text-3xl">Bookings</h1>
           <p className="text-muted-foreground mt-2 text-sm">
             Every booking, with the economics behind it.
           </p>

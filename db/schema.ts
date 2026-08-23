@@ -99,6 +99,22 @@ export const pricingRuleTypeEnum = pgEnum("pricing_rule_type", [
 
 export const discountTypeEnum = pgEnum("discount_type", ["percent", "fixed"]);
 
+/** What a corporate lead actually needs, so enquiries can be triaged. */
+export const enquiryNeedEnum = pgEnum("enquiry_need", [
+  "airport_transfers",
+  "conference_event",
+  "employee_site_transport",
+  "other",
+]);
+
+export const enquiryStatusEnum = pgEnum("enquiry_status", [
+  "new",
+  "contacted",
+  "quoted",
+  "won",
+  "lost",
+]);
+
 /* -------------------------------------------------------------------------- */
 /* Catalogue                                                                   */
 /* -------------------------------------------------------------------------- */
@@ -473,6 +489,33 @@ export const flightStatusEvents = pgTable(
   ]
 );
 
+/**
+ * Corporate and group leads. Deliberately separate from bookings: these are
+ * quoted by hand and may become many bookings, or none.
+ */
+export const corporateEnquiries = pgTable(
+  "corporate_enquiries",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    companyName: text("company_name").notNull(),
+    contactName: text("contact_name").notNull(),
+    whatsapp: text("whatsapp"),
+    email: text("email"),
+    needType: enquiryNeedEnum("need_type").notNull(),
+    approxPassengers: integer("approx_passengers"),
+    /** Free text — corporate travel dates are rarely a clean range. */
+    datesNote: text("dates_note"),
+    notes: text("notes"),
+    status: enquiryStatusEnum("status").notNull().default("new"),
+    acquisitionSource: text("acquisition_source"),
+    ...timestamps,
+  },
+  (t) => [
+    index("corporate_enquiries_status_idx").on(t.status),
+    index("corporate_enquiries_created_at_idx").on(t.createdAt),
+  ]
+);
+
 /* -------------------------------------------------------------------------- */
 /* Inferred types                                                              */
 /* -------------------------------------------------------------------------- */
@@ -488,7 +531,12 @@ export type NewBooking = typeof bookings.$inferInsert;
 export type Payment = typeof payments.$inferSelect;
 export type NewPayment = typeof payments.$inferInsert;
 
+export type CorporateEnquiry = typeof corporateEnquiries.$inferSelect;
+export type NewCorporateEnquiry = typeof corporateEnquiries.$inferInsert;
+
 export type RouteCategory = (typeof routeCategoryEnum.enumValues)[number];
+export type EnquiryNeed = (typeof enquiryNeedEnum.enumValues)[number];
+export type EnquiryStatus = (typeof enquiryStatusEnum.enumValues)[number];
 export type BookingStatus = (typeof bookingStatusEnum.enumValues)[number];
 export type CustomerType = (typeof customerTypeEnum.enumValues)[number];
 export type PaymentStatus = (typeof paymentStatusEnum.enumValues)[number];

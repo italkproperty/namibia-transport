@@ -136,7 +136,7 @@ export default async function RoutePage({ params }: PageProps) {
 
             <div className="mt-8 grid gap-12 lg:grid-cols-[1fr_20rem]">
               <div>
-                <h1 className="font-display max-w-2xl text-[2.5rem] leading-[1.08] text-balance sm:text-5xl lg:text-6xl">
+                <h1 className="max-w-2xl text-[2.5rem] leading-[1.08] text-balance sm:text-5xl lg:text-6xl">
                   {title}
                 </h1>
 
@@ -189,7 +189,7 @@ export default async function RoutePage({ params }: PageProps) {
           className="border-border/60 border-t"
         >
           <div className="mx-auto max-w-6xl px-5 py-16 sm:px-8 sm:py-20">
-            <h2 id="included-heading" className="font-display text-3xl">
+            <h2 id="included-heading" className="text-3xl">
               What&rsquo;s included
             </h2>
             <ul className="mt-8 grid gap-x-10 gap-y-6 sm:grid-cols-2 lg:grid-cols-3">
@@ -217,7 +217,7 @@ export default async function RoutePage({ params }: PageProps) {
           className="border-border/60 border-t"
         >
           <div className="mx-auto max-w-6xl px-5 py-16 sm:px-8 sm:py-20">
-            <h2 id="faq-heading" className="font-display text-3xl">
+            <h2 id="faq-heading" className="text-3xl">
               Frequently asked
             </h2>
             <dl className="divide-border/60 mt-8 max-w-3xl divide-y">
@@ -242,7 +242,7 @@ export default async function RoutePage({ params }: PageProps) {
             className="border-border/60 border-t"
           >
             <div className="mx-auto max-w-6xl px-5 py-16 sm:px-8">
-              <h2 id="other-heading" className="font-display text-2xl">
+              <h2 id="other-heading" className="text-2xl">
                 Other routes
               </h2>
               <ul className="mt-6 flex flex-wrap gap-3">
