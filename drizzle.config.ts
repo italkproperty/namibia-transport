@@ -1,5 +1,6 @@
-import "dotenv/config";
 import { defineConfig } from "drizzle-kit";
+
+import "./db/env";
 
 /**
  * `drizzle-kit generate` only reads the schema, so it must work without a

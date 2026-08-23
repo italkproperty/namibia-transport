@@ -1,8 +1,7 @@
-import "dotenv/config";
-
 import { drizzle } from "drizzle-orm/postgres-js";
 import postgres from "postgres";
 
+import { requireDatabaseUrl } from "./env";
 import { routes, vehicleClasses } from "./schema";
 
 /**
@@ -12,12 +11,7 @@ import { routes, vehicleClasses } from "./schema";
  *   npm run db:seed
  */
 async function main() {
-  const connectionString = process.env.DATABASE_URL;
-  if (!connectionString) {
-    throw new Error("DATABASE_URL is not set — copy .env.example to .env.local");
-  }
-
-  const client = postgres(connectionString, { prepare: false, max: 1 });
+  const client = postgres(requireDatabaseUrl(), { prepare: false, max: 1 });
   const db = drizzle(client);
 
   try {
