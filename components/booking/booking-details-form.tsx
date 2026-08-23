@@ -57,12 +57,15 @@ export function BookingDetailsForm({
   const [isPending, startTransition] = React.useTransition();
 
   const isAirport = route.category === "airport";
-  const fixedPickup = pickupOptions.length === 1 ? pickupOptions[0] : "";
+
   /**
-   * Pre-selected rather than blank. The commonest drop-off is a town-centre
-   * hotel, the exact place is confirmed on WhatsApp anyway, and a required
-   * empty select would cost two taps on the shortest possible path.
+   * Both pick-lists start on their commonest option rather than blank. A
+   * required empty select costs two taps on the shortest path, and the exact
+   * spot is confirmed on WhatsApp regardless — both stay editable.
+   *
+   * Airport routes have a single pickup, so this is also what fills it in.
    */
+  const defaultPickup = pickupOptions[0] ?? "";
   const defaultDropoff = dropoffOptions[0] ?? "";
 
   const form = useForm<BookingFormValues>({
@@ -76,7 +79,7 @@ export function BookingDetailsForm({
       time: trip.time,
       passengers: trip.passengers,
       // Asked for here.
-      pickupLabel: fixedPickup,
+      pickupLabel: defaultPickup,
       dropoffLabel: defaultDropoff,
       luggageCount: 1,
       flightNumber: "",
@@ -97,8 +100,8 @@ export function BookingDetailsForm({
     form.setValue("date", trip.date);
     form.setValue("time", trip.time);
     form.setValue("passengers", trip.passengers);
-    form.setValue("pickupLabel", fixedPickup);
-  }, [form, trip, fixedPickup]);
+    form.setValue("pickupLabel", defaultPickup);
+  }, [form, trip, defaultPickup]);
 
   // Attribution: campaign tags if present, otherwise where the visitor came from.
   React.useEffect(() => {
