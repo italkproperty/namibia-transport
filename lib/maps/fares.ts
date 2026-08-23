@@ -9,14 +9,8 @@ import {
   CATALOG_ROUTES_BY_SLUG,
   CATALOG_VEHICLE_CLASSES,
 } from "@/lib/catalog";
-import { toMoneyString } from "@/lib/money";
 
-import type {
-  CatalogSource,
-  FareQuote,
-  RouteView,
-  VehicleClassView,
-} from "./types";
+import type { CatalogSource, RouteView, VehicleClassView } from "./types";
 
 /**
  * Catalogue reads fall back to lib/catalog.ts when no database is reachable,
@@ -157,49 +151,6 @@ export async function listVehicleClasses(): Promise<VehicleClassView[]> {
   } catch {
     return fallback();
   }
-}
-
-/* ----------------------------------------------------------------- pricing */
-
-/**
- * The single source of truth for what a trip costs. Always call this on the
- * server: a price arriving from the client is an input to validate, never a
- * value to trust.
- *
- * The driver payout scales with the same multiplier as the fare, so our
- * contribution margin holds across vehicle classes.
- */
-export function quoteFare(
-  route: RouteView,
-  vehicleClass: VehicleClassView
-): FareQuote {
-  const multiplier = Number(vehicleClass.priceMultiplier);
-  if (!Number.isFinite(multiplier) || multiplier <= 0) {
-    throw new Error(
-      `Vehicle class ${vehicleClass.slug} has an invalid price multiplier`
-    );
-  }
-
-  const customerPrice = roundToRand(Number(route.fixedPrice) * multiplier);
-  const driverPayout = roundToRand(
-    Number(route.defaultDriverPayout) * multiplier
-  );
-
-  return {
-    routeId: route.id,
-    vehicleClassId: vehicleClass.id,
-    customerPrice: toMoneyString(customerPrice),
-    driverPayout: toMoneyString(driverPayout),
-    contribution: toMoneyString(customerPrice - driverPayout),
-    currency: route.currency,
-    distanceKm: route.distanceKm,
-    durationMin: route.durationMin,
-  };
-}
-
-/** Fares are quoted in whole Namibian dollars — no stray cents in the UI. */
-function roundToRand(amount: number): number {
-  return Math.round(amount);
 }
 
 function describe(error: unknown): string {

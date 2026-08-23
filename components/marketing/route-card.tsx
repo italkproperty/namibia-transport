@@ -42,7 +42,8 @@ export function RouteCard({ route }: { route: RouteView }) {
         </p>
       )}
 
-      <div className="mt-6 flex items-end justify-between gap-4 pt-4">
+      {/* mt-auto keeps the price on a common baseline when titles wrap. */}
+      <div className="mt-auto flex items-end justify-between gap-4 pt-8">
         <div>
           <p className="text-muted-foreground text-xs tracking-wide uppercase">
             From

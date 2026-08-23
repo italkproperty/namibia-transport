@@ -11,7 +11,7 @@ import { SiteFooter } from "@/components/marketing/site-footer";
 import { SiteHeader } from "@/components/marketing/site-header";
 import { Button } from "@/components/ui/button";
 import { listRoutes } from "@/lib/maps";
-import { INCLUSIONS, SITE } from "@/lib/site";
+import { INCLUSIONS } from "@/lib/site";
 
 const VALUE_STRIP = [
   "Fixed prices",
