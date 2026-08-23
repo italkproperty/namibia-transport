@@ -2,9 +2,8 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { ArrowDownIcon, ArrowUpIcon } from "lucide-react";
 
-import { AdminSignInForm } from "@/components/admin/sign-in-form";
+import { AdminShell } from "@/components/admin/shell";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
 import {
   Table,
   TableBody,
@@ -13,8 +12,6 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { adminSignOut } from "@/lib/admin/actions";
-import { getAdminGateState } from "@/lib/admin/auth";
 import {
   getAdminSummary,
   listBookings,
@@ -81,36 +78,7 @@ function humanise(value: string): string {
 }
 
 export default async function AdminBookingsPage({ searchParams }: PageProps) {
-  const gate = await getAdminGateState();
   const params = await searchParams;
-
-  if (gate.state === "unconfigured") {
-    return (
-      <Shell>
-        <div className="border-border mx-auto max-w-md rounded-2xl border border-dashed p-8">
-          <h1 className="text-2xl">Admin is not configured</h1>
-          <p className="text-muted-foreground mt-3 text-sm leading-relaxed">
-            Set <code className="text-foreground">ADMIN_PASSWORD</code> in your
-            environment to open this view. It stays closed until you do.
-          </p>
-        </div>
-      </Shell>
-    );
-  }
-
-  if (gate.state === "signed-out") {
-    return (
-      <Shell>
-        <div className="border-border/70 bg-card mx-auto max-w-sm rounded-2xl border p-8">
-          <h1 className="text-2xl">Dispatch</h1>
-          <p className="text-muted-foreground mt-2 mb-6 text-sm">
-            Internal view. Sign in to continue.
-          </p>
-          <AdminSignInForm />
-        </div>
-      </Shell>
-    );
-  }
 
   const statusParam = one(params.status);
   const categoryParam = one(params.category);
@@ -153,18 +121,10 @@ export default async function AdminBookingsPage({ searchParams }: PageProps) {
   }
 
   return (
-    <Shell
-      action={
-        <form action={adminSignOut}>
-          <Button type="submit" variant="ghost" size="sm">
-            Sign out
-          </Button>
-        </form>
-      }
-    >
-      <div className="space-y-8">
+    <AdminShell active="/admin/bookings">
+      <div className="space-y-6">
         <div>
-          <h1 className="text-3xl">Bookings</h1>
+          <h1 className="text-xl">Bookings</h1>
           <p className="text-muted-foreground mt-2 text-sm">
             Every booking, with the economics behind it.
           </p>
@@ -201,7 +161,7 @@ export default async function AdminBookingsPage({ searchParams }: PageProps) {
             </div>
 
             {summary.byRoute.length > 0 && (
-              <div className="border-border/70 bg-card rounded-2xl border p-5">
+              <div className="border-border/70 bg-card rounded-xl border p-4">
                 <h3 className="text-muted-foreground text-xs font-medium tracking-wider uppercase">
                   Contribution by route
                 </h3>
@@ -289,11 +249,11 @@ export default async function AdminBookingsPage({ searchParams }: PageProps) {
 
         {/* --------------------------------------------------------- table */}
         {rows.length === 0 ? (
-          <p className="border-border text-muted-foreground rounded-2xl border border-dashed p-12 text-center text-sm">
+          <p className="border-border text-muted-foreground rounded-xl border border-dashed p-10 text-center text-sm">
             No bookings match these filters yet.
           </p>
         ) : (
-          <div className="border-border/70 bg-card rounded-2xl border">
+          <div className="bg-card rounded-xl border">
             <Table>
               <TableHeader>
                 <TableRow>
@@ -363,7 +323,7 @@ export default async function AdminBookingsPage({ searchParams }: PageProps) {
                     <TableCell className="tabular font-medium">
                       {formatNad(row.customerPrice)}
                     </TableCell>
-                    <TableCell className="tabular text-brand font-medium">
+                    <TableCell className="tabular text-brand font-semibold">
                       {formatNad(row.contribution)}
                     </TableCell>
                     <TableCell>
@@ -406,41 +366,17 @@ export default async function AdminBookingsPage({ searchParams }: PageProps) {
           it before this leaves the founding team.
         </p>
       </div>
-    </Shell>
-  );
-}
-
-function Shell({
-  children,
-  action,
-}: {
-  children: React.ReactNode;
-  action?: React.ReactNode;
-}) {
-  return (
-    <div className="min-h-svh">
-      <header className="border-border/60 border-b">
-        <div className="mx-auto flex h-14 max-w-[110rem] items-center justify-between px-5 sm:px-8">
-          <Link href="/" className="text-sm font-semibold tracking-tight">
-            Namibia Transport
-          </Link>
-          {action}
-        </div>
-      </header>
-      <main className="mx-auto max-w-[110rem] px-5 py-10 sm:px-8">
-        {children}
-      </main>
-    </div>
+    </AdminShell>
   );
 }
 
 function Stat({ label, value }: { label: string; value: string }) {
   return (
-    <div className="border-border/70 bg-card rounded-2xl border p-5">
+    <div className="border-border/70 bg-card rounded-xl border p-4">
       <p className="text-muted-foreground text-xs font-medium tracking-wider uppercase">
         {label}
       </p>
-      <p className="tabular mt-2 text-3xl font-semibold tracking-tight">
+      <p className="tabular mt-1 text-2xl font-semibold tracking-tight">
         {value}
       </p>
     </div>
