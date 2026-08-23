@@ -32,6 +32,7 @@ Environment Variables** for Preview and Production.
 | `NEXT_PUBLIC_SUPABASE_URL` | Supabase → Project Settings → API → Project URL | Yes |
 | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Supabase → Project Settings → API → anon public | Yes |
 | `SUPABASE_SERVICE_ROLE_KEY` | Supabase → Project Settings → API → service_role | **No — bypasses RLS** |
+| `ADMIN_PASSWORD` | Any strong secret you choose — gates `/admin/bookings` | No |
 | `NEXT_PUBLIC_SITE_URL` | Your deployed origin, e.g. `https://example.com` | Yes |
 | `NEXT_PUBLIC_SUPPORT_WHATSAPP` | Optional E.164 support number | Yes |
 
@@ -57,14 +58,15 @@ environment that builds or runs the app.
 ```
 app/(marketing)/   public + SEO pages, incl. programmatic route pages
 app/(booking)/     booking flow and confirmation
-app/(dashboard)/   internal admin + dispatch (auth-gated, later phase)
+app/(dashboard)/   internal admin + dispatch at /admin/bookings
 app/driver/        partner-driver app (later phase)
 app/api/           route handlers and webhooks
 components/ui/     shadcn/ui components
 db/                Drizzle schema, migrations, seed
 lib/payments/      PaymentProvider interface — stubbed, DPO Pay later
 lib/messaging/     Messenger interface — stubbed, WhatsApp + Resend later
-lib/maps/          fare + route helpers — fixed-price table, Mapbox later
+lib/maps/          route reads — database, falling back to lib/catalog.ts
+lib/pricing.ts     fare maths, shared by the client preview and the server
 ```
 
 External services sit behind the adapter interfaces in `lib/`. Swap an
