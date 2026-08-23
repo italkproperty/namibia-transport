@@ -4,48 +4,64 @@
 @custom-variant dark (&:is(.dark *));
 
 :root {
-  --radius: 0.625rem;
-  --background: oklch(1 0 0);
-  --foreground: oklch(0.145 0 0);
+  --radius: 0.75rem;
+
+  /* Warm stone neutrals — Namibian sand rather than clinical grey. */
+  --background: oklch(0.993 0.003 85);
+  --foreground: oklch(0.185 0.012 65);
   --card: oklch(1 0 0);
-  --card-foreground: oklch(0.145 0 0);
+  --card-foreground: oklch(0.185 0.012 65);
   --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.145 0 0);
-  --primary: oklch(0.205 0 0);
-  --primary-foreground: oklch(0.985 0 0);
-  --secondary: oklch(0.97 0 0);
-  --secondary-foreground: oklch(0.205 0 0);
-  --muted: oklch(0.97 0 0);
-  --muted-foreground: oklch(0.556 0 0);
-  --accent: oklch(0.97 0 0);
-  --accent-foreground: oklch(0.205 0 0);
+  --popover-foreground: oklch(0.185 0.012 65);
+
+  /* Deep ink primary: high contrast, quiet. */
+  --primary: oklch(0.22 0.018 60);
+  --primary-foreground: oklch(0.985 0.004 85);
+
+  --secondary: oklch(0.965 0.008 85);
+  --secondary-foreground: oklch(0.26 0.015 62);
+  --muted: oklch(0.965 0.008 85);
+  --muted-foreground: oklch(0.52 0.014 68);
+
+  /* Single ochre accent — used sparingly, never as a background wash. */
+  --accent: oklch(0.955 0.022 75);
+  --accent-foreground: oklch(0.34 0.058 62);
+  --brand: oklch(0.62 0.115 58);
+  --brand-foreground: oklch(0.99 0.004 85);
+
   --destructive: oklch(0.577 0.245 27.325);
   --destructive-foreground: oklch(0.985 0 0);
-  --border: oklch(0.922 0 0);
-  --input: oklch(0.922 0 0);
-  --ring: oklch(0.708 0 0);
+  --border: oklch(0.915 0.008 82);
+  --input: oklch(0.905 0.009 82);
+  --ring: oklch(0.62 0.115 58);
 }
 
 .dark {
-  --background: oklch(0.145 0 0);
-  --foreground: oklch(0.985 0 0);
-  --card: oklch(0.205 0 0);
-  --card-foreground: oklch(0.985 0 0);
-  --popover: oklch(0.205 0 0);
-  --popover-foreground: oklch(0.985 0 0);
-  --primary: oklch(0.922 0 0);
-  --primary-foreground: oklch(0.205 0 0);
-  --secondary: oklch(0.269 0 0);
-  --secondary-foreground: oklch(0.985 0 0);
-  --muted: oklch(0.269 0 0);
-  --muted-foreground: oklch(0.708 0 0);
-  --accent: oklch(0.269 0 0);
-  --accent-foreground: oklch(0.985 0 0);
+  --background: oklch(0.165 0.011 62);
+  --foreground: oklch(0.96 0.006 85);
+  --card: oklch(0.215 0.013 62);
+  --card-foreground: oklch(0.96 0.006 85);
+  --popover: oklch(0.215 0.013 62);
+  --popover-foreground: oklch(0.96 0.006 85);
+
+  --primary: oklch(0.94 0.008 85);
+  --primary-foreground: oklch(0.2 0.013 62);
+
+  --secondary: oklch(0.27 0.014 62);
+  --secondary-foreground: oklch(0.96 0.006 85);
+  --muted: oklch(0.27 0.014 62);
+  --muted-foreground: oklch(0.72 0.012 75);
+
+  --accent: oklch(0.3 0.024 65);
+  --accent-foreground: oklch(0.92 0.03 78);
+  --brand: oklch(0.72 0.105 62);
+  --brand-foreground: oklch(0.19 0.013 62);
+
   --destructive: oklch(0.704 0.191 22.216);
   --destructive-foreground: oklch(0.985 0 0);
-  --border: oklch(1 0 0 / 10%);
-  --input: oklch(1 0 0 / 15%);
-  --ring: oklch(0.556 0 0);
+  --border: oklch(1 0 0 / 12%);
+  --input: oklch(1 0 0 / 16%);
+  --ring: oklch(0.72 0.105 62);
 }
 
 @theme inline {
@@ -72,6 +88,9 @@
   --color-border: var(--border);
   --color-input: var(--input);
   --color-ring: var(--ring);
+  --color-brand: var(--brand);
+  --color-brand-foreground: var(--brand-foreground);
+  --font-display: var(--font-display);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
 }
@@ -82,5 +101,43 @@
   }
   body {
     @apply bg-background text-foreground;
+  }
+}
+
+@layer base {
+  /* A tighter optical scale than Tailwind's defaults at display sizes. */
+  .font-display {
+    font-family: var(--font-display), ui-serif, Georgia, serif;
+    font-weight: 400;
+    letter-spacing: -0.015em;
+  }
+
+  /* Numerals in tables and prices should line up column to column. */
+  .tabular {
+    font-variant-numeric: tabular-nums;
+  }
+}
+
+@layer utilities {
+  /* Load-in motion. Honours reduced-motion; never gates content visibility. */
+  @keyframes rise {
+    from {
+      opacity: 0;
+      transform: translateY(0.75rem);
+    }
+    to {
+      opacity: 1;
+      transform: none;
+    }
+  }
+
+  .animate-rise {
+    animation: rise 0.7s cubic-bezier(0.16, 1, 0.3, 1) both;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .animate-rise {
+      animation: none;
+    }
   }
 }
