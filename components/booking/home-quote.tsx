@@ -6,6 +6,7 @@ import Link from "next/link";
 import { QuoteWidget } from "@/components/booking/quote-widget";
 import { StickyBookBar } from "@/components/booking/sticky-book-bar";
 import { useTrip } from "@/components/booking/use-trip";
+import type { TripParams } from "@/lib/booking/trip-params";
 import { formatDuration, shortPlace } from "@/lib/format";
 import type { RouteView, VehicleClassView } from "@/lib/maps";
 import { formatNad } from "@/lib/money";
@@ -19,11 +20,13 @@ import { formatNad } from "@/lib/money";
 export function HomeQuote({
   routes,
   vehicleClasses,
+  initialTrip,
 }: {
   routes: RouteView[];
   vehicleClasses: VehicleClassView[];
+  initialTrip?: Partial<TripParams>;
 }) {
-  const trip = useTrip(routes, vehicleClasses);
+  const trip = useTrip(routes, vehicleClasses, initialTrip);
 
   const selectRoute = React.useCallback(
     (slug: string) => {

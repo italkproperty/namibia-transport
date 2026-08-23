@@ -5,6 +5,7 @@ import { HomeQuote } from "@/components/booking/home-quote";
 import { SiteFooter } from "@/components/marketing/site-footer";
 import { SiteHeader } from "@/components/marketing/site-header";
 import { Button } from "@/components/ui/button";
+import { parseTripParams } from "@/lib/booking/trip-params";
 import { listRoutes, listVehicleClasses } from "@/lib/maps";
 
 const TRUST = [
@@ -30,11 +31,22 @@ const STEPS = [
   },
 ];
 
-export default async function HomePage() {
-  const [{ routes }, vehicleClasses] = await Promise.all([
+type PageProps = {
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
+};
+
+export default async function HomePage({ searchParams }: PageProps) {
+  const [{ routes }, vehicleClasses, params] = await Promise.all([
     listRoutes({ activeOnly: true }),
     listVehicleClasses(),
+    searchParams,
   ]);
+
+  // Lets "Change trip" on /book come back to the widget already filled in.
+  const initialTrip =
+    routes.length > 0 && vehicleClasses.length > 0
+      ? parseTripParams(params, routes, vehicleClasses)
+      : undefined;
 
   return (
     <div className="flex min-h-svh flex-col">
@@ -62,7 +74,11 @@ export default async function HomePage() {
           </ul>
 
           {routes.length > 0 && vehicleClasses.length > 0 ? (
-            <HomeQuote routes={routes} vehicleClasses={vehicleClasses} />
+            <HomeQuote
+              routes={routes}
+              vehicleClasses={vehicleClasses}
+              initialTrip={initialTrip}
+            />
           ) : (
             <div className="bg-card rounded-xl border p-6 text-center">
               <p className="font-medium">Bookings are not open yet</p>
