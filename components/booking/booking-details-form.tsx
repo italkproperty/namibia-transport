@@ -299,6 +299,30 @@ export function BookingDetailsForm({
 
           <FormField
             control={form.control}
+            name="email"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Email (optional)</FormLabel>
+                <FormControl>
+                  <Input
+                    className="h-11"
+                    type="email"
+                    inputMode="email"
+                    placeholder="you@example.com"
+                    autoComplete="email"
+                    {...field}
+                  />
+                </FormControl>
+                <FormDescription>
+                  For a written copy of your confirmation.
+                </FormDescription>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+
+          <FormField
+            control={form.control}
             name="customerType"
             render={({ field }) => (
               <FormItem>

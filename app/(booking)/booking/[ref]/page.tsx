@@ -1,12 +1,17 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { CheckIcon } from "lucide-react";
+import {
+  CalendarPlusIcon,
+  CheckIcon,
+  MessageCircleIcon,
+} from "lucide-react";
 
 import { SiteFooter } from "@/components/marketing/site-footer";
 import { SiteHeader } from "@/components/marketing/site-header";
 import { Button } from "@/components/ui/button";
 import { getBookingByRef } from "@/lib/booking/queries";
+import { getCompanyInfo, whatsappLink } from "@/lib/company";
 import { formatDateTime } from "@/lib/format";
 import { formatNad } from "@/lib/money";
 
@@ -21,14 +26,18 @@ export const dynamic = "force-dynamic";
 const NEXT_STEPS = [
   {
     title: "We confirm on WhatsApp",
-    body: "Payment details and your driver's name, before your travel date.",
+    body: "Your booking and payment details, before your travel date.",
   },
   {
     title: "We watch your flight",
-    body: "If you land late, the pickup moves. No waiting charge.",
+    body: "If you land late, the pickup moves with you. No waiting charge.",
   },
   {
-    title: "Your driver meets you",
+    title: "Your driver is assigned",
+    body: "Name, vehicle and registration sent to you before pickup.",
+  },
+  {
+    title: "They meet you",
     body: "Name board in arrivals, then straight to your destination.",
   },
 ];
@@ -44,6 +53,7 @@ export default async function BookingConfirmationPage({ params }: PageProps) {
   }
 
   const { booking } = detail;
+  const company = getCompanyInfo();
   const routeLabel =
     detail.routeOrigin && detail.routeDestination
       ? `${detail.routeOrigin} to ${detail.routeDestination}`
@@ -124,7 +134,7 @@ export default async function BookingConfirmationPage({ params }: PageProps) {
             <h2 id="next-heading" className="text-base font-semibold">
               What happens next
             </h2>
-            <ol className="mt-3 grid gap-3 sm:grid-cols-3">
+            <ol className="mt-3 grid gap-3 sm:grid-cols-2">
               {NEXT_STEPS.map((step, index) => (
                 <li key={step.title} className="flex gap-2.5">
                   <span
@@ -146,10 +156,26 @@ export default async function BookingConfirmationPage({ params }: PageProps) {
 
           <div className="mt-8 flex flex-wrap gap-2">
             <Button asChild variant="outline" className="press">
-              <Link href="/">Back to home</Link>
+              <a href={`/booking/${booking.ref}/calendar`}>
+                <CalendarPlusIcon className="size-4" aria-hidden />
+                Add to calendar
+              </a>
             </Button>
+            {company.whatsapp && (
+              <Button asChild variant="outline" className="press">
+                <a
+                  href={whatsappLink(
+                    company.whatsapp,
+                    `Hi — my booking reference is ${booking.ref}.`
+                  )}
+                >
+                  <MessageCircleIcon className="size-4" aria-hidden />
+                  WhatsApp us
+                </a>
+              </Button>
+            )}
             <Button asChild variant="ghost" className="press">
-              <Link href="/book">Book another transfer</Link>
+              <Link href="/">Back to home</Link>
             </Button>
           </div>
         </div>
