@@ -87,7 +87,7 @@ export function Logo({
           Namibia Transport
         </span>
         {descriptor && (
-          <span className="text-muted-foreground mt-1 text-[0.58rem] font-medium tracking-[0.13em] uppercase">
+          <span className="text-muted-foreground mt-1 text-[0.55rem] font-medium tracking-[0.1em] whitespace-nowrap uppercase">
             Transfers · Intercity · Corporate
           </span>
         )}

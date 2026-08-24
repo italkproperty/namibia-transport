@@ -1,7 +1,6 @@
 import Link from "next/link";
 import {
   BadgeCheckIcon,
-  LockIcon,
   MessageCircleIcon,
   PhoneIcon,
   PlaneIcon,
@@ -454,26 +453,6 @@ export async function ReviewBadge() {
       <span className="tabular font-semibold">{summary.average.toFixed(1)}/5</span>
       <span className="text-muted-foreground">
         from {summary.count} traveller{summary.count === 1 ? "" : "s"}
-      </span>
-    </p>
-  );
-}
-
-/** Reassurance under the booking button — no unverifiable claims. */
-export function BookingAssurance() {
-  return (
-    <p className="text-muted-foreground flex flex-wrap items-center gap-x-4 gap-y-1 text-xs">
-      <span className="flex items-center gap-1.5">
-        <LockIcon className="size-3.5" aria-hidden />
-        Nothing charged today
-      </span>
-      <span className="flex items-center gap-1.5">
-        <ShieldCheckIcon className="size-3.5" aria-hidden />
-        Free cancellation up to 24h before
-      </span>
-      <span className="flex items-center gap-1.5">
-        <MessageCircleIcon className="size-3.5" aria-hidden />
-        Confirmed on WhatsApp
       </span>
     </p>
   );

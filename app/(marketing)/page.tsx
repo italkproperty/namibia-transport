@@ -43,7 +43,7 @@ export default async function HomePage({ searchParams }: PageProps) {
       <main id="main" className="flex-1">
         {/* ------------------------------------------- headline + the widget */}
         <section className="relative overflow-hidden">
-          <DuneScene className="pointer-events-none absolute inset-x-0 bottom-0 -z-10 h-64 w-full sm:h-80" />
+          <DuneScene className="pointer-events-none absolute inset-x-0 bottom-0 -z-10 h-28 w-full sm:h-40" />
 
           <div className="mx-auto max-w-5xl px-4 pt-8 pb-10 sm:px-6 sm:pt-12 sm:pb-16">
             <h1 className="max-w-2xl text-2xl leading-tight sm:text-4xl">

@@ -4,6 +4,7 @@ import * as React from "react";
 import Link from "next/link";
 
 import { QuoteWidget } from "@/components/booking/quote-widget";
+import { BookingAssurance } from "@/components/marketing/booking-assurance";
 import { StickyBookBar } from "@/components/booking/sticky-book-bar";
 import { useTrip } from "@/components/booking/use-trip";
 import type { TripParams } from "@/lib/booking/trip-params";
@@ -44,6 +45,10 @@ export function HomeQuote({
   return (
     <>
       <QuoteWidget trip={trip} routes={routes} />
+
+      <div className="mt-3">
+        <BookingAssurance />
+      </div>
 
       {/* Quick-select: controls, not brochure cards. */}
       <div className="mt-4">

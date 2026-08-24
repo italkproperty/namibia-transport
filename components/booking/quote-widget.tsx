@@ -195,6 +195,9 @@ export function VehicleToggle({ trip }: { trip: TripState }) {
                   {trip.unitLabel}
                 </span>
               </span>
+              <span className="text-muted-foreground mt-0.5 block text-[0.68rem] leading-tight">
+                {capacity} pax · {vehicleClass.luggageCapacity} bags
+              </span>
             </button>
           );
         })}
