@@ -94,7 +94,7 @@ export function HomeQuote({
           })}
         </ul>
 
-        <p className="text-muted-foreground mt-2 text-xs">
+        <p className="text-foreground/80 mt-2 text-xs">
           Airport transfers are priced per person; long-distance transfers per
           vehicle.{" "}
           <Link

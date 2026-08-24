@@ -34,7 +34,12 @@ Environment Variables** for Preview and Production.
 | `SUPABASE_SERVICE_ROLE_KEY` | Supabase → Project Settings → API → service_role | **No — bypasses RLS** |
 | `ADMIN_PASSWORD` | Any strong secret you choose — gates `/admin/bookings` | No |
 | `NEXT_PUBLIC_SITE_URL` | Your deployed origin, e.g. `https://example.com` | Yes |
-| `NEXT_PUBLIC_SUPPORT_WHATSAPP` | Optional E.164 support number | Yes |
+| `NEXT_PUBLIC_SUPPORT_WHATSAPP` | E.164 support WhatsApp — unlocks WhatsApp CTAs sitewide | Yes |
+| `NEXT_PUBLIC_SUPPORT_PHONE` | Optional support phone | Yes |
+| `NEXT_PUBLIC_SUPPORT_EMAIL` | Optional support email | Yes |
+| `NEXT_PUBLIC_COMPANY_LOCATION` | e.g. `Windhoek, Namibia` | Yes |
+| `NEXT_PUBLIC_COMPANY_REGISTRATION` | Company registration number, shown on quotes/footer | Yes |
+| `QUOTE_VAT_RATE` | e.g. `0.15` once VAT-registered; empty = quotes without VAT | No |
 
 `DATABASE_URL` is read at server start, so it must be present in every
 environment that builds or runs the app.
