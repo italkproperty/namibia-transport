@@ -43,8 +43,8 @@ const TRUST_POINTS = [
   },
   {
     icon: MessageCircleIcon,
-    title: "One WhatsApp number",
-    body: "A person, not a form — before, during and after your journey.",
+    title: "One number, start to finish",
+    body: "Quote your reference and we can see your trip, your driver and your flight — one message settles it.",
   },
 ];
 
@@ -272,9 +272,9 @@ export function SupportStrip() {
             Need help with a booking?
           </h2>
           <p className="text-primary-foreground/70 mt-1 max-w-md text-sm leading-snug">
-            A real operations team in {company.location}. Coordination{" "}
-            {SUPPORT.officeHours}; on your travel day we are reachable
-            throughout your journey.
+            Coordination from {company.location}, {SUPPORT.officeHours}. On
+            your travel day we are reachable throughout your journey — quote
+            your reference and we can see the whole trip.
           </p>
         </div>
 

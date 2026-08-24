@@ -27,7 +27,7 @@ export const INCLUSIONS = [
     body: "Vetted Namibian partner drivers who know the roads they drive.",
   },
   {
-    title: "Reachable around the clock",
-    body: "A real person on WhatsApp before, during and after the trip.",
+    title: "One number, start to finish",
+    body: "Quote your reference and we can see your trip, your driver and your flight — one message settles it.",
   },
 ] as const;
