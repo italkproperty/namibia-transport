@@ -1,8 +1,7 @@
 /**
  * Real company identity, read from the environment so nothing fabricated is
  * ever hard-coded. Every consumer must handle a channel being absent — the
- * site renders honestly before the numbers exist and fills in as they are
- * published in Vercel.
+ * site degrades to honest silence rather than inventing a number.
  */
 
 export type CompanyInfo = {
@@ -13,8 +12,23 @@ export type CompanyInfo = {
   /** Short one-liner, e.g. "Windhoek, Namibia". */
   location: string | null;
   registration: string | null;
-  hours: string;
+  /** True once at least one real channel is published. */
+  hasContactChannel: boolean;
 };
+
+/**
+ * The support promise, stated precisely.
+ *
+ * We deliberately do NOT claim "24/7". Office-hours coordination plus
+ * travel-day cover is what the operation can actually deliver today, and a
+ * promise a traveller can verify is worth more than a bigger one they cannot.
+ * Widen this only when an overnight desk genuinely exists.
+ */
+export const SUPPORT = {
+  officeHours: "06:00–22:00 CAT, daily",
+  travelDay: "Reachable throughout your journey, whatever the hour",
+  officeHoursShort: "06:00–22:00 CAT",
+} as const;
 
 function env(name: string): string | null {
   const value = process.env[name]?.trim();
@@ -22,13 +36,17 @@ function env(name: string): string | null {
 }
 
 export function getCompanyInfo(): CompanyInfo {
+  const whatsapp = env("NEXT_PUBLIC_SUPPORT_WHATSAPP");
+  const phone = env("NEXT_PUBLIC_SUPPORT_PHONE");
+  const email = env("NEXT_PUBLIC_SUPPORT_EMAIL");
+
   return {
-    whatsapp: env("NEXT_PUBLIC_SUPPORT_WHATSAPP"),
-    phone: env("NEXT_PUBLIC_SUPPORT_PHONE"),
-    email: env("NEXT_PUBLIC_SUPPORT_EMAIL"),
+    whatsapp,
+    phone,
+    email,
     location: env("NEXT_PUBLIC_COMPANY_LOCATION") ?? "Windhoek, Namibia",
     registration: env("NEXT_PUBLIC_COMPANY_REGISTRATION"),
-    hours: "Operations support 06:00–22:00 CAT · after-hours line for travel-day emergencies",
+    hasContactChannel: Boolean(whatsapp || phone || email),
   };
 }
 
@@ -40,9 +58,9 @@ export function whatsappLink(number: string, text?: string): string {
 }
 
 /**
- * VAT is applied only once the business is registered — flip
- * QUOTE_VAT_RATE to "0.15" in the environment at that point and every new
- * quotation picks it up. Existing quotes keep the rate they were issued at.
+ * VAT is applied only once the business is registered — set QUOTE_VAT_RATE to
+ * "0.15" in the environment at that point and every new quotation picks it up.
+ * Existing quotes keep the rate they were issued at.
  */
 export function getVatRate(): number {
   const raw = process.env.QUOTE_VAT_RATE;

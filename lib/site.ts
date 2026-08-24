@@ -1,9 +1,9 @@
 /** Brand-level constants. Kept in one place so rebranding is a single edit. */
 export const SITE = {
   name: "Namibia Transport",
-  tagline: "Private transfers across Namibia",
+  tagline: "Ground transport across Namibia",
   description:
-    "Fixed-price private transfers across Namibia — airport pickups, coastal runs and intercity drives, with professional local drivers and no meter.",
+    "Fixed-price ground transport across Namibia — airport transfers, intercity journeys and corporate mobility, with professional local drivers and no meter.",
   url: process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000",
   supportWhatsapp: process.env.NEXT_PUBLIC_SUPPORT_WHATSAPP ?? "",
 } as const;

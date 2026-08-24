@@ -2,7 +2,7 @@ import Link from "next/link";
 
 import { Logo } from "@/components/brand/logo";
 import { Separator } from "@/components/ui/separator";
-import { getCompanyInfo, whatsappLink } from "@/lib/company";
+import { getCompanyInfo, SUPPORT, whatsappLink } from "@/lib/company";
 import type { RouteView } from "@/lib/maps";
 import { SITE } from "@/lib/site";
 
@@ -137,7 +137,10 @@ export function SiteFooter({ routes = [] }: { routes?: RouteView[] }) {
                 </li>
               )}
               <li className="text-muted-foreground">{company.location}</li>
-              <li className="text-muted-foreground text-xs">{company.hours}</li>
+              <li className="text-muted-foreground text-xs leading-snug">
+                Coordination {SUPPORT.officeHoursShort} · travel-day support
+                throughout your journey
+              </li>
             </ul>
           </div>
         </div>

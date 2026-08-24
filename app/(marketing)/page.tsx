@@ -3,10 +3,14 @@ import { ArrowRightIcon, BuildingIcon } from "lucide-react";
 
 import { HomeQuote } from "@/components/booking/home-quote";
 import { DuneScene } from "@/components/marketing/dune-scene";
+import { JourneyTimeline } from "@/components/marketing/journey";
 import { SiteFooter } from "@/components/marketing/site-footer";
 import { SiteHeader } from "@/components/marketing/site-header";
 import {
-  AfterBooking,
+  Contingencies,
+  MeetingPoint,
+  OperationsSection,
+  ReviewBadge,
   ReviewsSection,
   SupportStrip,
   WhyTrustUs,
@@ -14,14 +18,6 @@ import {
 import { Button } from "@/components/ui/button";
 import { parseTripParams } from "@/lib/booking/trip-params";
 import { listRoutes, listVehicleClasses } from "@/lib/maps";
-
-const TRUST = [
-  "Fixed prices",
-  "Meet & greet",
-  "Flight monitoring",
-  "Professional drivers",
-  "24/7 support",
-];
 
 type PageProps = {
   searchParams: Promise<Record<string, string | string[] | undefined>>;
@@ -54,57 +50,66 @@ export default async function HomePage({ searchParams }: PageProps) {
               Reliable private transfers across Namibia.
             </h1>
             <p className="text-muted-foreground mt-2 max-w-xl text-sm text-pretty sm:text-base">
-              Airport pickups, coastal runs and intercity journeys — booked
-              online with a real operations team behind every trip.
+              From the airport to your hotel, from Windhoek to the coast —
+              fixed prices, flight monitoring and one operations team behind
+              every trip.
             </p>
 
-            <ul className="text-muted-foreground mt-3 mb-5 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs sm:text-sm">
-              {TRUST.map((item, index) => (
-                <li key={item} className="flex items-center gap-3">
-                  {/* Hidden once the list wraps, so no line ever starts on a dot. */}
-                  {index > 0 && (
-                    <span className="text-border hidden sm:inline" aria-hidden>
-                      ·
-                    </span>
-                  )}
-                  {item}
-                </li>
-              ))}
-            </ul>
+            {/* Renders only once real published reviews exist. */}
+            <ReviewBadge />
 
-            {routes.length > 0 && vehicleClasses.length > 0 ? (
-              <HomeQuote
-                routes={routes}
-                vehicleClasses={vehicleClasses}
-                initialTrip={initialTrip}
-              />
-            ) : (
-              <div className="bg-card rounded-xl border p-6 text-center">
-                <p className="font-medium">Bookings are not open yet</p>
-                <p className="text-muted-foreground mt-1 text-sm">
-                  No routes are published. Please check back shortly.
-                </p>
-              </div>
-            )}
+            <div className="mt-6">
+              {routes.length > 0 && vehicleClasses.length > 0 ? (
+                <HomeQuote
+                  routes={routes}
+                  vehicleClasses={vehicleClasses}
+                  initialTrip={initialTrip}
+                />
+              ) : (
+                <div className="bg-card rounded-xl border p-6 text-center">
+                  <p className="font-medium">Bookings are not open yet</p>
+                  <p className="text-muted-foreground mt-1 text-sm">
+                    No routes are published. Please check back shortly.
+                  </p>
+                </div>
+              )}
+            </div>
           </div>
         </section>
 
-        {/* ---------------------------------------- what happens after booking */}
+        {/* ------------------------------------------------ why travellers */}
         <div className="border-y">
           <div className="mx-auto max-w-5xl px-4 py-10 sm:px-6 sm:py-12">
-            <AfterBooking />
+            <WhyTrustUs />
           </div>
         </div>
 
-        {/* ----------------------------------------------------------- trust */}
+        {/* --------------------------------------------------- the journey */}
         <div className="mx-auto max-w-5xl px-4 py-10 sm:px-6 sm:py-12">
-          <WhyTrustUs />
+          <JourneyTimeline />
         </div>
 
-        {/* --------------------------------------------------------- reviews */}
+        {/* ------------------------------------------------- meeting point */}
+        <div className="mx-auto max-w-5xl px-4 pb-12 sm:px-6">
+          <MeetingPoint />
+        </div>
+
+        {/* ------------------------------------------------- contingencies */}
+        <div className="border-y">
+          <div className="mx-auto max-w-5xl px-4 py-10 sm:px-6 sm:py-12">
+            <Contingencies />
+          </div>
+        </div>
+
+        {/* ---------------------------------------------------- operations */}
+        <div className="mx-auto max-w-5xl px-4 py-10 sm:px-6 sm:py-12">
+          <OperationsSection />
+        </div>
+
+        {/* ------------------------------------------------------- reviews */}
         <ReviewsWrapper />
 
-        {/* ------------------------------------------------------- corporate */}
+        {/* ----------------------------------------------------- corporate */}
         <section
           aria-labelledby="corporate-heading"
           className="mx-auto max-w-5xl px-4 pb-10 sm:px-6"
@@ -118,12 +123,11 @@ export default async function HomePage({ searchParams }: PageProps) {
               />
               <div className="min-w-0">
                 <h2 id="corporate-heading" className="text-base font-semibold">
-                  Corporate &amp; group transport
+                  Corporate transport
                 </h2>
                 <p className="text-muted-foreground mt-0.5 text-sm leading-snug">
-                  Airport transfers for visiting teams, conferences, site and
-                  employee transport — get an itemised quotation in about a
-                  minute.
+                  One account, one quotation, one monthly invoice — itemised in
+                  about a minute.
                 </p>
               </div>
             </div>
@@ -148,7 +152,7 @@ export default async function HomePage({ searchParams }: PageProps) {
   );
 }
 
-/** Renders nothing until a real, published review exists. */
+/** Renders nothing until real, published reviews exist. */
 async function ReviewsWrapper() {
   return (
     <div className="mx-auto max-w-5xl px-4 sm:px-6 [&:has(section)]:pb-12">

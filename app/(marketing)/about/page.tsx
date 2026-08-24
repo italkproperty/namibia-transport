@@ -5,7 +5,7 @@ import { SiteFooter } from "@/components/marketing/site-footer";
 import { SiteHeader } from "@/components/marketing/site-header";
 import { SupportStrip } from "@/components/marketing/trust";
 import { Button } from "@/components/ui/button";
-import { getCompanyInfo } from "@/lib/company";
+import { getCompanyInfo, SUPPORT } from "@/lib/company";
 import { listRoutes } from "@/lib/maps";
 import { SITE } from "@/lib/site";
 
@@ -65,7 +65,15 @@ export default async function AboutPage() {
             </p>
           </div>
 
-          <h2 className="mt-10 text-lg font-semibold">What we operate today</h2>
+          <h2 className="mt-10 text-lg font-semibold">How we are reachable</h2>
+          <p className="text-muted-foreground mt-2 text-sm leading-relaxed">
+            Coordination runs {SUPPORT.officeHours}. On your travel day we are
+            reachable throughout your journey — we would rather promise the
+            hours we actually cover than advertise a round-the-clock desk we do
+            not yet staff.
+          </p>
+
+          <h2 className="mt-8 text-lg font-semibold">What we operate today</h2>
           <ul className="text-muted-foreground mt-3 list-disc space-y-1.5 pl-5 text-sm leading-relaxed">
             <li>
               Fixed-price airport transfers from Hosea Kutako International

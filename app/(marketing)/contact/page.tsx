@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import {
   ClockIcon,
+  LifeBuoyIcon,
   MailIcon,
   MapPinIcon,
   MessageCircleIcon,
@@ -10,7 +11,7 @@ import {
 
 import { SiteFooter } from "@/components/marketing/site-footer";
 import { SiteHeader } from "@/components/marketing/site-header";
-import { getCompanyInfo, whatsappLink } from "@/lib/company";
+import { getCompanyInfo, SUPPORT, whatsappLink } from "@/lib/company";
 import { listRoutes } from "@/lib/maps";
 import { SITE } from "@/lib/site";
 
@@ -69,7 +70,7 @@ export default async function ContactPage() {
             your whole trip immediately.
           </p>
 
-          {channels.length > 0 ? (
+          {channels.length > 0 && (
             <ul className="mt-7 space-y-3">
               {channels.map((channel) => (
                 <li key={channel.label}>
@@ -97,26 +98,27 @@ export default async function ContactPage() {
                 </li>
               ))}
             </ul>
-          ) : (
-            <div className="mt-7 rounded-xl border border-dashed p-6">
-              <p className="text-sm font-medium">
-                Contact lines are being connected
-              </p>
-              <p className="text-muted-foreground mt-1 text-sm leading-snug">
-                Our WhatsApp and phone numbers are published here the moment
-                they go live. Bookings made meanwhile are confirmed to the
-                WhatsApp number you give us when booking.
-              </p>
-            </div>
           )}
 
-          <dl className="mt-8 grid gap-4 sm:grid-cols-2">
+          {/* -------------------------------------------------- operations */}
+          <dl className="mt-8 grid gap-5 sm:grid-cols-2">
             <div className="flex items-start gap-3">
               <ClockIcon className="text-brand mt-0.5 size-4 shrink-0" aria-hidden />
               <div>
-                <dt className="text-sm font-medium">Hours</dt>
+                <dt className="text-sm font-medium">Coordination hours</dt>
                 <dd className="text-muted-foreground text-sm leading-snug">
-                  {company.hours}
+                  {SUPPORT.officeHours}. New bookings, changes and quotations
+                  are handled in this window.
+                </dd>
+              </div>
+            </div>
+            <div className="flex items-start gap-3">
+              <LifeBuoyIcon className="text-brand mt-0.5 size-4 shrink-0" aria-hidden />
+              <div>
+                <dt className="text-sm font-medium">Travel-day support</dt>
+                <dd className="text-muted-foreground text-sm leading-snug">
+                  {SUPPORT.travelDay} — if you are flying today, we are
+                  reachable on WhatsApp for your pickup.
                 </dd>
               </div>
             </div>
@@ -127,6 +129,19 @@ export default async function ContactPage() {
                 <dd className="text-muted-foreground text-sm leading-snug">
                   {company.location}
                   {company.registration ? ` · ${company.registration}` : ""}
+                </dd>
+              </div>
+            </div>
+            <div className="flex items-start gap-3">
+              <MessageCircleIcon
+                className="text-brand mt-0.5 size-4 shrink-0"
+                aria-hidden
+              />
+              <div>
+                <dt className="text-sm font-medium">Existing booking?</dt>
+                <dd className="text-muted-foreground text-sm leading-snug">
+                  Have your reference ready — it is on your confirmation and in
+                  your WhatsApp thread with us.
                 </dd>
               </div>
             </div>
