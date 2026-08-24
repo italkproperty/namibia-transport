@@ -1,16 +1,18 @@
 import Link from "next/link";
 
 import { Logo } from "@/components/brand/logo";
-
 import { Separator } from "@/components/ui/separator";
-import { SITE } from "@/lib/site";
+import { getCompanyInfo, whatsappLink } from "@/lib/company";
 import type { RouteView } from "@/lib/maps";
+import { SITE } from "@/lib/site";
 
 export function SiteFooter({ routes = [] }: { routes?: RouteView[] }) {
+  const company = getCompanyInfo();
+
   return (
     <footer className="mt-12 border-t">
       <div className="mx-auto max-w-5xl px-4 py-8 sm:px-6">
-        <div className="grid gap-8 sm:grid-cols-2 lg:grid-cols-3">
+        <div className="grid gap-8 sm:grid-cols-2 lg:grid-cols-4">
           <div className="space-y-3">
             <Logo />
             <p className="text-muted-foreground max-w-xs text-sm leading-relaxed">
@@ -41,6 +43,14 @@ export function SiteFooter({ routes = [] }: { routes?: RouteView[] }) {
                     </Link>
                   </li>
                 ))}
+                <li>
+                  <Link
+                    href="/book"
+                    className="text-muted-foreground hover:text-foreground transition"
+                  >
+                    Book a transfer
+                  </Link>
+                </li>
               </ul>
             </nav>
           )}
@@ -55,6 +65,14 @@ export function SiteFooter({ routes = [] }: { routes?: RouteView[] }) {
             <ul className="space-y-2 text-sm">
               <li>
                 <Link
+                  href="/about"
+                  className="text-muted-foreground hover:text-foreground transition"
+                >
+                  About us
+                </Link>
+              </li>
+              <li>
+                <Link
                   href="/corporate"
                   className="text-muted-foreground hover:text-foreground transition"
                 >
@@ -63,21 +81,73 @@ export function SiteFooter({ routes = [] }: { routes?: RouteView[] }) {
               </li>
               <li>
                 <Link
-                  href="/book"
+                  href="/terms"
                   className="text-muted-foreground hover:text-foreground transition"
                 >
-                  Book a transfer
+                  Booking terms &amp; cancellation
+                </Link>
+              </li>
+              <li>
+                <Link
+                  href="/contact"
+                  className="text-muted-foreground hover:text-foreground transition"
+                >
+                  Contact &amp; support
                 </Link>
               </li>
             </ul>
           </nav>
+
+          <div aria-labelledby="footer-contact" className="space-y-3">
+            <p
+              id="footer-contact"
+              className="text-muted-foreground text-xs font-medium tracking-wider uppercase"
+            >
+              Support
+            </p>
+            <ul className="space-y-2 text-sm">
+              {company.whatsapp && (
+                <li>
+                  <a
+                    href={whatsappLink(company.whatsapp)}
+                    className="text-muted-foreground hover:text-foreground transition"
+                  >
+                    WhatsApp {company.whatsapp}
+                  </a>
+                </li>
+              )}
+              {company.phone && (
+                <li>
+                  <a
+                    href={`tel:${company.phone.replace(/\s/g, "")}`}
+                    className="text-muted-foreground hover:text-foreground transition"
+                  >
+                    {company.phone}
+                  </a>
+                </li>
+              )}
+              {company.email && (
+                <li>
+                  <a
+                    href={`mailto:${company.email}`}
+                    className="text-muted-foreground hover:text-foreground transition"
+                  >
+                    {company.email}
+                  </a>
+                </li>
+              )}
+              <li className="text-muted-foreground">{company.location}</li>
+              <li className="text-muted-foreground text-xs">{company.hours}</li>
+            </ul>
+          </div>
         </div>
 
         <Separator className="my-6" />
 
         <p className="text-muted-foreground text-xs">
-          &copy; {new Date().getFullYear()} {SITE.name}. Transfers are fulfilled
-          by vetted independent Namibian partner drivers.
+          &copy; {new Date().getFullYear()} {SITE.name}
+          {company.registration ? ` · ${company.registration}` : ""}. Transfers
+          are fulfilled by vetted independent Namibian partner drivers.
         </p>
       </div>
     </footer>

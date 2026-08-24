@@ -18,10 +18,22 @@ export function SiteHeader() {
 
         <nav
           aria-label="Main"
-          className="text-muted-foreground ml-auto flex items-center gap-5 text-sm"
+          className="text-muted-foreground ml-auto flex items-center gap-4 text-sm sm:gap-6"
         >
-          <Link href="/corporate" className="hover:text-foreground transition">
+          <Link
+            href="/corporate"
+            className="hover:text-foreground transition"
+          >
             Corporate
+          </Link>
+          <Link
+            href="/about"
+            className="hover:text-foreground hidden transition sm:inline"
+          >
+            About
+          </Link>
+          <Link href="/contact" className="hover:text-foreground transition">
+            Contact
           </Link>
         </nav>
       </div>
