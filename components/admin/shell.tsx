@@ -1,5 +1,7 @@
 import Link from "next/link";
 
+import { Logo } from "@/components/brand/logo";
+
 import { AdminSignInForm } from "@/components/admin/sign-in-form";
 import { Button } from "@/components/ui/button";
 import { adminSignOut } from "@/lib/admin/actions";
@@ -100,8 +102,8 @@ function Frame({
     <div className="min-h-svh">
       <header className="border-b">
         <div className="mx-auto flex h-14 max-w-[110rem] items-center justify-between gap-4 px-4 sm:px-6">
-          <Link href="/" className="text-sm font-semibold tracking-tight">
-            Namibia Transport
+          <Link href="/" aria-label="Namibia Transport">
+            <Logo markSize={26} />
           </Link>
           {tabs}
           <div className="ml-auto">{action}</div>

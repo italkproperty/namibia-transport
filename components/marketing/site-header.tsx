@@ -1,5 +1,7 @@
 import Link from "next/link";
 
+import { Logo } from "@/components/brand/logo";
+
 import { SITE } from "@/lib/site";
 
 export function SiteHeader() {
@@ -8,9 +10,10 @@ export function SiteHeader() {
       <div className="mx-auto flex h-14 max-w-5xl items-center justify-between gap-6 px-4 sm:px-6">
         <Link
           href="/"
-          className="focus-visible:ring-ring rounded-sm text-[0.95rem] font-semibold tracking-tight focus-visible:ring-[3px] focus-visible:outline-none"
+          aria-label={SITE.name}
+          className="focus-visible:ring-ring rounded-sm focus-visible:ring-[3px] focus-visible:outline-none"
         >
-          {SITE.name}
+          <Logo />
         </Link>
 
         <nav
