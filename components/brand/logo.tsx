@@ -1,30 +1,33 @@
 import * as React from "react";
 
 /**
- * The brand mark: an ink roundel carrying a dune crest with a route line
- * rising over it to a destination point — ground transport across Namibia,
- * drawn geometrically enough to survive a 16px favicon and a vehicle decal.
+ * The mark is an N whose diagonal is the route.
  *
- * One mark, three renderings: full colour, mono, and the favicon. The
- * wordmark is set in the UI font next to the mark rather than baked into the
- * SVG, so it stays crisp at every size and never ships an embedded font.
+ * A dune-and-horizon mark said "generic African transport company"; a
+ * letterform says us. The two uprights are the fixed points — where you are,
+ * where you are going — and the amber stroke between them is the journey we
+ * run. It is geometric enough to survive a 16px favicon and bold enough to
+ * read across a car park on a vehicle door, which is the real test.
  */
 
 const MARK_TITLE = "Namibia Transport";
 
 export function BrandMark({
   size = 32,
-  mono = false,
+  variant = "default",
   className,
 }: {
   size?: number;
-  mono?: boolean;
+  /** "default" = ink roundel · "mono" = single-colour · "inverse" = on dark */
+  variant?: "default" | "mono" | "inverse";
   className?: string;
 }) {
-  const ink = mono ? "currentColor" : "#1a1614";
-  const dune = mono ? "#ffffff" : "#bc4b00";
-  const duneFar = mono ? "#ffffff" : "#8f3a02";
-  const line = "#fcfaf7";
+  const mono = variant === "mono";
+  const inverse = variant === "inverse";
+
+  const plate = mono ? "none" : inverse ? "none" : "#1a1614";
+  const upright = mono ? "currentColor" : inverse ? "#fcfaf7" : "#fcfaf7";
+  const route = mono ? "currentColor" : "#bc4b00";
 
   return (
     <svg
@@ -35,51 +38,59 @@ export function BrandMark({
       aria-label={MARK_TITLE}
       className={className}
     >
-      <rect width="64" height="64" rx="15" fill={ink} />
-      {/* Far dune — darker, behind. */}
+      {plate !== "none" && <rect width="64" height="64" rx="14" fill={plate} />}
+
+      {/* Clipped to the uprights' band so the route ends flush, not ragged. */}
+      <clipPath id="nt-mark-band">
+        <rect x="15" y="15" width="34" height="34" />
+      </clipPath>
+
+      {/* The route: drawn first so the uprights sit crisply on top of it. */}
       <path
-        d="M0 40 C 16 24, 34 26, 46 34 C 53 38.5, 59 40, 64 39 L 64 64 L 0 64 Z"
-        fill={duneFar}
-        opacity={mono ? 0.35 : 1}
+        clipPath="url(#nt-mark-band)"
+        d="M19 14 L45 50"
+        stroke={route}
+        strokeWidth="9"
+        strokeLinecap="butt"
+        opacity={mono ? 0.55 : 1}
       />
-      {/* Near dune — the brand amber crest. */}
-      <path
-        d="M0 54 C 14 44, 30 43, 42 49 C 50 52.5, 58 53, 64 51.5 L 64 64 L 0 64 Z"
-        fill={dune}
-        opacity={mono ? 0.75 : 1}
-      />
-      {/* The route: rising over the crest to where you are going. */}
-      <path
-        d="M8 57 C 20 49, 30 38, 39 29 C 41.5 26.5, 44 24.5, 46 23"
-        fill="none"
-        stroke={line}
-        strokeWidth="3"
-        strokeLinecap="round"
-      />
-      <circle cx="49.5" cy="20.5" r="3.4" fill={line} />
+
+      {/* Uprights — the two fixed points of any journey. */}
+      <rect x="15" y="15" width="8" height="34" rx="1.5" fill={upright} />
+      <rect x="41" y="15" width="8" height="34" rx="1.5" fill={upright} />
     </svg>
   );
 }
 
+/**
+ * The lockup. "Namibia Transport" is the master brand — deliberately not
+ * narrowed by a "private transfers" tagline, because the same company has to
+ * carry intercity, corporate and group work as it grows.
+ */
 export function Logo({
   markSize = 30,
-  mono = false,
+  variant = "default",
+  descriptor = false,
   className,
 }: {
   markSize?: number;
-  mono?: boolean;
+  variant?: "default" | "mono" | "inverse";
+  /** Adds the service descriptor. Off in navigation, on where it earns space. */
+  descriptor?: boolean;
   className?: string;
 }) {
   return (
     <span className={`inline-flex items-center gap-2.5 ${className ?? ""}`}>
-      <BrandMark size={markSize} mono={mono} />
+      <BrandMark size={markSize} variant={variant} />
       <span className="flex flex-col leading-none">
-        <span className="text-[0.95rem] font-semibold tracking-tight">
+        <span className="text-[0.98rem] font-semibold tracking-tight">
           Namibia Transport
         </span>
-        <span className="text-muted-foreground mt-0.5 text-[0.58rem] font-medium tracking-[0.14em] uppercase">
-          Private transfers
-        </span>
+        {descriptor && (
+          <span className="text-muted-foreground mt-1 text-[0.58rem] font-medium tracking-[0.13em] uppercase">
+            Transfers · Intercity · Corporate
+          </span>
+        )}
       </span>
     </span>
   );

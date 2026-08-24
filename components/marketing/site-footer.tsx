@@ -14,7 +14,7 @@ export function SiteFooter({ routes = [] }: { routes?: RouteView[] }) {
       <div className="mx-auto max-w-5xl px-4 py-8 sm:px-6">
         <div className="grid gap-8 sm:grid-cols-2 lg:grid-cols-4">
           <div className="space-y-3">
-            <Logo />
+            <Logo descriptor />
             <p className="text-muted-foreground max-w-xs text-sm leading-relaxed">
               {SITE.description}
             </p>
