@@ -44,6 +44,7 @@ function catalogRouteToView(route: CatalogRoute): RouteView {
     destinationLabel: route.destinationLabel,
     category: route.category,
     fixedPrice: route.fixedPrice as string,
+    pricingUnit: route.pricingUnit ?? "per_vehicle",
     defaultDriverPayout: route.defaultDriverPayout as string,
     currency: route.currency ?? "NAD",
     isActive: route.isActive ?? false,

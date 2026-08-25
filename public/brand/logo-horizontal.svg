@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="360" height="64" viewBox="0 0 360 64">
+  <rect width="64" height="64" rx="14" fill="#1a1614"/>
+  <clipPath id="b"><rect x="15" y="15" width="34" height="34"/></clipPath>
+  <path clip-path="url(#b)" d="M19 14 L45 50" stroke="#bc4b00" stroke-width="9"/>
+  <rect x="15" y="15" width="8" height="34" rx="1.5" fill="#fcfaf7"/>
+  <rect x="41" y="15" width="8" height="34" rx="1.5" fill="#fcfaf7"/>
+  <text x="80" y="35" font-family="Geist, Inter, -apple-system, 'Segoe UI', sans-serif" font-size="25" font-weight="600" letter-spacing="-0.6" fill="#1a1614">Namibia Transport</text>
+  <text x="81" y="52" font-family="Geist, Inter, -apple-system, 'Segoe UI', sans-serif" font-size="9.5" font-weight="500" letter-spacing="2.6" fill="#6a635e">TRANSFERS · INTERCITY · CORPORATE</text>
+</svg>

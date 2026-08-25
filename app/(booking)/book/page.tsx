@@ -1,16 +1,25 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { PencilIcon } from "lucide-react";
 
-import { BookingForm } from "@/components/booking/booking-form";
+import { BookingDetailsForm } from "@/components/booking/booking-details-form";
 import { SiteFooter } from "@/components/marketing/site-footer";
 import { SiteHeader } from "@/components/marketing/site-header";
+import {
+  buildTripQuery,
+  parseTripParams,
+} from "@/lib/booking/trip-params";
+import { formatDuration } from "@/lib/format";
 import { listRoutes, listVehicleClasses } from "@/lib/maps";
+import { formatNad } from "@/lib/money";
+import { computeFare, unitFare } from "@/lib/pricing";
 import { dropoffOptions, pickupOptions } from "@/lib/places";
+import { routeTitle } from "@/lib/route-content";
 import { SITE } from "@/lib/site";
 
 export const metadata: Metadata = {
-  title: "Book a transfer",
-  description: `Book a fixed-price private transfer with ${SITE.name}.`,
+  title: "Confirm your booking",
+  description: `Complete your fixed-price transfer booking with ${SITE.name}.`,
   robots: { index: false, follow: true },
 };
 
@@ -29,18 +38,32 @@ export default async function BookPage({ searchParams }: PageProps) {
     searchParams,
   ]);
 
-  // Pick-lists are derived per route on the server, so the client component
-  // never has to know how destinations are curated.
-  const routeOptions = routes.map((route) => ({
-    route,
-    pickupOptions: pickupOptions(route),
-    dropoffOptions: dropoffOptions(route),
-  }));
+  if (routes.length === 0 || vehicleClasses.length === 0) {
+    return (
+      <div className="flex min-h-svh flex-col">
+        <SiteHeader />
+        <main className="mx-auto flex max-w-md flex-1 flex-col justify-center px-4 py-16 text-center">
+          <h1 className="text-xl">Bookings are not open yet</h1>
+          <p className="text-muted-foreground mt-2 text-sm">
+            No routes are published. Please check back shortly.
+          </p>
+          <Link href="/" className="mt-5 text-sm underline underline-offset-4">
+            Back to home
+          </Link>
+        </main>
+        <SiteFooter />
+      </div>
+    );
+  }
 
-  const requestedSlug = firstValue(params.route);
-  const initialSlug =
-    routes.find((route) => route.slug === requestedSlug)?.slug ??
-    routes[0]?.slug;
+  const trip = parseTripParams(params, routes, vehicleClasses);
+  const route = routes.find((r) => r.slug === trip.routeSlug) ?? routes[0];
+  const vehicleClass =
+    vehicleClasses.find((c) => c.id === trip.vehicleClassId) ?? vehicleClasses[0];
+
+  // Display only. The Server Action recomputes this before writing anything.
+  const fare = computeFare(route, vehicleClass, trip.passengers);
+  const duration = formatDuration(route.durationMin);
 
   const utm = ["utm_source", "utm_medium", "utm_campaign"]
     .map((key) => {
@@ -55,48 +78,80 @@ export default async function BookPage({ searchParams }: PageProps) {
       <SiteHeader />
 
       <main id="main" className="flex-1">
-        <div className="mx-auto max-w-6xl px-5 py-12 sm:px-8 sm:py-16">
-          {routeOptions.length === 0 || !initialSlug ? (
-            <div className="border-border mx-auto max-w-lg rounded-2xl border border-dashed p-10 text-center">
-              <h1 className="font-display text-2xl">
-                Bookings are not open yet
-              </h1>
-              <p className="text-muted-foreground mt-3 text-sm">
-                No routes are published. Please check back shortly.
-              </p>
-              <Link
-                href="/"
-                className="mt-6 inline-block text-sm underline underline-offset-4"
-              >
-                Back to home
-              </Link>
-            </div>
-          ) : (
-            <>
-              <header className="max-w-2xl">
-                <h1 className="font-display text-4xl sm:text-5xl">
-                  Book your transfer
-                </h1>
-                <p className="text-muted-foreground mt-4 text-pretty">
-                  Takes about a minute. You will see the full price before you
-                  confirm, and nothing is charged today.
-                </p>
-              </header>
+        <div className="mx-auto max-w-5xl px-4 py-6 sm:px-6 sm:py-8">
+          <h1 className="text-xl sm:text-2xl">Confirm your booking</h1>
+          <p className="text-muted-foreground mt-1 text-sm">
+            One step. Nothing is charged today.
+          </p>
 
-              <div className="mt-10">
-                <BookingForm
-                  routeOptions={routeOptions}
-                  vehicleClasses={vehicleClasses}
-                  initialRouteSlug={initialSlug}
-                  utm={utm}
-                />
+          <div className="mt-5 grid gap-5 lg:grid-cols-[20rem_1fr] lg:items-start">
+            {/* ------------------------------------------------ trip summary */}
+            <aside className="bg-card rounded-xl border p-4 lg:sticky lg:top-20">
+              <div className="flex items-start justify-between gap-3">
+                <h2 className="text-sm font-semibold">{routeTitle(route)}</h2>
+                <Link
+                  href={`/?${buildTripQuery(trip)}#quote`}
+                  className="text-muted-foreground hover:text-foreground press inline-flex shrink-0 items-center gap-1 text-xs underline underline-offset-2"
+                >
+                  <PencilIcon className="size-3" aria-hidden />
+                  Change
+                </Link>
               </div>
-            </>
-          )}
+
+              <dl className="mt-3 space-y-1.5 text-sm">
+                <Row label="Pickup">
+                  {trip.date} at {trip.time}
+                </Row>
+                <Row label="Vehicle">{vehicleClass.name}</Row>
+                <Row label="Passengers">{trip.passengers}</Row>
+                {duration && <Row label="Journey">about {duration}</Row>}
+              </dl>
+
+              <div className="mt-4 border-t pt-3">
+                <p className="text-muted-foreground text-xs font-medium">
+                  Total, all in
+                </p>
+                <p className="tabular text-brand text-3xl leading-none font-semibold tracking-tight">
+                  {formatNad(fare.customerPrice)}
+                </p>
+                <p className="text-muted-foreground mt-1 text-xs">
+                  {route.pricingUnit === "per_person"
+                    ? `${formatNad(unitFare(route, vehicleClass))} per person × ${trip.passengers}`
+                    : `per vehicle, up to ${vehicleClass.capacity} passengers`}
+                </p>
+              </div>
+            </aside>
+
+            {/* -------------------------------------------------- one form */}
+            <div className="bg-card rounded-xl border p-4 sm:p-5">
+              <BookingDetailsForm
+                trip={trip}
+                route={route}
+                pickupOptions={pickupOptions(route)}
+                dropoffOptions={dropoffOptions(route)}
+                utm={utm}
+              />
+            </div>
+          </div>
         </div>
       </main>
 
       <SiteFooter routes={routes} />
+    </div>
+  );
+}
+
+function Row({
+  label,
+  children,
+}: {
+  label: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <div className="flex items-baseline justify-between gap-3">
+      <dt className="text-muted-foreground">{label}</dt>
+      <dd className="text-right font-medium">{children}</dd>
     </div>
   );
 }

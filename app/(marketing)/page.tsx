@@ -1,234 +1,162 @@
 import Link from "next/link";
-import {
-  BadgeCheckIcon,
-  CarFrontIcon,
-  HandshakeIcon,
-  PlaneLandingIcon,
-} from "lucide-react";
+import { ArrowRightIcon, BuildingIcon } from "lucide-react";
 
-import { RouteCard } from "@/components/marketing/route-card";
+import { HomeQuote } from "@/components/booking/home-quote";
+import { DuneScene } from "@/components/marketing/dune-scene";
+import { JourneyTimeline } from "@/components/marketing/journey";
 import { SiteFooter } from "@/components/marketing/site-footer";
 import { SiteHeader } from "@/components/marketing/site-header";
+import {
+  Contingencies,
+  MeetingPoint,
+  OperationsSection,
+  ReviewBadge,
+  ReviewsSection,
+  SupportStrip,
+  WhyTrustUs,
+} from "@/components/marketing/trust";
 import { Button } from "@/components/ui/button";
-import { listRoutes } from "@/lib/maps";
-import { INCLUSIONS } from "@/lib/site";
+import { parseTripParams } from "@/lib/booking/trip-params";
+import { listRoutes, listVehicleClasses } from "@/lib/maps";
 
-const VALUE_STRIP = [
-  "Fixed prices",
-  "Meet & greet",
-  "Flight monitoring",
-  "Licensed local drivers",
-  "24/7 support",
-];
+type PageProps = {
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
+};
 
-const STEPS = [
-  {
-    icon: CarFrontIcon,
-    title: "Book in a minute",
-    body: "Pick your route, date and vehicle. You see the full price before you commit — nothing is estimated.",
-  },
-  {
-    icon: BadgeCheckIcon,
-    title: "We assign a vetted driver",
-    body: "A licensed Namibian partner driver is matched to your trip and confirmed to you on WhatsApp.",
-  },
-  {
-    icon: PlaneLandingIcon,
-    title: "They meet you on arrival",
-    body: "We watch your flight. Your driver is inside the terminal with a name board, however late you land.",
-  },
-  {
-    icon: HandshakeIcon,
-    title: "Straight to your door",
-    body: "A direct, private drive to your hotel, lodge or office. No detours, no other passengers.",
-  },
-];
+export default async function HomePage({ searchParams }: PageProps) {
+  const [{ routes }, vehicleClasses, params] = await Promise.all([
+    listRoutes({ activeOnly: true }),
+    listVehicleClasses(),
+    searchParams,
+  ]);
 
-export default async function HomePage() {
-  const { routes } = await listRoutes({ activeOnly: true });
+  // Lets "Change trip" on /book come back to the widget already filled in.
+  const initialTrip =
+    routes.length > 0 && vehicleClasses.length > 0
+      ? parseTripParams(params, routes, vehicleClasses)
+      : undefined;
 
   return (
     <div className="flex min-h-svh flex-col">
       <SiteHeader />
 
       <main id="main" className="flex-1">
-        {/* ------------------------------------------------------------ hero */}
+        {/* ------------------------------------------- headline + the widget */}
         <section className="relative overflow-hidden">
-          {/* A single warm wash, sitting behind the type rather than on it. */}
-          <div
-            aria-hidden
-            className="from-accent/50 pointer-events-none absolute inset-x-0 top-0 -z-10 h-[36rem] bg-gradient-to-b via-transparent to-transparent"
-          />
+          <DuneScene className="pointer-events-none absolute inset-x-0 bottom-0 -z-10 h-28 w-full sm:h-40" />
 
-          <div className="mx-auto max-w-6xl px-5 pt-20 pb-16 sm:px-8 sm:pt-28 sm:pb-24">
-            <p className="text-muted-foreground animate-rise text-sm tracking-wide">
-              Namibia · door to door
-            </p>
-
-            <h1
-              className="font-display animate-rise mt-5 max-w-4xl text-[2.75rem] leading-[1.06] text-balance sm:text-6xl lg:text-7xl"
-              style={{ animationDelay: "60ms" }}
-            >
-              Someone is waiting when you land.
+          <div className="mx-auto max-w-5xl px-4 pt-8 pb-10 sm:px-6 sm:pt-12 sm:pb-16">
+            <h1 className="max-w-2xl text-2xl leading-tight sm:text-4xl">
+              Reliable private transfers across Namibia.
             </h1>
-
-            <p
-              className="text-muted-foreground animate-rise mt-7 max-w-xl text-lg leading-relaxed text-pretty"
-              style={{ animationDelay: "120ms" }}
-            >
-              Private, fixed-price transfers across Namibia — from the airport
-              into Windhoek, or all the way to the coast. Booked online, driven
-              by licensed locals.
+            <p className="text-muted-foreground mt-2 max-w-xl text-sm text-pretty sm:text-base">
+              From the airport to your hotel, from Windhoek to the coast —
+              fixed prices, flight monitoring and one operations team behind
+              every trip.
             </p>
 
-            <div
-              className="animate-rise mt-10 flex flex-wrap items-center gap-3"
-              style={{ animationDelay: "180ms" }}
-            >
-              <Button asChild size="xl">
-                <Link href="/book">Book a transfer</Link>
-              </Button>
-              <Button asChild size="xl" variant="outline">
-                <Link href="#routes">See routes &amp; prices</Link>
-              </Button>
-            </div>
-          </div>
+            {/* Renders only once real published reviews exist. */}
+            <ReviewBadge />
 
-          {/* ---------------------------------------------------- value strip */}
-          <div className="border-border/60 border-y">
-            <div className="mx-auto max-w-6xl px-5 sm:px-8">
-              <ul className="divide-border/60 grid grid-cols-2 divide-y sm:grid-cols-3 sm:divide-y-0 lg:grid-cols-5 lg:divide-x">
-                {VALUE_STRIP.map((item) => (
-                  <li
-                    key={item}
-                    className="text-muted-foreground px-1 py-4 text-sm lg:px-5 lg:text-center"
-                  >
-                    {item}
-                  </li>
-                ))}
-              </ul>
-            </div>
-          </div>
-        </section>
-
-        {/* ---------------------------------------------------------- routes */}
-        <section
-          id="routes"
-          aria-labelledby="routes-heading"
-          className="mx-auto max-w-6xl scroll-mt-20 px-5 py-20 sm:px-8 sm:py-28"
-        >
-          <div className="flex flex-wrap items-end justify-between gap-4">
-            <div>
-              <h2
-                id="routes-heading"
-                className="font-display text-3xl sm:text-4xl"
-              >
-                Popular routes
-              </h2>
-              <p className="text-muted-foreground mt-3 max-w-md text-pretty">
-                Every price is for the whole vehicle, not per seat, and is fixed
-                at the moment you book.
-              </p>
-            </div>
-          </div>
-
-          {routes.length > 0 ? (
-            <div className="mt-10 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
-              {routes.map((route) => (
-                <RouteCard key={route.id} route={route} />
-              ))}
-            </div>
-          ) : (
-            <p className="border-border text-muted-foreground mt-10 rounded-2xl border border-dashed p-10 text-center">
-              No routes are published yet.
-            </p>
-          )}
-        </section>
-
-        {/* ------------------------------------------------------ how it works */}
-        <section
-          id="how"
-          aria-labelledby="how-heading"
-          className="border-border/60 scroll-mt-20 border-y"
-        >
-          <div className="mx-auto max-w-6xl px-5 py-20 sm:px-8 sm:py-28">
-            <h2 id="how-heading" className="font-display text-3xl sm:text-4xl">
-              How it works
-            </h2>
-
-            <ol className="mt-12 grid gap-10 sm:grid-cols-2 lg:grid-cols-4">
-              {STEPS.map((step, index) => (
-                <li key={step.title}>
-                  <step.icon
-                    className="text-brand size-6"
-                    strokeWidth={1.5}
-                    aria-hidden
-                  />
-                  <p className="text-muted-foreground mt-5 text-xs tracking-wider">
-                    {String(index + 1).padStart(2, "0")}
+            <div className="mt-6">
+              {routes.length > 0 && vehicleClasses.length > 0 ? (
+                <HomeQuote
+                  routes={routes}
+                  vehicleClasses={vehicleClasses}
+                  initialTrip={initialTrip}
+                />
+              ) : (
+                <div className="bg-card rounded-xl border p-6 text-center">
+                  <p className="font-medium">Bookings are not open yet</p>
+                  <p className="text-muted-foreground mt-1 text-sm">
+                    No routes are published. Please check back shortly.
                   </p>
-                  <h3 className="mt-2 font-semibold tracking-tight">
-                    {step.title}
-                  </h3>
-                  <p className="text-muted-foreground mt-2 text-sm leading-relaxed text-pretty">
-                    {step.body}
-                  </p>
-                </li>
-              ))}
-            </ol>
-          </div>
-        </section>
-
-        {/* ------------------------------------------------------- inclusions */}
-        <section
-          aria-labelledby="included-heading"
-          className="mx-auto max-w-6xl px-5 py-20 sm:px-8 sm:py-28"
-        >
-          <div className="grid gap-12 lg:grid-cols-[minmax(0,22rem)_1fr]">
-            <div>
-              <h2
-                id="included-heading"
-                className="font-display text-3xl sm:text-4xl text-balance"
-              >
-                What every transfer includes
-              </h2>
-              <p className="text-muted-foreground mt-4 text-pretty">
-                The same standard on a 45-minute airport run and a four-hour
-                drive to the coast.
-              </p>
-            </div>
-
-            <dl className="divide-border/60 divide-y">
-              {INCLUSIONS.map((item) => (
-                <div key={item.title} className="grid gap-1 py-5 sm:grid-cols-3">
-                  <dt className="font-medium tracking-tight">{item.title}</dt>
-                  <dd className="text-muted-foreground text-sm leading-relaxed sm:col-span-2">
-                    {item.body}
-                  </dd>
                 </div>
-              ))}
-            </dl>
+              )}
+            </div>
           </div>
         </section>
 
-        {/* -------------------------------------------------------------- cta */}
-        <section className="mx-auto max-w-6xl px-5 pb-8 sm:px-8">
-          <div className="bg-primary text-primary-foreground rounded-3xl px-8 py-14 sm:px-14 sm:py-20">
-            <h2 className="font-display max-w-2xl text-3xl text-balance sm:text-4xl">
-              Tell us when you land. We will take it from there.
-            </h2>
-            <p className="text-primary-foreground/70 mt-4 max-w-lg text-pretty">
-              Book now and pay later — your fare is locked in the moment you
-              confirm.
-            </p>
-            <Button asChild size="xl" variant="secondary" className="mt-9">
-              <Link href="/book">Book a transfer</Link>
+        {/* ------------------------------------------------ why travellers */}
+        <div className="border-y">
+          <div className="mx-auto max-w-5xl px-4 py-10 sm:px-6 sm:py-12">
+            <WhyTrustUs />
+          </div>
+        </div>
+
+        {/* --------------------------------------------------- the journey */}
+        <div className="mx-auto max-w-5xl px-4 py-10 sm:px-6 sm:py-12">
+          <JourneyTimeline />
+        </div>
+
+        {/* ------------------------------------------------- meeting point */}
+        <div className="mx-auto max-w-5xl px-4 pb-12 sm:px-6">
+          <MeetingPoint />
+        </div>
+
+        {/* ------------------------------------------------- contingencies */}
+        <div className="border-y">
+          <div className="mx-auto max-w-5xl px-4 py-10 sm:px-6 sm:py-12">
+            <Contingencies />
+          </div>
+        </div>
+
+        {/* ---------------------------------------------------- operations */}
+        <div className="mx-auto max-w-5xl px-4 py-10 sm:px-6 sm:py-12">
+          <OperationsSection />
+        </div>
+
+        {/* ------------------------------------------------------- reviews */}
+        <ReviewsWrapper />
+
+        {/* ----------------------------------------------------- corporate */}
+        <section
+          aria-labelledby="corporate-heading"
+          className="mx-auto max-w-5xl px-4 pb-10 sm:px-6"
+        >
+          <div className="bg-card flex flex-wrap items-center justify-between gap-4 rounded-xl border p-5">
+            <div className="flex min-w-0 items-start gap-3">
+              <BuildingIcon
+                className="text-brand mt-0.5 size-5 shrink-0"
+                strokeWidth={1.75}
+                aria-hidden
+              />
+              <div className="min-w-0">
+                <h2 id="corporate-heading" className="text-base font-semibold">
+                  Corporate transport
+                </h2>
+                <p className="text-muted-foreground mt-0.5 text-sm leading-snug">
+                  One account, one quotation, one monthly invoice — itemised in
+                  about a minute.
+                </p>
+              </div>
+            </div>
+
+            <Button asChild variant="outline" className="press shrink-0">
+              <Link href="/corporate">
+                Get an instant quotation
+                <ArrowRightIcon className="size-4" aria-hidden />
+              </Link>
             </Button>
           </div>
         </section>
+
+        {/* --------------------------------------------------------- support */}
+        <div className="mx-auto max-w-5xl px-4 pb-12 sm:px-6">
+          <SupportStrip />
+        </div>
       </main>
 
       <SiteFooter routes={routes} />
+    </div>
+  );
+}
+
+/** Renders nothing until real, published reviews exist. */
+async function ReviewsWrapper() {
+  return (
+    <div className="mx-auto max-w-5xl px-4 sm:px-6 [&:has(section)]:pb-12">
+      <ReviewsSection />
     </div>
   );
 }

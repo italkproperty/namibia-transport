@@ -3,12 +3,11 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { CheckIcon } from "lucide-react";
 
+import { RouteQuote } from "@/components/booking/route-quote";
 import { SiteFooter } from "@/components/marketing/site-footer";
 import { SiteHeader } from "@/components/marketing/site-header";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
 import { formatDistance, formatDuration } from "@/lib/format";
-import { getRouteBySlug, listRoutes } from "@/lib/maps";
+import { getRouteBySlug, listRoutes, listVehicleClasses } from "@/lib/maps";
 import { formatNad } from "@/lib/money";
 import { routeFaqs, routeTitle } from "@/lib/route-content";
 import { INCLUSIONS, SITE } from "@/lib/site";
@@ -61,11 +60,12 @@ export default async function RoutePage({ params }: PageProps) {
     notFound();
   }
 
-  const [{ routes: allRoutes }, faqs] = [
-    await listRoutes({ activeOnly: true }),
-    routeFaqs(route),
-  ];
+  const [{ routes: allRoutes }, vehicleClasses] = await Promise.all([
+    listRoutes({ activeOnly: true }),
+    listVehicleClasses(),
+  ]);
 
+  const faqs = routeFaqs(route);
   const duration = formatDuration(route.durationMin);
   const distance = formatDistance(route.distanceKm);
   const title = routeTitle(route);
@@ -79,11 +79,7 @@ export default async function RoutePage({ params }: PageProps) {
     description:
       route.seoDescription ??
       `Private fixed-price transfer from ${route.originLabel} to ${route.destinationLabel}.`,
-    provider: {
-      "@type": "Organization",
-      name: SITE.name,
-      url: SITE.url,
-    },
+    provider: { "@type": "Organization", name: SITE.name, url: SITE.url },
     areaServed: { "@type": "Country", name: "Namibia" },
     offers: {
       "@type": "Offer",
@@ -119,147 +115,114 @@ export default async function RoutePage({ params }: PageProps) {
       <SiteHeader />
 
       <main id="main" className="flex-1">
-        {/* ------------------------------------------------------------ hero */}
-        <section className="relative overflow-hidden">
-          <div
-            aria-hidden
-            className="from-accent/50 pointer-events-none absolute inset-x-0 top-0 -z-10 h-96 bg-gradient-to-b via-transparent to-transparent"
-          />
-          <div className="mx-auto max-w-6xl px-5 pt-14 pb-14 sm:px-8 sm:pt-20">
-            <nav aria-label="Breadcrumb" className="text-muted-foreground text-sm">
-              <Link href="/" className="hover:text-foreground transition">
-                Home
-              </Link>
-              <span aria-hidden> / </span>
-              <span className="text-foreground">{title}</span>
-            </nav>
+        <div className="mx-auto max-w-5xl px-4 py-6 sm:px-6 sm:py-8">
+          {/* Title and the booking control share the first screen. */}
+          <div className="grid gap-6 lg:grid-cols-[1fr_22rem] lg:items-start">
+            <div className="min-w-0">
+              <nav
+                aria-label="Breadcrumb"
+                className="text-muted-foreground text-xs"
+              >
+                <Link href="/" className="hover:text-foreground">
+                  Home
+                </Link>
+                <span aria-hidden> / </span>
+                <span className="text-foreground">{title}</span>
+              </nav>
 
-            <div className="mt-8 grid gap-12 lg:grid-cols-[1fr_20rem]">
-              <div>
-                <h1 className="font-display max-w-2xl text-[2.5rem] leading-[1.08] text-balance sm:text-5xl lg:text-6xl">
-                  {title}
-                </h1>
+              <h1 className="mt-2 text-2xl sm:text-3xl">{title}</h1>
 
-                <div className="text-muted-foreground mt-5 flex flex-wrap items-center gap-x-3 gap-y-2 text-sm">
-                  {distance && <span>{distance}</span>}
-                  {distance && duration && <span aria-hidden>·</span>}
-                  {duration && <span>about {duration}</span>}
-                  <Badge variant="secondary">Private vehicle</Badge>
-                </div>
+              <p className="text-muted-foreground mt-1.5 text-sm">
+                {[distance, duration && `about ${duration}`, "private vehicle"]
+                  .filter(Boolean)
+                  .join(" · ")}
+                {" · from "}
+                <span className="text-brand font-semibold">
+                  {formatNad(route.fixedPrice)}
+                </span>
+              </p>
 
-                {route.seoBody && (
-                  <p className="mt-8 max-w-2xl text-lg leading-relaxed text-pretty">
-                    {route.seoBody}
-                  </p>
-                )}
-              </div>
+              {route.seoBody && (
+                <p className="mt-4 leading-relaxed text-pretty">
+                  {route.seoBody}
+                </p>
+              )}
 
-              {/* ------------------------------------------------ price card */}
-              <aside className="lg:sticky lg:top-24 lg:self-start">
-                <div className="border-border/70 bg-card rounded-2xl border p-6 shadow-[0_2px_24px_-12px_oklch(0_0_0/0.18)]">
-                  <p className="text-muted-foreground text-xs tracking-wide uppercase">
-                    Fixed price
-                  </p>
-                  <p className="tabular mt-2 text-4xl font-semibold tracking-tight">
-                    {formatNad(route.fixedPrice)}
-                  </p>
-                  <p className="text-muted-foreground mt-1 text-sm">
-                    per vehicle · up to 3 passengers
-                  </p>
+              {/* -------------------------------------------- inclusions */}
+              <section aria-labelledby="included-heading" className="mt-8">
+                <h2 id="included-heading" className="text-base font-semibold">
+                  What&rsquo;s included
+                </h2>
+                <ul className="mt-3 grid gap-x-6 gap-y-2.5 sm:grid-cols-2">
+                  {INCLUSIONS.map((item) => (
+                    <li key={item.title} className="flex gap-2.5">
+                      <CheckIcon
+                        className="text-brand mt-0.5 size-4 shrink-0"
+                        aria-hidden
+                      />
+                      <div>
+                        <p className="text-sm font-medium">{item.title}</p>
+                        <p className="text-muted-foreground mt-0.5 text-sm leading-snug">
+                          {item.body}
+                        </p>
+                      </div>
+                    </li>
+                  ))}
+                </ul>
+              </section>
 
-                  <Button asChild size="lg" className="mt-6 w-full">
-                    <Link href={`/book?route=${route.slug}`}>
-                      Book this transfer
-                    </Link>
-                  </Button>
+              {/* --------------------------------------------------- faq */}
+              <section aria-labelledby="faq-heading" className="mt-8">
+                <h2 id="faq-heading" className="text-base font-semibold">
+                  Frequently asked
+                </h2>
+                <dl className="mt-3 divide-y">
+                  {faqs.map((faq) => (
+                    <div key={faq.question} className="py-3">
+                      <dt className="text-sm font-medium text-pretty">
+                        {faq.question}
+                      </dt>
+                      <dd className="text-muted-foreground mt-1 text-sm leading-snug text-pretty">
+                        {faq.answer}
+                      </dd>
+                    </div>
+                  ))}
+                </dl>
+              </section>
 
-                  <p className="text-muted-foreground mt-4 text-xs leading-relaxed">
-                    No payment taken now. We confirm on WhatsApp and send
-                    payment details before your travel date.
-                  </p>
-                </div>
-              </aside>
+              {/* ------------------------------------------ other routes */}
+              {otherRoutes.length > 0 && (
+                <section aria-labelledby="other-heading" className="mt-8">
+                  <h2 id="other-heading" className="text-base font-semibold">
+                    Other routes
+                  </h2>
+                  <ul className="mt-3 flex flex-wrap gap-2">
+                    {otherRoutes.map((other) => (
+                      <li key={other.id}>
+                        <Link
+                          href={`/transfers/${other.slug}`}
+                          className="press bg-card hover:border-foreground/25 inline-flex items-center gap-2 rounded-lg border px-3 py-2 text-sm"
+                        >
+                          {routeTitle(other)}
+                          <span className="tabular text-brand font-semibold">
+                            {formatNad(other.fixedPrice)}
+                          </span>
+                        </Link>
+                      </li>
+                    ))}
+                  </ul>
+                </section>
+              )}
+            </div>
+
+            {/* Order-first on mobile so price and CTA precede the copy. */}
+            <div className="order-first lg:order-last">
+              {vehicleClasses.length > 0 && (
+                <RouteQuote route={route} vehicleClasses={vehicleClasses} />
+              )}
             </div>
           </div>
-        </section>
-
-        {/* ------------------------------------------------------- inclusions */}
-        <section
-          aria-labelledby="included-heading"
-          className="border-border/60 border-t"
-        >
-          <div className="mx-auto max-w-6xl px-5 py-16 sm:px-8 sm:py-20">
-            <h2 id="included-heading" className="font-display text-3xl">
-              What&rsquo;s included
-            </h2>
-            <ul className="mt-8 grid gap-x-10 gap-y-6 sm:grid-cols-2 lg:grid-cols-3">
-              {INCLUSIONS.map((item) => (
-                <li key={item.title} className="flex gap-3">
-                  <CheckIcon
-                    className="text-brand mt-0.5 size-4 shrink-0"
-                    aria-hidden
-                  />
-                  <div>
-                    <p className="font-medium tracking-tight">{item.title}</p>
-                    <p className="text-muted-foreground mt-1 text-sm leading-relaxed">
-                      {item.body}
-                    </p>
-                  </div>
-                </li>
-              ))}
-            </ul>
-          </div>
-        </section>
-
-        {/* -------------------------------------------------------------- faq */}
-        <section
-          aria-labelledby="faq-heading"
-          className="border-border/60 border-t"
-        >
-          <div className="mx-auto max-w-6xl px-5 py-16 sm:px-8 sm:py-20">
-            <h2 id="faq-heading" className="font-display text-3xl">
-              Frequently asked
-            </h2>
-            <dl className="divide-border/60 mt-8 max-w-3xl divide-y">
-              {faqs.map((faq) => (
-                <div key={faq.question} className="py-6">
-                  <dt className="font-medium tracking-tight text-pretty">
-                    {faq.question}
-                  </dt>
-                  <dd className="text-muted-foreground mt-2 leading-relaxed text-pretty">
-                    {faq.answer}
-                  </dd>
-                </div>
-              ))}
-            </dl>
-          </div>
-        </section>
-
-        {/* ----------------------------------------------------- other routes */}
-        {otherRoutes.length > 0 && (
-          <section
-            aria-labelledby="other-heading"
-            className="border-border/60 border-t"
-          >
-            <div className="mx-auto max-w-6xl px-5 py-16 sm:px-8">
-              <h2 id="other-heading" className="font-display text-2xl">
-                Other routes
-              </h2>
-              <ul className="mt-6 flex flex-wrap gap-3">
-                {otherRoutes.map((other) => (
-                  <li key={other.id}>
-                    <Link
-                      href={`/transfers/${other.slug}`}
-                      className="border-border/70 hover:bg-accent focus-visible:ring-ring inline-flex rounded-full border px-4 py-2 text-sm transition focus-visible:ring-[3px] focus-visible:outline-none"
-                    >
-                      {routeTitle(other)} · {formatNad(other.fixedPrice)}
-                    </Link>
-                  </li>
-                ))}
-              </ul>
-            </div>
-          </section>
-        )}
+        </div>
       </main>
 
       <SiteFooter routes={allRoutes} />

@@ -5,8 +5,9 @@ import type {
 } from "./types";
 
 /**
- * Stand-in until DPO Pay is wired up. Records an intent and returns it as
- * pending — no money moves, and there is no redirect to a hosted page.
+ * The no-credentials fallback, and the default. Records an intent and returns
+ * it as pending — no money moves, and there is no redirect to a hosted page,
+ * so bookings still get taken on a machine with no PayToday keys.
  * Stripe is deliberately absent: it does not serve Namibian entities.
  */
 export class StubPaymentProvider implements PaymentProvider {

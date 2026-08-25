@@ -62,6 +62,12 @@ export const CATALOG_ROUTES: NewRoute[] = [
     originLabel: "Hosea Kutako International Airport (WDH)",
     destinationLabel: "Windhoek CBD",
     category: "airport",
+    /**
+     * The airport shuttle sells per seat (N$650/person). Long-distance
+     * routes below keep per-vehicle pricing — their fares were set as
+     * whole-car prices, and per-person would silently multiply them.
+     */
+    pricingUnit: "per_person",
     fixedPrice: "650.00",
     defaultDriverPayout: "455.00",
     isActive: true,
@@ -71,7 +77,7 @@ export const CATALOG_ROUTES: NewRoute[] = [
     seoTitle:
       "Hosea Kutako Airport to Windhoek Transfer — Fixed Price Private Car",
     seoDescription:
-      "Book a private transfer from Hosea Kutako International Airport (WDH) to Windhoek CBD. Fixed price, meet & greet in arrivals, flight monitoring and licensed Namibian drivers.",
+      "Book a private transfer from Hosea Kutako International Airport (WDH) to Windhoek CBD. Fixed price, meet & greet in arrivals, flight monitoring and professional Namibian drivers.",
     seoBody:
       "Hosea Kutako International Airport sits about 45 kilometres east of Windhoek, a straight 45-minute run into the city on the B6. There is no train and no reliable scheduled shuttle, so a pre-booked private car is how most visitors make the trip. Your driver tracks your flight, waits in the arrivals hall with a name board, and helps with luggage — so a delayed landing costs you nothing and there is no queue to join at midnight.",
   },
@@ -89,7 +95,7 @@ export const CATALOG_ROUTES: NewRoute[] = [
     sortOrder: 20,
     seoTitle: "Hosea Kutako Airport to Swakopmund Transfer — Private Car",
     seoDescription:
-      "Private door-to-door transfer from Hosea Kutako International Airport (WDH) to Swakopmund. One fixed price for the car, comfort stops en route, and licensed Namibian drivers.",
+      "Private door-to-door transfer from Hosea Kutako International Airport (WDH) to Swakopmund. One fixed price for the car, comfort stops en route, and professional Namibian drivers.",
     seoBody:
       "Swakopmund lies roughly 400 kilometres west of the airport, about four and a half hours of open road through the Khomas Hochland and across the Namib. Landing and driving straight to the coast is a common opening move for a Namibian itinerary, and it is far easier in a private vehicle than with a hire car after a long-haul flight. The price is for the whole car, not per seat, and includes comfort stops along the way.",
   },
@@ -107,7 +113,7 @@ export const CATALOG_ROUTES: NewRoute[] = [
     sortOrder: 30,
     seoTitle: "Windhoek to Swakopmund Private Transfer — Fixed Price",
     seoDescription:
-      "Private car from Windhoek to Swakopmund on the B2. Fixed price for the whole vehicle, hotel pickup, comfort stops and licensed Namibian drivers.",
+      "Private car from Windhoek to Swakopmund on the B2. Fixed price for the whole vehicle, hotel pickup, comfort stops and professional Namibian drivers.",
     seoBody:
       "The B2 from Windhoek to Swakopmund is a four-hour drive of about 360 kilometres, climbing out of the highlands and dropping through Karibib and Usakos before the coastal fog takes over near the sea. We collect you from your Windhoek hotel or guesthouse at a time you choose. Because the fare covers the vehicle rather than each seat, it works out well for couples, families and small groups alike.",
   },

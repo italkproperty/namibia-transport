@@ -1,23 +1,15 @@
 import type { Metadata } from "next";
-import { Geist, Instrument_Serif } from "next/font/google";
+import { Geist } from "next/font/google";
 
 import { Toaster } from "@/components/ui/sonner";
 import { SITE } from "@/lib/site";
 import "./globals.css";
 
-/**
- * Two roles, one voice: Instrument Serif carries display headings only, Geist
- * does every piece of interface text. Nothing else gets a typeface.
- */
+/** One family for the whole product. Weight and scale carry the hierarchy. */
 const geistSans = Geist({
   variable: "--font-geist-sans",
   subsets: ["latin"],
-});
-
-const displaySerif = Instrument_Serif({
-  variable: "--font-display",
-  weight: "400",
-  subsets: ["latin"],
+  display: "swap",
 });
 
 export const metadata: Metadata = {
@@ -45,7 +37,7 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body
-        className={`${geistSans.variable} ${displaySerif.variable} font-sans antialiased`}
+        className={`${geistSans.variable} font-sans antialiased`}
       >
         {children}
         <Toaster />

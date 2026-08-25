@@ -5,6 +5,7 @@ import { and, asc, desc, eq, gte, sql, type SQL } from "drizzle-orm";
 import { getDb, isDatabaseConfigured } from "@/db";
 import {
   bookings,
+  corporateEnquiries,
   customers,
   routes,
   vehicleClasses,
@@ -163,3 +164,23 @@ export async function getAdminSummary(): Promise<AdminSummary | null> {
     return null;
   }
 }
+
+/** Corporate leads for the admin view, newest first. */
+export async function listCorporateEnquiries() {
+  if (!isDatabaseConfigured()) return [];
+
+  try {
+    return await getDb()
+      .select()
+      .from(corporateEnquiries)
+      .orderBy(desc(corporateEnquiries.createdAt))
+      .limit(500);
+  } catch (error) {
+    console.error("[admin] enquiry list failed", error);
+    return [];
+  }
+}
+
+export type AdminEnquiryRow = Awaited<
+  ReturnType<typeof listCorporateEnquiries>
+>[number];
