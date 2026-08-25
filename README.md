@@ -33,7 +33,7 @@ Environment Variables** for Preview and Production.
 | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Supabase → Project Settings → API → anon public | Yes |
 | `SUPABASE_SERVICE_ROLE_KEY` | Supabase → Project Settings → API → service_role | **No — bypasses RLS** |
 | `ADMIN_PASSWORD` | Any strong secret you choose — gates `/admin/bookings` | No |
-| `NEXT_PUBLIC_SITE_URL` | Your deployed origin, e.g. `https://example.com` | Yes |
+| `NEXT_PUBLIC_SITE_URL` | Your custom domain, e.g. `https://example.com`. On Vercel, falls back to the project domain when unset | Yes |
 | `NEXT_PUBLIC_SUPPORT_WHATSAPP` | E.164 support WhatsApp — unlocks WhatsApp CTAs sitewide | Yes |
 | `NEXT_PUBLIC_SUPPORT_PHONE` | Optional support phone | Yes |
 | `NEXT_PUBLIC_SUPPORT_EMAIL` | Optional support email | Yes |

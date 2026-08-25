@@ -1,10 +1,32 @@
+/**
+ * The canonical origin, used for metadata, the sitemap, and the URL PayToday
+ * returns travellers to after checkout.
+ *
+ * NEXT_PUBLIC_SITE_URL wins when set, because a custom domain is a decision,
+ * not something to infer. Failing that we take what Vercel already knows:
+ * the project's production domain in production, and the deployment's own URL
+ * on a preview — so a preview links to itself rather than to production, and
+ * a forgotten variable degrades to the right host instead of to localhost.
+ */
+function resolveSiteUrl(): string {
+  const explicit = process.env.NEXT_PUBLIC_SITE_URL?.trim();
+  if (explicit) return explicit.replace(/\/+$/, "");
+
+  const vercelHost =
+    process.env.VERCEL_ENV === "production"
+      ? process.env.VERCEL_PROJECT_PRODUCTION_URL
+      : process.env.VERCEL_URL;
+
+  return vercelHost ? `https://${vercelHost}` : "http://localhost:3000";
+}
+
 /** Brand-level constants. Kept in one place so rebranding is a single edit. */
 export const SITE = {
   name: "Namibia Transport",
   tagline: "Ground transport across Namibia",
   description:
     "Fixed-price ground transport across Namibia — airport transfers, intercity journeys and corporate mobility, with professional local drivers and no meter.",
-  url: process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000",
+  url: resolveSiteUrl(),
   supportWhatsapp: process.env.NEXT_PUBLIC_SUPPORT_WHATSAPP ?? "",
 } as const;
 
