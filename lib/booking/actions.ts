@@ -9,6 +9,8 @@ import { getRouteBySlug, listVehicleClasses } from "@/lib/maps";
 import { getMessenger } from "@/lib/messaging";
 import { formatNad } from "@/lib/money";
 import { getPaymentProvider } from "@/lib/payments";
+import { INTENT_TTL_MS } from "@/lib/payments/paytoday/config";
+import { defaultReturnUrl } from "@/lib/payments/paytoday/provider";
 import { computeFare } from "@/lib/pricing";
 
 import { generateBookingRef } from "./ref";
@@ -158,29 +160,46 @@ export async function createBooking(
       notes: emptyToNull(values.notes),
     });
 
-    // Stubbed for now: records the intent, moves no money.
-    const intent = await getPaymentProvider().createPayment({
-      bookingId: booking.id,
-      bookingRef: booking.ref,
-      amount: fare.customerPrice,
-      currency: fare.currency,
-      customer: {
-        fullName: customer.fullName,
-        email: customer.email,
-        whatsapp: customer.whatsapp,
-      },
-      description: `${route.originLabel} to ${route.destinationLabel}`,
-    });
+    // The booking is already saved, so a gateway failure must not throw it
+    // away: we fall back to an unpaid booking that operations can chase,
+    // rather than losing a traveller who has just filled in a form.
+    let checkoutUrl: string | null = null;
+    try {
+      const intent = await getPaymentProvider().createPayment({
+        bookingId: booking.id,
+        bookingRef: booking.ref,
+        amount: fare.customerPrice,
+        currency: fare.currency,
+        customer: {
+          fullName: customer.fullName,
+          email: customer.email,
+          whatsapp: customer.whatsapp,
+        },
+        description: `${route.originLabel} to ${route.destinationLabel}`,
+        returnUrl: defaultReturnUrl(booking.ref),
+      });
 
-    await db.insert(payments).values({
-      bookingId: booking.id,
-      provider: intent.provider,
-      providerReference: intent.providerReference,
-      status: intent.status,
-      amount: intent.amount,
-      currency: intent.currency,
-      raw: intent.raw,
-    });
+      checkoutUrl = intent.redirectUrl;
+
+      await db.insert(payments).values({
+        bookingId: booking.id,
+        provider: intent.provider,
+        providerReference: intent.providerReference,
+        status: intent.status,
+        amount: intent.amount,
+        currency: intent.currency,
+        checkoutUrl: intent.redirectUrl,
+        expiresAt: intent.redirectUrl
+          ? new Date(Date.now() + INTENT_TTL_MS)
+          : null,
+        raw: intent.raw,
+      });
+    } catch (error) {
+      console.error(
+        `[booking] payment could not be started for ${booking.ref}`,
+        error
+      );
+    }
 
     // Stubbed for now: logs the message it would send.
     await getMessenger().send({
@@ -201,10 +220,12 @@ export async function createBooking(
         `Thanks ${customer.fullName} — we have your booking ${booking.ref}. ` +
         `${route.originLabel} to ${route.destinationLabel} on ${formatDateTime(scheduledAt)}, ` +
         `${formatNad(fare.customerPrice)} for a ${vehicleClass.name}. ` +
-        `We will confirm your driver and send payment details shortly.`,
+        (checkoutUrl
+          ? `Once payment clears we will confirm your driver.`
+          : `We will send payment details and confirm your driver shortly.`),
     });
 
-    return { ok: true, ref: booking.ref };
+    return { ok: true, ref: booking.ref, checkoutUrl };
   } catch (error) {
     console.error("[booking] failed to create booking", error);
     return {

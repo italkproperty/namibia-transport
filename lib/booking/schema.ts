@@ -65,5 +65,14 @@ export const bookingFormSchema = z.object({
 export type BookingFormValues = z.infer<typeof bookingFormSchema>;
 
 export type BookingActionResult =
-  | { ok: true; ref: string }
+  | {
+      ok: true;
+      ref: string;
+      /**
+       * Hosted gateway page to send the traveller to. Null when payment is
+       * stubbed, or when the gateway could not be reached — the booking is
+       * saved either way and the confirmation page offers to pay there.
+       */
+      checkoutUrl?: string | null;
+    }
   | { ok: false; message: string; fieldErrors?: Partial<Record<keyof BookingFormValues, string>> };

@@ -441,12 +441,17 @@ export const payments = pgTable(
     bookingId: uuid("booking_id")
       .notNull()
       .references(() => bookings.id, { onDelete: "cascade" }),
-    /** Adapter that produced this row: "stub" now, "dpo" later. */
+    /** Adapter that produced this row: "paytoday" live, "stub" without keys. */
     provider: text("provider").notNull(),
+    /** PayToday's payment_intent_token — the only handle on the transaction. */
     providerReference: text("provider_reference"),
     status: paymentStatusEnum("status").notNull().default("pending"),
     amount: money("amount").notNull(),
     currency: currency(),
+    /** Hosted gateway page, so an unpaid booking can resume the same intent. */
+    checkoutUrl: text("checkout_url"),
+    /** PayToday intents lapse after 30 minutes; past this, issue a new one. */
+    expiresAt: timestamp("expires_at", { withTimezone: true }),
     /** Verbatim gateway payload, for reconciliation and dispute handling. */
     raw: jsonb("raw"),
     paidAt: timestamp("paid_at", { withTimezone: true }),
