@@ -13,8 +13,17 @@ per person; long-distance/intercity transfers are priced per vehicle.
 
 ## Non-negotiable constraints (Namibia-specific — do not "helpfully" ignore these)
 - **Payments:** Stripe is NOT available to Namibian entities. Do NOT add Stripe, Paddle, or
-  any subscription-billing library. Real gateway will be DPO Pay (international cards, NAD
-  settlement) added later. For now, payments go through a STUBBED adapter (see Architecture).
+  any subscription-billing library. The live gateway is **PayToday** (Nedbank Namibia —
+  international cards, NAD settlement), integrated behind the `PaymentProvider` adapter.
+  It replaced the earlier DPO Pay plan. The STUB adapter remains the default; PayToday is
+  selected explicitly with `PAYMENT_PROVIDER=paytoday`.
+- **PayToday keys are server-only.** Shop Key, Shop Handle and Private Key never get a
+  `NEXT_PUBLIC_` prefix and never reach a browser bundle. PayToday's own guide (§3.3) says
+  keys must not appear in client-side code, even though its React sample does exactly that;
+  we follow the disclaimer and drive the SDK server-side.
+- **PayToday has no sandbox.** Every transaction is live and charged in real currency
+  (refunded in 3–5 business days; immediately for Nedbank accounts). Do NOT write anything
+  that fires real payment intents as part of a test run.
 - **Address data in Namibia is sparse.** Do NOT build free-text street-address autocomplete
   as the primary input. Use: a curated pick-list of common destinations (hotels, suburbs,
   towns) + optional map-pin drop + a free-text "landmark/notes" field.
@@ -28,7 +37,7 @@ per person; long-distance/intercity transfers are priced per vehicle.
 - Supabase (Postgres + Auth + Storage) — client via @supabase/ssr (cookie-based)
 - Drizzle ORM for schema + queries
 - Deployed on Vercel (already connected; every push to main auto-deploys)
-- Later, behind adapters only: Mapbox (maps/routing), DPO Pay (payments),
+- Later, behind adapters only: Mapbox (maps/routing),
   Meta WhatsApp Cloud API (messaging), Resend (email), a flight-status API.
 
 ## Architecture rules
@@ -40,8 +49,9 @@ per person; long-distance/intercity transfers are priced per vehicle.
   - `app/api/`          → route handlers, webhooks (later)
 - **Adapter pattern for all external integrations.** Put each behind a thin interface in
   `lib/` so the real service can be swapped in without touching business logic:
-  - `lib/payments/` → `PaymentProvider` interface + `StubPaymentProvider` (logs + returns a
-    fake pending payment) now; `DpoPaymentProvider` later.
+  - `lib/payments/` → `PaymentProvider` interface, `StubPaymentProvider` (logs + returns a
+    fake pending payment) and `PayTodayPaymentProvider` (live). Gateway status is only ever
+    read back via `queryPaymentIntent`; the `?status=` on the return URL is never trusted.
   - `lib/messaging/` → `Messenger` interface + `StubMessenger` (console.log) now;
     WhatsApp + Resend implementations later.
   - `lib/maps/` → distance/fare helpers; fixed-route table now, Mapbox later.

@@ -129,6 +129,13 @@ export function BookingDetailsForm({
     startTransition(async () => {
       const result = await createBooking(values);
       if (result.ok) {
+        // Straight to the gateway when there is one. router.push would keep the
+        // traveller inside the app router; PayToday is another origin, so this
+        // has to be a real navigation.
+        if (result.checkoutUrl) {
+          window.location.assign(result.checkoutUrl);
+          return;
+        }
         router.push(`/booking/${result.ref}`);
       } else {
         toast.error("We could not complete your booking", {

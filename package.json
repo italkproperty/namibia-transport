@@ -12,6 +12,7 @@
     "db:push": "drizzle-kit push",
     "db:studio": "drizzle-kit studio",
     "db:seed": "tsx db/seed.ts",
+    "test:payments": "tsx --conditions=react-server tests/payments.test.ts",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {

@@ -2,11 +2,14 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import {
+  AlertTriangleIcon,
   CalendarPlusIcon,
   CheckIcon,
   MessageCircleIcon,
+  ShieldCheckIcon,
 } from "lucide-react";
 
+import { PayNowButton } from "@/components/booking/pay-now-button";
 import { SiteFooter } from "@/components/marketing/site-footer";
 import { SiteHeader } from "@/components/marketing/site-header";
 import { Button } from "@/components/ui/button";
@@ -14,6 +17,11 @@ import { getBookingByRef } from "@/lib/booking/queries";
 import { getCompanyInfo, whatsappLink } from "@/lib/company";
 import { formatDateTime } from "@/lib/format";
 import { formatNad } from "@/lib/money";
+import {
+  getLatestPayment,
+  reconcileBookingPayment,
+  toPaymentView,
+} from "@/lib/payments/reconcile";
 
 export const metadata: Metadata = {
   title: "Booking confirmed",
@@ -26,7 +34,7 @@ export const dynamic = "force-dynamic";
 const NEXT_STEPS = [
   {
     title: "We confirm on WhatsApp",
-    body: "Your booking and payment details, before your travel date.",
+    body: "Your booking details, before your travel date.",
   },
   {
     title: "We watch your flight",
@@ -46,13 +54,27 @@ type PageProps = { params: Promise<{ ref: string }> };
 
 export default async function BookingConfirmationPage({ params }: PageProps) {
   const { ref } = await params;
-  const detail = await getBookingByRef(decodeURIComponent(ref));
+  const decodedRef = decodeURIComponent(ref);
+
+  // Settles the case the return URL cannot: the traveller paid, then closed the
+  // tab before PayToday redirected them back. Already-settled payments
+  // short-circuit without a network call, so this is cheap on every view.
+  await reconcileBookingPayment(decodedRef);
+
+  const detail = await getBookingByRef(decodedRef);
 
   if (!detail) {
     notFound();
   }
 
   const { booking } = detail;
+  const payment = toPaymentView(await getLatestPayment(booking.id));
+  const isPaid = payment?.status === "paid";
+  const canPayNow =
+    !isPaid &&
+    payment !== null &&
+    payment.provider !== "stub" &&
+    booking.status !== "cancelled";
   const company = getCompanyInfo();
   const routeLabel =
     detail.routeOrigin && detail.routeDestination
@@ -69,7 +91,9 @@ export default async function BookingConfirmationPage({ params }: PageProps) {
             <span className="bg-success-subtle text-success inline-flex size-7 items-center justify-center rounded-full">
               <CheckIcon className="size-4" aria-hidden />
             </span>
-            <p className="text-success text-sm font-medium">Booking received</p>
+            <p className="text-success text-sm font-medium">
+              {isPaid ? "Paid and confirmed" : "Booking received"}
+            </p>
           </div>
 
           {/* The reference is the one thing they need to keep. */}
@@ -112,23 +136,67 @@ export default async function BookingConfirmationPage({ params }: PageProps) {
                   {formatNad(booking.customerPrice)}
                 </p>
               </div>
-              <span className="bg-warning-subtle text-warning rounded-md px-2.5 py-1 text-xs font-medium">
-                Payment pending
-              </span>
+              <PaymentBadge status={payment?.status ?? null} />
             </div>
           </div>
 
-          <div className="border-warning/30 bg-warning-subtle/50 mt-4 rounded-xl border p-4">
-            <p className="text-sm font-medium">
-              Payment pending — confirmation will follow on WhatsApp
-            </p>
-            <p className="text-muted-foreground mt-1 text-sm leading-snug">
-              Nothing has been charged. We will message{" "}
-              <span className="text-foreground">{detail.customerWhatsapp}</span>{" "}
-              with payment details before your travel date. Your fare is locked
-              in at {formatNad(booking.customerPrice)} either way.
-            </p>
-          </div>
+          {isPaid ? (
+            <div className="border-success/30 bg-success-subtle/50 mt-4 flex gap-3 rounded-xl border p-4">
+              <ShieldCheckIcon
+                className="text-success mt-0.5 size-5 shrink-0"
+                strokeWidth={1.75}
+                aria-hidden
+              />
+              <div>
+                <p className="text-sm font-medium">
+                  Payment received — your seat is held
+                </p>
+                <p className="text-muted-foreground mt-1 text-sm leading-snug">
+                  {formatNad(booking.customerPrice)} paid via PayToday. We will
+                  message{" "}
+                  <span className="text-foreground">
+                    {detail.customerWhatsapp}
+                  </span>{" "}
+                  with your driver&rsquo;s name, vehicle and registration before
+                  pickup.
+                </p>
+              </div>
+            </div>
+          ) : (
+            <div className="border-warning/30 bg-warning-subtle/50 mt-4 flex gap-3 rounded-xl border p-4">
+              <AlertTriangleIcon
+                className="text-warning mt-0.5 size-5 shrink-0"
+                strokeWidth={1.75}
+                aria-hidden
+              />
+              <div className="min-w-0">
+                <p className="text-sm font-medium">
+                  {payment?.status === "failed"
+                    ? "That payment did not go through"
+                    : "Payment pending"}
+                </p>
+                <p className="text-muted-foreground mt-1 text-sm leading-snug">
+                  {payment?.status === "failed"
+                    ? "Nothing was charged. Your booking and your fare are held — try again with another card."
+                    : canPayNow
+                      ? "Your booking is held. Pay now to have your driver assigned, or we will message you a link."
+                      : "Nothing has been charged. We will message you payment details before your travel date."}{" "}
+                  Your fare is locked in at{" "}
+                  {formatNad(booking.customerPrice)} either way.
+                </p>
+                {canPayNow && (
+                  <div className="mt-3">
+                    <PayNowButton
+                      bookingRef={booking.ref}
+                      label={
+                        payment?.status === "failed" ? "Try again" : "Pay now"
+                      }
+                    />
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
 
           <section aria-labelledby="next-heading" className="mt-8">
             <h2 id="next-heading" className="text-base font-semibold">
@@ -198,5 +266,32 @@ function Row({
       <dt className="text-muted-foreground text-xs">{label}</dt>
       <dd className="mt-0.5 font-medium">{children}</dd>
     </div>
+  );
+}
+
+/** Reflects the gateway's own status; never a guess from the page it renders on. */
+function PaymentBadge({ status }: { status: string | null }) {
+  const label =
+    status === "paid"
+      ? "Paid"
+      : status === "failed"
+        ? "Payment failed"
+        : status === "cancelled"
+          ? "Payment cancelled"
+          : status === "refunded"
+            ? "Refunded"
+            : "Payment pending";
+
+  const tone =
+    status === "paid"
+      ? "bg-success-subtle text-success"
+      : status === "failed" || status === "cancelled"
+        ? "bg-destructive/10 text-destructive"
+        : "bg-warning-subtle text-warning";
+
+  return (
+    <span className={`rounded-md px-2.5 py-1 text-xs font-medium ${tone}`}>
+      {label}
+    </span>
   );
 }
