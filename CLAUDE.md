@@ -1,91 +1,132 @@
 # CLAUDE.md — Project Context & Working Agreement
 
 ## What this is
-A booking + dispatch web app for airport transfers in Namibia. Travellers arriving at
-Hosea Kutako International Airport (WDH) book a private transfer online; independent
-licensed partner drivers fulfil the trip. We are the demand + booking + dispatch layer,
-NOT a fleet owner.
+Namibia Transport is the booking, payment and dispatch layer for ground transport across
+Namibia. Three segments share one pipeline: airport transfers, intercity journeys, and
+corporate accounts. Independent partner drivers fulfil the trips — we are demand,
+software and coordination, not a fleet owner.
 
-Brand: Namibia Transport
-Primary route to launch first: Hosea Kutako International Airport (WDH) → Windhoek CBD
-Launch price for that route (fixed): N$650 per person. Airport transfers are priced
-per person; long-distance/intercity transfers are priced per vehicle.
+The goal is not a transfer website. It is the most capable ground-transport platform in
+the country: the operator a traveller trusts before they land, the one a Windhoek company
+gives its account to, and the only one that knows what Namibian ground transport actually
+costs and where it moves. Judge work against that, not against "does it ship".
 
-## Non-negotiable constraints (Namibia-specific — do not "helpfully" ignore these)
-- **Payments:** Stripe is NOT available to Namibian entities. Do NOT add Stripe, Paddle, or
-  any subscription-billing library. The live gateway is **PayToday** (Nedbank Namibia —
-  international cards, NAD settlement), integrated behind the `PaymentProvider` adapter.
-  It replaced the earlier DPO Pay plan. The STUB adapter remains the default; PayToday is
-  selected explicitly with `PAYMENT_PROVIDER=paytoday`.
-- **PayToday keys are server-only.** Shop Key, Shop Handle and Private Key never get a
-  `NEXT_PUBLIC_` prefix and never reach a browser bundle. PayToday's own guide (§3.3) says
-  keys must not appear in client-side code, even though its React sample does exactly that;
-  we follow the disclaimer and drive the SDK server-side.
+Live at namibiatransport.com. Airport transfers are priced per person (WDH→Windhoek is
+N$650); long-distance and intercity are priced per vehicle.
+
+## The bar
+- **Finish what you start.** A feature that is half-built is worse than one not started —
+  it looks like a promise. Ship whole, working units.
+- **Decide, then say so.** When something is ambiguous, choose the reading a careful
+  colleague would, state the assumption, and keep building. Stop only when proceeding
+  either way would waste real money, break live bookings, or be hard to reverse.
+- **Depth over breadth.** One surface that is genuinely excellent beats four that are
+  adequate. "Silicon Valley tech company level and feel" is the standard.
+- **Verify before claiming.** Run it, look at it, read the logs. "Should work" is not a
+  result. If something is untested, say which part and why.
+
+## Non-negotiable: Namibian reality
+- **Payments.** Stripe and Paddle do not serve Namibian entities — never add them, or any
+  subscription-billing library. The live gateway is **PayToday** (Nedbank Namibia:
+  international cards, NAD settlement) behind the `PaymentProvider` adapter. The stub stays
+  the default; PayToday is selected explicitly with `PAYMENT_PROVIDER=paytoday`.
+- **PayToday keys are server-only.** Shop Key, Shop Handle and Private Key never take a
+  `NEXT_PUBLIC_` prefix and never reach a browser bundle. Their guide §3.3 forbids keys in
+  client code even though their own React sample does it; we follow the disclaimer and run
+  the SDK server-side. PayToday also validates the request origin, so the site's domain
+  must be registered with them.
 - **PayToday has no sandbox.** Every transaction is live and charged in real currency
-  (refunded in 3–5 business days; immediately for Nedbank accounts). Do NOT write anything
-  that fires real payment intents as part of a test run.
-- **Address data in Namibia is sparse.** Do NOT build free-text street-address autocomplete
-  as the primary input. Use: a curated pick-list of common destinations (hotels, suburbs,
-  towns) + optional map-pin drop + a free-text "landmark/notes" field.
-- **WhatsApp-first.** WhatsApp (Meta Cloud API, added later) is the main customer comms
-  channel. Email is secondary. Build messaging behind a STUBBED adapter for now.
-- Currency is N$ (Namibian dollar). Display as "N$" with thousands separators.
+  (refunded in 3–5 business days; immediately for Nedbank accounts). Never wire real
+  payment intents into an automated test.
+- **Address data is sparse.** Never make free-text street-address autocomplete the primary
+  input. A curated pick-list of known destinations, plus an optional dropped pin, plus a
+  free-text landmark note. A landmark helps a Namibian driver more than a street name.
+- **WhatsApp-first.** WhatsApp is the main customer channel; email is secondary. Behind the
+  `Messenger` adapter — still stubbed until the Meta Cloud API lands.
+- Currency is N$ with thousands separators. Namibia is **UTC+02:00 all year** — no DST
+  since 2017, so the offset is fixed, never inferred from the runtime.
 
-## Tech stack (do not substitute without asking)
-- Next.js 15 (App Router) + React 19 + TypeScript (strict)
-- Tailwind CSS + shadcn/ui (Radix under the hood)
-- Supabase (Postgres + Auth + Storage) — client via @supabase/ssr (cookie-based)
-- Drizzle ORM for schema + queries
-- Deployed on Vercel (already connected; every push to main auto-deploys)
-- Later, behind adapters only: Mapbox (maps/routing),
-  Meta WhatsApp Cloud API (messaging), Resend (email), a flight-status API.
+## Non-negotiable: credibility
+This has cost more rework than anything else. The site sells trust to people who have not
+landed yet, and one unearned claim discredits the rest.
+- **Never state a capability we do not have.** No "24/7" until someone answers at 03:00.
+  No "licensed" or "vetted" drivers until there is a document on file. No invented
+  registration numbers, addresses, review counts or years in business.
+- **Say what we do, not that we are trustworthy.** "Quote your reference and we can see
+  your trip, your driver and your flight" beats "a real person on WhatsApp" — describing a
+  floor reads as insecurity.
+- Support hours, prices and inclusions are stated in exactly one place and read from there,
+  so they cannot drift apart across pages.
 
-## Architecture rules
-- ONE Next.js app. Use App Router route groups:
-  - `app/(marketing)/`  → SEO pages incl. programmatic route pages
-  - `app/(booking)/`    → the booking flow + confirmation
-  - `app/(dashboard)/`  → internal admin/dispatch (auth-gated), built later
-  - `app/driver/`       → driver PWA, built later
-  - `app/api/`          → route handlers, webhooks (later)
-- **Adapter pattern for all external integrations.** Put each behind a thin interface in
-  `lib/` so the real service can be swapped in without touching business logic:
-  - `lib/payments/` → `PaymentProvider` interface, `StubPaymentProvider` (logs + returns a
-    fake pending payment) and `PayTodayPaymentProvider` (live). Gateway status is only ever
-    read back via `queryPaymentIntent`; the `?status=` on the return URL is never trusted.
-  - `lib/messaging/` → `Messenger` interface + `StubMessenger` (console.log) now;
-    WhatsApp + Resend implementations later.
-  - `lib/maps/` → distance/fare helpers; fixed-route table now, Mapbox later.
-- **Pricing is always computed server-side.** Never trust a price sent from the client.
-  Persist the fully-resolved fare on the booking so later price changes don't alter old bookings.
-- Prefer Server Components + Server Actions for reads/mutations. Add TanStack Query only for
-  live/interactive surfaces (dispatch board) when we build them.
-- Secrets go in `.env.local` (gitignored) and Vercel env settings. Keep an `.env.example`
-  with placeholder keys. NEVER commit real secrets.
+## Non-negotiable: money and correctness
+- **Pricing is always computed server-side.** The client sends no price, ever. The resolved
+  fare, driver payout and contribution are snapshotted onto the booking so later price
+  changes never rewrite what someone already agreed to.
+- **Money is `numeric(10,2)` and moves as decimal strings.** Parse for arithmetic, format
+  for display, never store a float.
+- **Never trust a gateway redirect.** A `?status=` in a return URL is attacker-controlled.
+  Payment status is only ever re-read from the gateway, and only marked paid when the
+  amount matches what we recorded.
+- Server Actions are public endpoints. Anything privileged re-checks authorisation itself.
 
-## Data model (define the FULL schema now, even if the UI only uses part of it)
-Tables (Drizzle, Postgres): customers, bookings, drivers, vehicles, vehicle_classes, routes,
-pricing_rules, add_ons, promo_codes, payments, dispatch_assignments, flight_status_events.
-See the booking blueprint for fields. `bookings` must store: ref, customer_id, route_id,
-pickup_point, dropoff_point, scheduled_at, flight_number, vehicle_class_id, status,
-distance_km, duration_min, fare_total, currency, created_at. `routes` has a `slug` +
-`fixed_price` + SEO fields and powers both fixed pricing and the programmatic SEO pages.
+## Tech stack
+- Next.js 15 (App Router) · React 19 · TypeScript strict · Tailwind v4 · shadcn/ui (Radix)
+- Supabase Postgres via Drizzle ORM · `@supabase/ssr` for auth/storage
+- Vercel — every push to `main` auto-deploys. `DATABASE_URL` must be Supabase's
+  **transaction pooler** (port 6543, user `postgres.<ref>`); the direct host is IPv6-only
+  and unreachable from Vercel functions.
+- Live behind adapters: **PayToday** (payments), **Mapbox** (static route maps, Directions).
+- Planned behind adapters: Meta WhatsApp Cloud API, Resend, a flight-status API.
 
-## Scope guardrail (IMPORTANT)
-Build ONLY what the current task asks for. Do NOT pre-build Phase 2/3 features (live GPS
-tracking, dispatch automation, AI assistant, native apps, flight monitoring) unless the
-prompt explicitly says so. When in doubt, stop and ask rather than expanding scope.
+**Adding a dependency is your call** when it is the right tool and earns its weight — say
+what you added and why. **Replacing a pillar** (framework, ORM, database, host, payment
+gateway) is a conversation first.
+
+## Architecture
+- ONE Next.js app, App Router route groups:
+  - `app/(marketing)/` — SEO pages, programmatic route pages, corporate
+  - `app/(booking)/` — booking flow and confirmation
+  - `app/(dashboard)/` — internal admin and dispatch, password-gated
+  - `app/driver/` — driver PWA, not yet built
+  - `app/api/` — route handlers and gateway returns
+- **Every external service sits behind a thin interface in `lib/`**, with a stub
+  implementation, so it can be swapped or fail without touching business logic:
+  `lib/payments/` (`PaymentProvider`), `lib/messaging/` (`Messenger`), `lib/maps/`
+  (`RouteProvider`).
+- **Degrade, never collapse.** The catalogue fallback renders routes when the database is
+  unreachable; a gateway failure still saves the booking. A dependency being down must
+  cost a feature, not the business.
+- Prefer Server Components and Server Actions. TanStack Query only for genuinely live
+  surfaces, like the dispatch board.
+- Secrets live in `.env.local` (gitignored) and Vercel. `.env.example` carries placeholders
+  and the reasoning. Never commit a real secret.
+
+## Data model
+Postgres via Drizzle, defined in full even where the UI uses part of it — growth should be
+a migration, not a rewrite. Tables: customers, bookings, routes, vehicle_classes, vehicles,
+drivers, pricing_rules, add_ons, booking_add_ons, promo_codes, payments,
+dispatch_assignments, flight_status_events, corporate_enquiries, corporate_quotes,
+corporate_quote_items, reviews.
+
+Every booking records the full economics — customer price, driver payout, contribution — so
+route profitability is queryable from day one. `routes` carries a slug, fixed price, SEO
+fields and coordinates, powering fixed pricing, the programmatic SEO pages and route maps.
+Migrations are generated with `drizzle-kit`, and applied via Supabase's SQL editor when a
+local Postgres is not to hand.
 
 ## Working style
-- Small, reviewable commits with clear messages. After each logical unit, summarise what
-  changed and why.
-- Keep the app deployable at all times — never leave main in a broken state.
-- TypeScript strict; no `any` unless justified in a comment.
-- Accessible components (labels, focus states, keyboard nav) by default.
-- Ask before adding a new dependency that isn't in the stack above.
+- Small, reviewable commits. Explain *why* in the message; the diff already shows what.
+- `main` is always deployable and always deploying — never leave it broken.
+- TypeScript strict, no `any` without a comment justifying it.
+- Accessible by default: labels, focus states, keyboard nav, AA contrast measured rather
+  than assumed.
+- Comments explain reasoning and non-obvious constraints, not mechanics.
 
-## Definition of done for Phase 1 (the current goal)
-A visitor can: land on the WDH→Windhoek route page, click Book, fill a booking form
-(date/time, passengers, flight number, name, WhatsApp), see a server-computed fixed fare,
-submit, have a booking row written to Supabase, and land on a confirmation page with a
-booking reference — with payment + messaging going through the STUB adapters and clearly
-marked "pending". No real payment or WhatsApp yet.
+## Where we are
+Live and working: the booking flow end to end on Supabase, server-computed fares, the
+corporate quotation engine, the reviews admin, static route maps, the custom domain and
+Spacemail.
+
+In flight: PayToday returns 403 until the domain is registered with them. Next up: the
+map-pin drop on the booking form, then WhatsApp via the Meta Cloud API — the messaging
+adapter is stubbed and waiting.
