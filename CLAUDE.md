@@ -75,7 +75,10 @@ landed yet, and one unearned claim discredits the rest.
 - Vercel — every push to `main` auto-deploys. `DATABASE_URL` must be Supabase's
   **transaction pooler** (port 6543, user `postgres.<ref>`); the direct host is IPv6-only
   and unreachable from Vercel functions.
-- Live behind adapters: **PayToday** (payments), **Mapbox** (static route maps, Directions).
+- Live behind adapters: **PayToday** (payments), **Mapbox** (route maps, Directions).
+  `mapbox-gl` powers the interactive map and is ~230KB, so it is never in the
+  initial bundle — the static image renders first and the library loads only
+  when a map scrolls into view.
 - Planned behind adapters: Meta WhatsApp Cloud API, Resend, a flight-status API.
 
 **Adding a dependency is your call** when it is the right tool and earns its weight — say

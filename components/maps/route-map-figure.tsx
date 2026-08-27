@@ -1,3 +1,4 @@
+import { InteractiveRouteMap } from "@/components/maps/interactive-route-map";
 import { staticRouteMapUrl } from "@/lib/maps/mapbox";
 import type { RouteView } from "@/lib/maps/types";
 import { formatDuration, shortPlace } from "@/lib/format";
@@ -13,11 +14,14 @@ import { formatDuration, shortPlace } from "@/lib/format";
 export function RouteMapFigure({
   route,
   priority = false,
+  interactive = true,
   className,
 }: {
   route: RouteView;
   /** True on the home page, where the map swaps as the traveller chooses. */
   priority?: boolean;
+  /** Off where a page wants a picture and nothing more. */
+  interactive?: boolean;
   className?: string;
 }) {
   const { originLat, originLng, destinationLat, destinationLng } = route;
@@ -62,6 +66,18 @@ export function RouteMapFigure({
           decoding="async"
           className="absolute inset-0 size-full object-cover"
         />
+
+        {/* Fades in over the image once mapbox-gl has loaded. Until then, and
+            if it never does, the picture underneath is the whole feature. */}
+        {interactive && (
+          <InteractiveRouteMap
+            geometry={route.routeGeometry}
+            origin={[originLng, originLat]}
+            destination={[destinationLng, destinationLat]}
+            originLabel={from}
+            destinationLabel={to}
+          />
+        )}
       </div>
       <figcaption className="text-muted-foreground flex flex-wrap items-center gap-x-2 gap-y-1 border-t px-4 py-2.5 text-xs">
         <span className="text-foreground font-medium">
@@ -71,6 +87,11 @@ export function RouteMapFigure({
           <span>· {Math.round(Number(route.distanceKm))} km</span>
         )}
         {duration && <span>· about {duration}</span>}
+        {interactive && (
+          <span className="ml-auto hidden sm:inline">
+            Drag to explore · ⌘/Ctrl + scroll to zoom
+          </span>
+        )}
       </figcaption>
     </figure>
   );
