@@ -50,7 +50,12 @@ export class MapboxRouteProvider implements RouteProvider {
     url.searchParams.set("overview", "full");
 
     try {
-      const response = await fetch(url, { cache: "no-store" });
+      // Cacheable on purpose. `no-store` would opt any page that calls this
+      // out of static rendering, which would quietly turn the prerendered SEO
+      // route pages into server-rendered ones. A road does not move.
+      const response = await fetch(url, {
+        next: { revalidate: 60 * 60 * 24 * 30 },
+      });
       if (!response.ok) {
         console.error(
           `[mapbox] directions failed: ${response.status} ${response.statusText}`
