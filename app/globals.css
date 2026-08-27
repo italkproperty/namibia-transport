@@ -134,7 +134,9 @@
   --color-input: var(--input);
   --color-ring: var(--ring);
 
-  /* One family, everywhere. */
+  /* Geist runs the interface. Archivo is the wordmark's alone and is
+     referenced directly by the logo — next/font sets its variable on <body>,
+     so a @theme token resolving at :root would come back empty. */
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
 

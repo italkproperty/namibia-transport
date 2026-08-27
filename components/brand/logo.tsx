@@ -1,33 +1,46 @@
 import * as React from "react";
 
 /**
- * The mark is an N whose diagonal is the route.
+ * A wordmark, not a symbol.
  *
- * A dune-and-horizon mark said "generic African transport company"; a
- * letterform says us. The two uprights are the fixed points — where you are,
- * where you are going — and the amber stroke between them is the journey we
- * run. It is geometric enough to survive a 16px favicon and bold enough to
- * read across a car park on a vehicle door, which is the real test.
+ * Two symbol attempts were rejected, and the reason both failed is the same:
+ * a dune, a horizon, a road, an N with a route through it — every one of them
+ * is a picture of *transport*, which is the category, not the company. Any
+ * competitor could use it tomorrow.
+ *
+ * So the name does the work. The device is typographic: set in a grotesque
+ * with enough squareness to read as infrastructure, uppercase, and tracked
+ * tight so the two words lock into one block rather than floating apart. In
+ * the stacked lockup the tracking is tuned per word so NAMIBIA and TRANSPORT
+ * occupy the same measure — a deliberate optical alignment that reads as
+ * designed rather than typed, and the only real flourish in the identity.
+ *
+ * It survives what a symbol has to survive: a 16px favicon (as the monogram
+ * below), a vehicle door, a black-and-white invoice, and a WhatsApp preview.
  */
 
-const MARK_TITLE = "Namibia Transport";
+const NAME = "Namibia Transport";
 
+/**
+ * The single-letter tile, for a favicon and anywhere too tight for the name.
+ * Not a symbol in its own right — it is the wordmark's first letter, in the
+ * wordmark's typeface.
+ */
 export function BrandMark({
   size = 32,
   variant = "default",
   className,
 }: {
   size?: number;
-  /** "default" = ink roundel · "mono" = single-colour · "inverse" = on dark */
+  /** "default" = ink tile · "mono" = single-colour · "inverse" = on dark */
   variant?: "default" | "mono" | "inverse";
   className?: string;
 }) {
   const mono = variant === "mono";
   const inverse = variant === "inverse";
 
-  const plate = mono ? "none" : inverse ? "none" : "#1a1614";
-  const upright = mono ? "currentColor" : inverse ? "#fcfaf7" : "#fcfaf7";
-  const route = mono ? "currentColor" : "#bc4b00";
+  const tile = mono || inverse ? "none" : "#1a1614";
+  const letter = mono ? "currentColor" : inverse ? "#1a1614" : "#fcfaf7";
 
   return (
     <svg
@@ -35,63 +48,103 @@ export function BrandMark({
       height={size}
       viewBox="0 0 64 64"
       role="img"
-      aria-label={MARK_TITLE}
+      aria-label={NAME}
       className={className}
     >
-      {plate !== "none" && <rect width="64" height="64" rx="14" fill={plate} />}
-
-      {/* Clipped to the uprights' band so the route ends flush, not ragged. */}
-      <clipPath id="nt-mark-band">
-        <rect x="15" y="15" width="34" height="34" />
-      </clipPath>
-
-      {/* The route: drawn first so the uprights sit crisply on top of it. */}
-      <path
-        clipPath="url(#nt-mark-band)"
-        d="M19 14 L45 50"
-        stroke={route}
-        strokeWidth="9"
-        strokeLinecap="butt"
-        opacity={mono ? 0.55 : 1}
-      />
-
-      {/* Uprights — the two fixed points of any journey. */}
-      <rect x="15" y="15" width="8" height="34" rx="1.5" fill={upright} />
-      <rect x="41" y="15" width="8" height="34" rx="1.5" fill={upright} />
+      {tile !== "none" && <rect width="64" height="64" rx="13" fill={tile} />}
+      {inverse && <rect width="64" height="64" rx="13" fill="#fcfaf7" />}
+      {/* Drawn as paths rather than a text node: a glyph would depend on the
+          brand font having loaded, and this has to hold at 16px in a browser
+          tab and inside a printed quotation alike. */}
+      <g fill={letter}>
+        <rect x="16" y="16" width="10" height="32" />
+        <rect x="38" y="16" width="10" height="32" />
+        <polygon points="16,16 26,16 48,48 38,48" />
+      </g>
     </svg>
   );
 }
 
 /**
- * The lockup. "Namibia Transport" is the master brand — deliberately not
- * narrowed by a "private transfers" tagline, because the same company has to
- * carry intercity, corporate and group work as it grows.
+ * The wordmark.
+ *
+ * `stacked` is the primary lockup — two lines, optically matched widths. Use
+ * it where there is room to breathe: the footer, a quotation header, a share
+ * card. `inline` is the compact form for navigation bars.
  */
 export function Logo({
-  markSize = 30,
   variant = "default",
-  descriptor = false,
+  layout = "inline",
   className,
+  size = 1,
 }: {
-  markSize?: number;
   variant?: "default" | "mono" | "inverse";
-  /** Adds the service descriptor. Off in navigation, on where it earns space. */
-  descriptor?: boolean;
+  layout?: "inline" | "stacked";
   className?: string;
+  /** Multiplier on the base size, so one lockup serves every context. */
+  size?: number;
 }) {
+  const colour =
+    variant === "mono"
+      ? "currentColor"
+      : variant === "inverse"
+        ? "#fcfaf7"
+        : "#1a1614";
+
+  const brandFont = {
+    fontFamily:
+      "var(--font-archivo), Archivo, ui-sans-serif, system-ui, sans-serif",
+    fontWeight: 700,
+  } as const;
+
+  if (layout === "stacked") {
+    // Drawn as SVG so the two lines are the same width by construction rather
+    // than by tuned tracking. `textLength` forces each word onto an identical
+    // measure and lets the spacing fall where it must — which is the whole
+    // device, and something hand-tuned letter-spacing can only approximate
+    // for one font at one size.
+    return (
+      <svg
+        viewBox="0 0 120 33"
+        role="img"
+        aria-label={NAME}
+        className={className}
+        style={{ height: `${2.05 * size}rem`, width: "auto", display: "block" }}
+      >
+        <g
+          fill={colour}
+          style={{
+            fontFamily:
+              "var(--font-archivo), Archivo, ui-sans-serif, system-ui, sans-serif",
+            fontWeight: 700,
+            fontSize: "15px",
+          }}
+        >
+          <text x="0" y="13" textLength="120" lengthAdjust="spacing">
+            NAMIBIA
+          </text>
+          <text x="0" y="30" textLength="120" lengthAdjust="spacing">
+            TRANSPORT
+          </text>
+        </g>
+      </svg>
+    );
+  }
+
   return (
-    <span className={`inline-flex items-center gap-2.5 ${className ?? ""}`}>
-      <BrandMark size={markSize} variant={variant} />
-      <span className="flex flex-col leading-none">
-        <span className="text-[0.98rem] font-semibold tracking-tight">
-          Namibia Transport
-        </span>
-        {descriptor && (
-          <span className="text-muted-foreground mt-1 text-[0.55rem] font-medium tracking-[0.1em] whitespace-nowrap uppercase">
-            Transfers · Intercity · Corporate
-          </span>
-        )}
-      </span>
+    <span
+      aria-label={NAME}
+      role="img"
+      className={`inline-block whitespace-nowrap ${className ?? ""}`}
+      style={{
+        ...brandFont,
+        color: colour,
+        fontSize: `${1.02 * size}rem`,
+        letterSpacing: "-0.015em",
+      }}
+    >
+      NAMIBIA<span style={{ display: "inline-block", width: "0.34em" }} />
+      TRANSPORT
     </span>
   );
 }

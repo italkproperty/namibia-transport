@@ -105,7 +105,7 @@ function Frame({
       <header className="border-b">
         <div className="mx-auto flex h-14 max-w-[110rem] items-center justify-between gap-4 px-4 sm:px-6">
           <Link href="/" aria-label="Namibia Transport">
-            <Logo markSize={26} />
+            <Logo />
           </Link>
           {tabs}
           <div className="ml-auto">{action}</div>
