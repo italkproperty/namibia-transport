@@ -36,6 +36,18 @@ export function getPaymentProvider(): PaymentProvider {
   return provider;
 }
 
+/**
+ * True when a real gateway is wired up and selected.
+ *
+ * The confirmation page needs this to decide whether to offer payment, and it
+ * cannot infer it from the booking's payments row: when the gateway fails at
+ * booking time there is no row at all, which is exactly the case where the
+ * traveller most needs a way to pay.
+ */
+export function isLiveGatewayConfigured(): boolean {
+  return selectedPaymentProvider() === "paytoday" && isPayTodayConfigured();
+}
+
 /** Test seam: forces the next getPaymentProvider() to re-read the environment. */
 export function resetPaymentProvider(): void {
   provider = undefined;

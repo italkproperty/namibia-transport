@@ -17,6 +17,7 @@ import { getBookingByRef } from "@/lib/booking/queries";
 import { getCompanyInfo, whatsappLink } from "@/lib/company";
 import { formatDateTime } from "@/lib/format";
 import { formatNad } from "@/lib/money";
+import { isLiveGatewayConfigured } from "@/lib/payments";
 import {
   getLatestPayment,
   reconcileBookingPayment,
@@ -70,10 +71,14 @@ export default async function BookingConfirmationPage({ params }: PageProps) {
   const { booking } = detail;
   const payment = toPaymentView(await getLatestPayment(booking.id));
   const isPaid = payment?.status === "paid";
+  // Offer payment whenever a live gateway is configured — including when the
+  // booking has no payments row, which happens if the gateway was unreachable
+  // at booking time. Requiring a row meant the one case that most needed a
+  // retry button was the one case that never showed one.
   const canPayNow =
     !isPaid &&
-    payment !== null &&
-    payment.provider !== "stub" &&
+    isLiveGatewayConfigured() &&
+    payment?.provider !== "stub" &&
     booking.status !== "cancelled";
   const company = getCompanyInfo();
   const routeLabel =
