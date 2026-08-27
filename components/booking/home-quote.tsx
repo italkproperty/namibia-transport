@@ -3,6 +3,7 @@
 import * as React from "react";
 import Link from "next/link";
 
+import { RouteMapFigure } from "@/components/maps/route-map-figure";
 import { QuoteWidget } from "@/components/booking/quote-widget";
 import { BookingAssurance } from "@/components/marketing/booking-assurance";
 import { StickyBookBar } from "@/components/booking/sticky-book-bar";
@@ -109,6 +110,13 @@ export function HomeQuote({
             Route details
           </Link>
         </p>
+      </div>
+
+      {/* Follows the selection above. Deliberately below the widget: the fold
+          belongs to the price and the button, not to a picture. Renders
+          nothing without a Mapbox token or coordinates. */}
+      <div className="mt-4">
+        <RouteMapFigure route={trip.route} priority />
       </div>
 
       <StickyBookBar
