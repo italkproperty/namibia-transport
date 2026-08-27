@@ -18,6 +18,20 @@ function buildDb() {
     throw new Error("DATABASE_URL is not set — see .env.example");
   }
 
+  // Supabase's direct host (db.<ref>.supabase.co) resolves to IPv6 only, and
+  // Vercel's serverless functions have no IPv6 egress — every query dies with
+  // ENOTFOUND before a socket is opened. Pages still render from the
+  // catalogue fallback, so the only visible symptom is that writes fail,
+  // which reads as a database problem rather than a connection-string one.
+  // Say it plainly instead of leaving it to be inferred from a DNS error.
+  if (process.env.VERCEL && /@db\.[a-z0-9]+\.supabase\.co/.test(connectionString)) {
+    console.error(
+      "[db] DATABASE_URL points at Supabase's direct connection, which is IPv6-only and unreachable from Vercel. " +
+        "Use the transaction pooler instead: host aws-0-<region>.pooler.supabase.com, port 6543, " +
+        "username postgres.<project-ref>."
+    );
+  }
+
   const client =
     globalForDb.__transferSql ??
     postgres(connectionString, {

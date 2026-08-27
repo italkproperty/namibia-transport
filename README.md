@@ -28,7 +28,7 @@ Environment Variables** for Preview and Production.
 
 | Variable | Where to find it | Exposed to browser |
 | --- | --- | --- |
-| `DATABASE_URL` | Supabase → Project Settings → Database → Connection string (URI) | No |
+| `DATABASE_URL` | Supabase → Connect → **Transaction pooler** (port 6543, username `postgres.<ref>`). Not the direct connection — see below | No |
 | `NEXT_PUBLIC_SUPABASE_URL` | Supabase → Project Settings → API → Project URL | Yes |
 | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Supabase → Project Settings → API → anon public | Yes |
 | `SUPABASE_SERVICE_ROLE_KEY` | Supabase → Project Settings → API → service_role | **No — bypasses RLS** |
@@ -51,6 +51,14 @@ Environment Variables** for Preview and Production.
 
 `DATABASE_URL` is read at server start, so it must be present in every
 environment that builds or runs the app.
+
+**Use Supabase's transaction pooler, not the direct connection.** The direct
+host (`db.<ref>.supabase.co:5432`) resolves to IPv6 only, and Vercel's
+serverless functions have no IPv6 egress — every query fails with `ENOTFOUND`
+while pages keep rendering from the catalogue fallback, so the symptom looks
+like a database problem rather than a connection-string one. The pooler
+(`aws-0-<region>.pooler.supabase.com:6543`, username `postgres.<project-ref>`)
+is IPv4 and works. The direct connection is fine from a local machine.
 
 ## Scripts
 
