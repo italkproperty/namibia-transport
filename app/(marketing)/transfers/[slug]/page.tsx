@@ -11,6 +11,7 @@ import { formatDistance, formatDuration } from "@/lib/format";
 import { getRouteBySlug, listRoutes, listVehicleClasses } from "@/lib/maps";
 import { formatNad } from "@/lib/money";
 import { routeFaqs, routeTitle } from "@/lib/route-content";
+import { GUIDES } from "@/lib/guides";
 import { INCLUSIONS, SITE } from "@/lib/site";
 
 type PageProps = { params: Promise<{ slug: string }> };
@@ -149,6 +150,8 @@ export default async function RoutePage({ params }: PageProps) {
                 </p>
               )}
 
+              <RelatedGuides slug={route.slug} />
+
               {/* Renders nothing without a Mapbox token or coordinates. */}
               <div className="mt-6 empty:mt-0">
                 <RouteMap route={route} />
@@ -233,5 +236,31 @@ export default async function RoutePage({ params }: PageProps) {
 
       <SiteFooter routes={allRoutes} />
     </div>
+  );
+}
+
+/** Sends a researching traveller to the planning page for this journey. */
+function RelatedGuides({ slug }: { slug: string }) {
+  const guides = GUIDES.filter((guide) => guide.routes.includes(slug));
+  if (guides.length === 0) return null;
+
+  return (
+    <section aria-labelledby="guides-heading" className="mt-6">
+      <h2 id="guides-heading" className="text-sm font-medium">
+        Planning this trip
+      </h2>
+      <ul className="mt-2 grid gap-1.5">
+        {guides.map((guide) => (
+          <li key={guide.slug}>
+            <Link
+              href={`/guides/${guide.slug}`}
+              className="text-sm underline underline-offset-2"
+            >
+              {guide.title}
+            </Link>
+          </li>
+        ))}
+      </ul>
+    </section>
   );
 }

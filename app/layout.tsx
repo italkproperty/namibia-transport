@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Geist } from "next/font/google";
 
 import { Toaster } from "@/components/ui/sonner";
+import { SiteSchema } from "@/components/marketing/site-schema";
 import { SITE } from "@/lib/site";
 import "./globals.css";
 
@@ -41,6 +42,7 @@ export default function RootLayout({
       >
         {children}
         <Toaster />
+              <SiteSchema />
       </body>
     </html>
   );

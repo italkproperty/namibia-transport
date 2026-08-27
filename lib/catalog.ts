@@ -144,7 +144,7 @@ export const CATALOG_ROUTES: NewRoute[] = [
       "The B2 from Windhoek to Swakopmund is a four-hour drive of about 360 kilometres, climbing out of the highlands and dropping through Karibib and Usakos before the coastal fog takes over near the sea. We collect you from your Windhoek hotel or guesthouse at a time you choose. Because the fare covers the vehicle rather than each seat, it works out well for couples, families and small groups alike.",
   },
 
-  /* ----------------------------------------------- schema-ready, not listed */
+  /* ------------------------------------ long-distance and special routes */
   {
     id: ROUTE_IDS.wdhWalvisBay,
     slug: "hosea-kutako-to-walvis-bay",
@@ -157,13 +157,16 @@ export const CATALOG_ROUTES: NewRoute[] = [
     category: "airport",
     fixedPrice: "4400.00",
     defaultDriverPayout: "3080.00",
-    isActive: false,
+    isActive: true,
     distanceKm: "430.00",
     durationMin: 285,
     sortOrder: 40,
-    seoTitle: "Hosea Kutako Airport to Walvis Bay Transfer — Private Car",
+    seoTitle:
+      "Hosea Kutako Airport to Walvis Bay Transfer — Fixed Price Private Car",
     seoDescription:
-      "Private transfer from Hosea Kutako International Airport (WDH) to Walvis Bay, for the harbour, the lagoon and cruise departures.",
+      "Private transfer from Hosea Kutako International Airport (WDH) to Walvis Bay — harbour, lagoon and cruise terminal. One fixed price for the vehicle, comfort stops, professional Namibian drivers.",
+    seoBody:
+      "Walvis Bay is about 430 kilometres west of the airport — roughly four and three quarter hours on the B2 through Okahandja, Karibib and Usakos, then the last stretch down the coast past Swakopmund. It is a long way to drive straight off a long-haul flight, which is why most people book the car rather than collect a rental at midnight. The lagoon, the harbour and the cruise terminal are all within a few minutes of each other, so tell us which you need and the driver takes you to the door. Comfort stops are built into the drive.",
   },
   {
     id: ROUTE_IDS.wdhSossusvlei,
@@ -177,13 +180,16 @@ export const CATALOG_ROUTES: NewRoute[] = [
     category: "airport",
     fixedPrice: "6500.00",
     defaultDriverPayout: "4550.00",
-    isActive: false,
+    isActive: true,
     distanceKm: "380.00",
     durationMin: 330,
     sortOrder: 50,
-    seoTitle: "Hosea Kutako Airport to Sossusvlei Transfer — 4x4 Private Car",
+    seoTitle:
+      "Hosea Kutako Airport to Sossusvlei Transfer — Private 4x4",
     seoDescription:
-      "Private 4x4 transfer from Hosea Kutako International Airport (WDH) to the Sossusvlei dune lodges, over the Spreetshoogte or Remhoogte pass.",
+      "Private 4x4 transfer from Hosea Kutako International Airport (WDH) to the Sossusvlei lodges via the Spreetshoogte or Remhoogte pass. Fixed price for the vehicle, door-to-door at your lodge.",
+    seoBody:
+      "Sossusvlei is around 380 kilometres from the airport but takes about five and a half hours, because the second half is gravel — south through Rehoboth, then west over the Spreetshoogte or Remhoogte pass and down onto the Namib plain. The passes are steep and the district roads are corrugated in places, so this route runs in the SUV or 4x4 rather than a sedan. Most lodges sit near the Sesriem gate; give us the lodge name when you book and the driver takes you to reception rather than to a junction. If you are flying in and driving straight out, plan to arrive in daylight — the last section is not a road to meet for the first time after dark.",
   },
   {
     id: ROUTE_IDS.wdhEtosha,
@@ -197,13 +203,16 @@ export const CATALOG_ROUTES: NewRoute[] = [
     category: "airport",
     fixedPrice: "6900.00",
     defaultDriverPayout: "4830.00",
-    isActive: false,
+    isActive: true,
     distanceKm: "450.00",
     durationMin: 330,
     sortOrder: 60,
-    seoTitle: "Hosea Kutako Airport to Etosha Transfer — Private Car",
+    seoTitle:
+      "Hosea Kutako Airport to Etosha Transfer — Private Car, Both Gates",
     seoDescription:
-      "Private transfer from Hosea Kutako International Airport (WDH) to Etosha National Park and the Andersson and Von Lindequist gates.",
+      "Private transfer from Hosea Kutako International Airport (WDH) to Etosha National Park, routed to the Andersson or Von Lindequist gate for your camp. Fixed price, planned around gate closing time.",
+    seoBody:
+      "Etosha is about 450 kilometres north of the airport, five and a half hours on the B1 through Okahandja and Otjiwarongo. Which gate you want matters: Andersson Gate in the south serves Okaukuejo and the camps around it, while Von Lindequist in the east is the one for Namutoni. They are hours apart, so tell us your camp and we route accordingly. Park gates close at sunset and are strict about it, so we plan the departure backwards from that rather than from your landing time — if your flight lands late in the day, an overnight in Windhoek or Otjiwarongo is usually the sensible call and we will say so.",
   },
   {
     id: ROUTE_IDS.windhoekWalvisBay,
@@ -217,13 +226,16 @@ export const CATALOG_ROUTES: NewRoute[] = [
     category: "intercity",
     fixedPrice: "4100.00",
     defaultDriverPayout: "2870.00",
-    isActive: false,
+    isActive: true,
     distanceKm: "395.00",
     durationMin: 260,
     sortOrder: 70,
-    seoTitle: "Windhoek to Walvis Bay Private Transfer",
+    seoTitle:
+      "Windhoek to Walvis Bay Private Transfer — Fixed Price",
     seoDescription:
-      "Private car from Windhoek to Walvis Bay for the harbour, the lagoon and cruise departures.",
+      "Private car from Windhoek to Walvis Bay on the B2. Fixed price for the whole vehicle, hotel pickup, comfort stops and professional Namibian drivers.",
+    seoBody:
+      "The B2 from Windhoek to Walvis Bay is about 395 kilometres and a little over four hours, out through Okahandja and Karibib, past the Erongo mountains and into the coastal fog that sits over the last fifty kilometres for much of the year. We collect you from your Windhoek hotel or guesthouse at a time you choose. The fare covers the whole vehicle rather than each seat, so it works out the same for one traveller or four, and we can drop at the lagoon, the waterfront or the cruise terminal.",
   },
   {
     id: ROUTE_IDS.corporateWindhoek,
