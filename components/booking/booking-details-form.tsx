@@ -25,7 +25,9 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { PlacePicker } from "@/components/booking/place-picker";
 import { createBooking } from "@/lib/booking/actions";
+import type { Place } from "@/lib/places";
 import { bookingFormSchema, type BookingFormValues } from "@/lib/booking/schema";
 import type { TripParams } from "@/lib/booking/trip-params";
 import type { RouteView } from "@/lib/maps";
@@ -33,8 +35,8 @@ import type { RouteView } from "@/lib/maps";
 type Props = {
   trip: TripParams;
   route: RouteView;
-  pickupOptions: string[];
-  dropoffOptions: string[];
+  pickupPlaces: Place[];
+  dropoffPlaces: Place[];
   utm: string;
 };
 
@@ -49,8 +51,8 @@ type Props = {
 export function BookingDetailsForm({
   trip,
   route,
-  pickupOptions,
-  dropoffOptions,
+  pickupPlaces,
+  dropoffPlaces,
   utm,
 }: Props) {
   const router = useRouter();
@@ -65,8 +67,15 @@ export function BookingDetailsForm({
    *
    * Airport routes have a single pickup, so this is also what fills it in.
    */
-  const defaultPickup = pickupOptions[0] ?? "";
-  const defaultDropoff = dropoffOptions[0] ?? "";
+  // Default to a neutral area, never to a named property. Hotels sort first
+  // in the picker because that is what people search for, but pre-filling
+  // someone's booking with "Hilton Windhoek" puts a destination they never
+  // chose onto a real trip.
+  const firstNeutral = (places: Place[]) =>
+    (places.find((place) => place.kind === "area") ?? places[0])?.name ?? "";
+
+  const defaultPickup = firstNeutral(pickupPlaces);
+  const defaultDropoff = firstNeutral(dropoffPlaces);
 
   const form = useForm<BookingFormValues>({
     resolver: zodResolver(bookingFormSchema),
@@ -198,27 +207,21 @@ export function BookingDetailsForm({
 
           {/* Curated pick-list, never free-text: Namibian addresses are sparse. */}
           <div className="grid gap-4 sm:grid-cols-2">
-            {pickupOptions.length > 1 && (
+            {pickupPlaces.length > 1 && (
               <FormField
                 control={form.control}
                 name="pickupLabel"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Pickup area</FormLabel>
-                    <Select onValueChange={field.onChange} value={field.value}>
-                      <FormControl>
-                        <SelectTrigger className="h-11 w-full">
-                          <SelectValue placeholder="Where should we collect you?" />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        {pickupOptions.map((option) => (
-                          <SelectItem key={option} value={option}>
-                            {option}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                    <FormLabel>Pickup</FormLabel>
+                    <FormControl>
+                      <PlacePicker
+                        places={pickupPlaces}
+                        value={field.value}
+                        onChange={field.onChange}
+                        placeholder="Where should we collect you?"
+                      />
+                    </FormControl>
                     <FormMessage />
                   </FormItem>
                 )}
@@ -230,21 +233,15 @@ export function BookingDetailsForm({
               name="dropoffLabel"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Drop-off area</FormLabel>
-                  <Select onValueChange={field.onChange} value={field.value}>
-                    <FormControl>
-                      <SelectTrigger className="h-11 w-full">
-                        <SelectValue placeholder="Choose an area" />
-                      </SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
-                      {dropoffOptions.map((option) => (
-                        <SelectItem key={option} value={option}>
-                          {option}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                  <FormLabel>Drop-off</FormLabel>
+                  <FormControl>
+                    <PlacePicker
+                      places={dropoffPlaces}
+                      value={field.value}
+                      onChange={field.onChange}
+                      placeholder="Search hotels and areas"
+                    />
+                  </FormControl>
                   <FormMessage />
                 </FormItem>
               )}

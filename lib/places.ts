@@ -1,81 +1,148 @@
 import type { RouteView } from "@/lib/maps";
 
 /**
- * Curated pick-lists instead of street-address autocomplete.
+ * Where a traveller is actually going.
  *
- * Namibian address data is sparse and inconsistent, so free text produces
- * destinations a driver cannot find. Travellers pick a known area and add a
- * landmark in their own words; the driver confirms on WhatsApp.
+ * This was a list of suburbs, which meant someone booked to "Windhoek CBD
+ * hotel or guesthouse" and typed "Safari Hotel" into a notes box. The driver
+ * got a neighbourhood and a hope. Naming the property is the whole point of a
+ * curated list — it is what makes a pick-list better than street-address
+ * autocomplete rather than worse.
+ *
+ * Still a curated list, never free-text address search: Namibian address data
+ * is too sparse for autocomplete to return somewhere a driver can find. Areas
+ * remain as fallbacks, and "somewhere else" plus a landmark note is always
+ * available, so nobody is ever blocked by a property we have not listed yet.
+ *
+ * This belongs in the database with an admin screen behind it, so a new lodge
+ * is a form submission rather than a deploy. It is a constant for now.
  */
 
-const AREAS: Record<string, string[]> = {
-  "Windhoek CBD": [
-    "Windhoek CBD hotel or guesthouse",
-    "Klein Windhoek",
-    "Eros",
-    "Ludwigsdorf",
-    "Olympia",
-    "Pioneers Park",
-    "Katutura",
-    "Windhoek Country Club",
-  ],
-  Windhoek: [
-    "Windhoek CBD hotel or guesthouse",
-    "Klein Windhoek",
-    "Eros",
-    "Ludwigsdorf",
-    "Olympia",
-    "Pioneers Park",
-    "Katutura",
-    "Windhoek Country Club",
-  ],
-  Swakopmund: [
-    "Swakopmund town centre hotel or guesthouse",
-    "The Strand / beachfront",
-    "Vineta",
-    "Kramersdorf",
-    "Mile 4 / Long Beach",
-  ],
-  "Walvis Bay": [
-    "Walvis Bay town centre",
-    "The Lagoon / Esplanade",
-    "Walvis Bay harbour / cruise terminal",
-    "Walvis Bay Airport (WVB)",
-  ],
-  "Greater Windhoek": [
-    "Windhoek CBD office",
-    "Prosperita",
-    "Northern Industrial",
-    "Windhoek Country Club",
-  ],
+export type PlaceKind = "hotel" | "guesthouse" | "area" | "landmark";
+
+export type Place = {
+  name: string;
+  kind: PlaceKind;
+  /** Groups the picker, and disambiguates two properties of the same name. */
+  area?: string;
 };
 
-/** Always available, so a traveller is never blocked by a missing entry. */
-const OTHER = "Somewhere else — I'll describe it in the notes";
+const place = (name: string, kind: PlaceKind, area?: string): Place => ({
+  name,
+  kind,
+  area,
+});
 
-function optionsFor(label: string): string[] {
-  const curated = AREAS[label];
-  if (curated) return [...curated, OTHER];
+/**
+ * Named properties come first because they are what people search for. The
+ * list is deliberately short and checkable rather than exhaustive — an entry
+ * nobody has confirmed is worse than an absence, since the traveller assumes a
+ * listed hotel is one we know how to reach.
+ */
+const WINDHOEK: Place[] = [
+  place("Hilton Windhoek", "hotel", "CBD"),
+  place("Avani Windhoek Hotel & Casino", "hotel", "CBD"),
+  place("Windhoek Country Club Resort", "hotel", "Olympia"),
+  place("Safari Hotel & Safari Court", "hotel", "Ausspannplatz"),
+  place("Hotel Heinitzburg", "hotel", "Klein Windhoek"),
+  place("Am Weinberg Boutique Hotel", "hotel", "Klein Windhoek"),
+  place("Arebbusch Travel Lodge", "hotel", "Olympia"),
+  place("Hotel Thule", "hotel", "Eros"),
+  place("Olive Grove Guesthouse", "guesthouse", "Klein Windhoek"),
+  place("Galton House", "guesthouse", "Eros"),
+  place("Hosea Kutako International Airport (WDH)", "landmark"),
+  place("Eros Airport (ERS)", "landmark"),
+  place("Windhoek CBD — hotel or guesthouse", "area"),
+  place("Klein Windhoek", "area"),
+  place("Eros", "area"),
+  place("Ludwigsdorf", "area"),
+  place("Olympia", "area"),
+  place("Pioneers Park", "area"),
+  place("Katutura", "area"),
+  place("Prosperita", "area"),
+  place("Northern Industrial", "area"),
+];
 
-  // Unknown destination (a route added straight to the database) still works.
+const SWAKOPMUND: Place[] = [
+  place("Strand Hotel Swakopmund", "hotel", "The Mole"),
+  place("Swakopmund Hotel & Entertainment Centre", "hotel", "Town centre"),
+  place("Hansa Hotel", "hotel", "Town centre"),
+  place("The Delight Swakopmund", "hotel", "Town centre"),
+  place("Beach Lodge", "guesthouse", "Mile 4"),
+  place("Cornerstone Guesthouse", "guesthouse", "Town centre"),
+  place("Swakopmund town centre — hotel or guesthouse", "area"),
+  place("The Strand / beachfront", "area"),
+  place("Vineta", "area"),
+  place("Kramersdorf", "area"),
+  place("Mile 4 / Long Beach", "area"),
+];
+
+const WALVIS_BAY: Place[] = [
+  place("Protea Hotel Walvis Bay Pelican Bay", "hotel", "The Lagoon"),
+  place("Lagoon Lodge", "guesthouse", "The Lagoon"),
+  place("Walvis Bay harbour / cruise terminal", "landmark"),
+  place("Walvis Bay Airport (WVB)", "landmark"),
+  place("Walvis Bay town centre", "area"),
+  place("The Lagoon / Esplanade", "area"),
+];
+
+const SOSSUSVLEI: Place[] = [
+  place("Sesriem gate", "landmark"),
+  place("Sesriem — my lodge, named in the notes", "area"),
+];
+
+const ETOSHA: Place[] = [
+  place("Andersson Gate (south — for Okaukuejo)", "landmark"),
+  place("Von Lindequist Gate (east — for Namutoni)", "landmark"),
+  place("Etosha — my camp, named in the notes", "area"),
+];
+
+/** Destination label as it appears on a route, mapped to its places. */
+const BY_DESTINATION: Record<string, Place[]> = {
+  "Windhoek CBD": WINDHOEK,
+  Windhoek: WINDHOEK,
+  "Greater Windhoek": WINDHOEK,
+  Swakopmund: SWAKOPMUND,
+  "Walvis Bay": WALVIS_BAY,
+  Sossusvlei: SOSSUSVLEI,
+  "Etosha National Park": ETOSHA,
+};
+
+/** Always offered, so a missing entry never blocks a booking. */
+export const OTHER_PLACE = "Somewhere else — I'll describe it in the notes";
+
+function placesFor(label: string): Place[] {
+  const curated = BY_DESTINATION[label];
+  if (curated) return [...curated, place(OTHER_PLACE, "area")];
+
+  // A route added straight to the database still gets a usable form.
   return [
-    `${label} — hotel or guesthouse`,
-    `${label} — private address`,
-    OTHER,
+    place(`${label} — hotel or guesthouse`, "area"),
+    place(`${label} — private address`, "area"),
+    place(OTHER_PLACE, "area"),
   ];
 }
 
 /**
  * Airport pickups happen in one place, so there is nothing to choose. Every
- * other origin gets the same curated treatment as a destination.
+ * other origin gets the same treatment as a destination.
  */
-export function pickupOptions(route: RouteView): string[] {
+export function pickupPlaces(route: RouteView): Place[] {
   if (route.category === "airport") {
-    return [`${route.originLabel} — arrivals hall`];
+    return [place(`${route.originLabel} — arrivals hall`, "landmark")];
   }
-  return optionsFor(route.originLabel);
+  return placesFor(route.originLabel);
+}
+
+export function dropoffPlaces(route: RouteView): Place[] {
+  return placesFor(route.destinationLabel);
+}
+
+/** Names only, for anything that still wants a plain list. */
+export function pickupOptions(route: RouteView): string[] {
+  return pickupPlaces(route).map((p) => p.name);
 }
 
 export function dropoffOptions(route: RouteView): string[] {
-  return optionsFor(route.destinationLabel);
+  return dropoffPlaces(route).map((p) => p.name);
 }

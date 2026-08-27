@@ -13,7 +13,7 @@ import { formatDuration } from "@/lib/format";
 import { listRoutes, listVehicleClasses } from "@/lib/maps";
 import { formatNad } from "@/lib/money";
 import { computeFare, unitFare } from "@/lib/pricing";
-import { dropoffOptions, pickupOptions } from "@/lib/places";
+import { dropoffPlaces, pickupPlaces } from "@/lib/places";
 import { routeTitle } from "@/lib/route-content";
 import { SITE } from "@/lib/site";
 
@@ -127,8 +127,8 @@ export default async function BookPage({ searchParams }: PageProps) {
               <BookingDetailsForm
                 trip={trip}
                 route={route}
-                pickupOptions={pickupOptions(route)}
-                dropoffOptions={dropoffOptions(route)}
+                pickupPlaces={pickupPlaces(route)}
+                dropoffPlaces={dropoffPlaces(route)}
                 utm={utm}
               />
             </div>
