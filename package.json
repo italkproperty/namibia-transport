@@ -15,6 +15,7 @@
     "routes:measure": "tsx db/measure-routes.ts",
     "test:payments": "tsx --conditions=react-server tests/payments.test.ts",
     "test:maps": "tsx --conditions=react-server tests/maps.test.ts",
+    "test:geometry": "tsx --conditions=react-server tests/geometry.test.ts",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {

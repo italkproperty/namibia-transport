@@ -77,7 +77,8 @@ is IPv4 and works. The direct connection is fine from a local machine.
 | `npm run db:studio` | Drizzle Studio |
 | `npm run test:payments` | Payment reconciliation tests — needs a throwaway `DATABASE_URL` |
 | `npm run test:maps` | Mapbox URL-construction tests — no network, no database |
-| `npm run routes:measure` | Ask Mapbox for each route's real distance, duration and road geometry |
+| `npm run test:geometry` | Geometry-backfill tests, including the unreachable-Mapbox path |
+| `npm run routes:measure` | Ask Mapbox for each route's real **distance and duration**. Road geometry backfills itself on first render, so this is only needed to correct the quoted figures |
 
 ## Layout
 

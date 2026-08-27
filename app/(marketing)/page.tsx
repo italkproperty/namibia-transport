@@ -17,18 +17,27 @@ import {
 } from "@/components/marketing/trust";
 import { Button } from "@/components/ui/button";
 import { parseTripParams } from "@/lib/booking/trip-params";
-import { listRoutes, listVehicleClasses } from "@/lib/maps";
+import {
+  listRoutes,
+  listVehicleClasses,
+  withRouteGeometries,
+} from "@/lib/maps";
 
 type PageProps = {
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 };
 
 export default async function HomePage({ searchParams }: PageProps) {
-  const [{ routes }, vehicleClasses, params] = await Promise.all([
+  const [{ routes: bareRoutes }, vehicleClasses, params] = await Promise.all([
     listRoutes({ activeOnly: true }),
     listVehicleClasses(),
     searchParams,
   ]);
+
+  // The widget can switch to any of these, and the map follows the selection —
+  // so every one needs its road geometry before the routes reach the client.
+  // Fetched once per route ever, then read from the database.
+  const routes = await withRouteGeometries(bareRoutes);
 
   // Lets "Change trip" on /book come back to the widget already filled in.
   const initialTrip =

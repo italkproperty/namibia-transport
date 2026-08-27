@@ -8,7 +8,12 @@ import { RouteMap } from "@/components/marketing/route-map";
 import { SiteFooter } from "@/components/marketing/site-footer";
 import { SiteHeader } from "@/components/marketing/site-header";
 import { formatDistance, formatDuration } from "@/lib/format";
-import { getRouteBySlug, listRoutes, listVehicleClasses } from "@/lib/maps";
+import {
+  getRouteBySlug,
+  listRoutes,
+  listVehicleClasses,
+  withRouteGeometry,
+} from "@/lib/maps";
 import { formatNad } from "@/lib/money";
 import { routeFaqs, routeTitle } from "@/lib/route-content";
 import { GUIDES } from "@/lib/guides";
@@ -56,7 +61,8 @@ export async function generateMetadata({
 
 export default async function RoutePage({ params }: PageProps) {
   const { slug } = await params;
-  const route = await getRouteBySlug(slug);
+  const bare = await getRouteBySlug(slug);
+  const route = bare ? await withRouteGeometry(bare) : null;
 
   if (!route || !route.isActive) {
     notFound();
