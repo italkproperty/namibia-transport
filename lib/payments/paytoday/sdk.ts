@@ -4,6 +4,8 @@ import { createHash } from "node:crypto";
 import { readFile } from "node:fs/promises";
 import { createContext, runInContext } from "node:vm";
 
+import { SITE } from "@/lib/site";
+
 import { getPayTodayConfig, type PayTodayConfig } from "./config";
 import type {
   CreateIntentInput,
@@ -93,14 +95,60 @@ async function getSource(config: PayTodayConfig): Promise<string> {
 }
 
 /**
+ * The SDK's network calls, wrapped for two reasons.
+ *
+ * PayToday's API is built for browser callers, so requests normally arrive
+ * carrying an Origin and Referer for the merchant's own site. Driving the SDK
+ * from a server sends neither, and their auth endpoint answers 403 — which
+ * looks identical to bad credentials. We present the site's own origin.
+ *
+ * And when a call does fail, the SDK reports only the status code. Logging the
+ * response body turns "HTTP error! Status: 403" into something diagnosable.
+ * Request bodies are never logged: they carry the keys.
+ */
+function instrumentedFetch(): typeof fetch {
+  const origin = SITE.url.replace(/\/+$/, "");
+
+  return async (input: RequestInfo | URL, init: RequestInit = {}) => {
+    const headers = new Headers(init.headers ?? {});
+    if (!headers.has("origin")) headers.set("Origin", origin);
+    if (!headers.has("referer")) headers.set("Referer", `${origin}/`);
+
+    const response = await fetch(input, { ...init, headers });
+
+    if (!response.ok) {
+      let detail = "";
+      try {
+        detail = (await response.clone().text()).slice(0, 400);
+      } catch {
+        /* body already consumed or not text */
+      }
+      const url =
+        typeof input === "string"
+          ? input
+          : input instanceof URL
+            ? input.toString()
+            : input.url;
+      console.error(
+        `[paytoday] ${response.status} ${response.statusText} from ${url} — ${detail || "(no body)"}`
+      );
+    }
+
+    return response;
+  };
+}
+
+/**
  * Minimal shim of the globals a browser script expects. Deliberately small:
  * anything the SDK reaches for that is not here should fail loudly rather than
  * silently behave differently from a real browser.
  */
 function buildSandbox(): Record<string, unknown> {
+  const netFetch = instrumentedFetch();
+
   const sandbox: Record<string, unknown> = {
     console,
-    fetch,
+    fetch: netFetch,
     Headers,
     Request,
     Response,
@@ -124,7 +172,7 @@ function buildSandbox(): Record<string, unknown> {
     // Some SDKs reach for axios rather than fetch; PayToday's React guide tells
     // integrators to `npm install axios`, which hints that it might. This is a
     // compatibility shim over fetch covering the surface such a script uses.
-    axios: makeAxiosShim(),
+    axios: makeAxiosShim(netFetch),
     // A document stub: enough to not crash on a defensive touch, not enough to
     // pretend a DOM exists.
     document: {
@@ -167,7 +215,7 @@ type AxiosConfig = {
 };
 
 /** Faithful on the parts an SDK depends on: response shape and thrown errors. */
-function makeAxiosShim() {
+function makeAxiosShim(netFetch: typeof fetch) {
   async function request(config: AxiosConfig) {
     const base = config.baseURL ? new URL(config.url ?? "", config.baseURL) : new URL(config.url ?? "");
     if (config.params) {
@@ -183,7 +231,7 @@ function makeAxiosShim() {
       headers["Content-Type"] = "application/json";
     }
 
-    const response = await fetch(base.toString(), {
+    const response = await netFetch(base.toString(), {
       method: (config.method ?? "get").toUpperCase(),
       headers,
       body: hasBody ? (isPlainBody ? JSON.stringify(config.data) : (config.data as BodyInit)) : undefined,
