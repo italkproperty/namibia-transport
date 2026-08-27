@@ -40,6 +40,8 @@ Environment Variables** for Preview and Production.
 | `NEXT_PUBLIC_COMPANY_LOCATION` | e.g. `Windhoek, Namibia` | Yes |
 | `NEXT_PUBLIC_COMPANY_REGISTRATION` | Company registration number, shown on quotes/footer | Yes |
 | `QUOTE_VAT_RATE` | e.g. `0.15` once VAT-registered; empty = quotes without VAT | No |
+| `NEXT_PUBLIC_MAPBOX_TOKEN` | Mapbox → Tokens → public token (`pk.…`). **Restrict it by URL** to your domains | Yes |
+| `MAPBOX_SECRET_TOKEN` | Optional server-only token for Directions (`npm run routes:measure`) | No |
 | `PAYMENT_PROVIDER` | `paytoday` to take real money; anything else uses the stub | No |
 | `PAYTODAY_SHOP_KEY` | PayToday Support / Merchant Portal | **No — secret** |
 | `PAYTODAY_SHOP_HANDLE` | PayToday Support / Merchant Portal | **No — secret** |
@@ -74,6 +76,8 @@ is IPv4 and works. The direct connection is fine from a local machine.
 | `npm run db:seed` | Idempotent seed of routes + vehicle classes |
 | `npm run db:studio` | Drizzle Studio |
 | `npm run test:payments` | Payment reconciliation tests — needs a throwaway `DATABASE_URL` |
+| `npm run test:maps` | Mapbox URL-construction tests — no network, no database |
+| `npm run routes:measure` | Ask Mapbox for each route's real distance, duration and road geometry |
 
 ## Layout
 

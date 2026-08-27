@@ -58,6 +58,10 @@ async function main() {
             seoTitle: route.seoTitle,
             seoDescription: route.seoDescription,
             seoBody: route.seoBody,
+            originLat: route.originLat,
+            originLng: route.originLng,
+            destinationLat: route.destinationLat,
+            destinationLng: route.destinationLng,
             updatedAt: new Date(),
           },
         });

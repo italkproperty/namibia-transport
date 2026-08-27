@@ -54,11 +54,29 @@ export const CATALOG_VEHICLE_CLASSES: NewVehicleClass[] = [
   },
 ];
 
+/**
+ * Coordinates for the places the routes join, written once and referenced by
+ * name. Airport and town centres rather than exact addresses — these anchor
+ * route maps and distance lookups, not the pickup itself.
+ */
+const PLACES = {
+  wdh: { lat: -22.4799, lng: 17.4709 },
+  windhoek: { lat: -22.5609, lng: 17.0658 },
+  swakopmund: { lat: -22.6792, lng: 14.5272 },
+  walvisBay: { lat: -22.9576, lng: 14.5053 },
+  sossusvlei: { lat: -24.7272, lng: 15.3444 },
+  etosha: { lat: -19.1833, lng: 15.9167 },
+} as const;
+
 export const CATALOG_ROUTES: NewRoute[] = [
   /* ---------------------------------------------------------------- active */
   {
     id: ROUTE_IDS.wdhWindhoek,
     slug: "hosea-kutako-to-windhoek",
+    originLat: PLACES.wdh.lat,
+    originLng: PLACES.wdh.lng,
+    destinationLat: PLACES.windhoek.lat,
+    destinationLng: PLACES.windhoek.lng,
     originLabel: "Hosea Kutako International Airport (WDH)",
     destinationLabel: "Windhoek CBD",
     category: "airport",
@@ -84,6 +102,10 @@ export const CATALOG_ROUTES: NewRoute[] = [
   {
     id: ROUTE_IDS.wdhSwakopmund,
     slug: "hosea-kutako-to-swakopmund",
+    originLat: PLACES.wdh.lat,
+    originLng: PLACES.wdh.lng,
+    destinationLat: PLACES.swakopmund.lat,
+    destinationLng: PLACES.swakopmund.lng,
     originLabel: "Hosea Kutako International Airport (WDH)",
     destinationLabel: "Swakopmund",
     category: "airport",
@@ -102,6 +124,10 @@ export const CATALOG_ROUTES: NewRoute[] = [
   {
     id: ROUTE_IDS.windhoekSwakopmund,
     slug: "windhoek-to-swakopmund",
+    originLat: PLACES.windhoek.lat,
+    originLng: PLACES.windhoek.lng,
+    destinationLat: PLACES.swakopmund.lat,
+    destinationLng: PLACES.swakopmund.lng,
     originLabel: "Windhoek",
     destinationLabel: "Swakopmund",
     category: "intercity",
@@ -122,6 +148,10 @@ export const CATALOG_ROUTES: NewRoute[] = [
   {
     id: ROUTE_IDS.wdhWalvisBay,
     slug: "hosea-kutako-to-walvis-bay",
+    originLat: PLACES.wdh.lat,
+    originLng: PLACES.wdh.lng,
+    destinationLat: PLACES.walvisBay.lat,
+    destinationLng: PLACES.walvisBay.lng,
     originLabel: "Hosea Kutako International Airport (WDH)",
     destinationLabel: "Walvis Bay",
     category: "airport",
@@ -138,6 +168,10 @@ export const CATALOG_ROUTES: NewRoute[] = [
   {
     id: ROUTE_IDS.wdhSossusvlei,
     slug: "hosea-kutako-to-sossusvlei",
+    originLat: PLACES.wdh.lat,
+    originLng: PLACES.wdh.lng,
+    destinationLat: PLACES.sossusvlei.lat,
+    destinationLng: PLACES.sossusvlei.lng,
     originLabel: "Hosea Kutako International Airport (WDH)",
     destinationLabel: "Sossusvlei",
     category: "airport",
@@ -154,6 +188,10 @@ export const CATALOG_ROUTES: NewRoute[] = [
   {
     id: ROUTE_IDS.wdhEtosha,
     slug: "hosea-kutako-to-etosha",
+    originLat: PLACES.wdh.lat,
+    originLng: PLACES.wdh.lng,
+    destinationLat: PLACES.etosha.lat,
+    destinationLng: PLACES.etosha.lng,
     originLabel: "Hosea Kutako International Airport (WDH)",
     destinationLabel: "Etosha National Park",
     category: "airport",
@@ -170,6 +208,10 @@ export const CATALOG_ROUTES: NewRoute[] = [
   {
     id: ROUTE_IDS.windhoekWalvisBay,
     slug: "windhoek-to-walvis-bay",
+    originLat: PLACES.windhoek.lat,
+    originLng: PLACES.windhoek.lng,
+    destinationLat: PLACES.walvisBay.lat,
+    destinationLng: PLACES.walvisBay.lng,
     originLabel: "Windhoek",
     destinationLabel: "Walvis Bay",
     category: "intercity",
@@ -186,6 +228,10 @@ export const CATALOG_ROUTES: NewRoute[] = [
   {
     id: ROUTE_IDS.corporateWindhoek,
     slug: "corporate-windhoek-city",
+    originLat: PLACES.windhoek.lat,
+    originLng: PLACES.windhoek.lng,
+    destinationLat: PLACES.windhoek.lat,
+    destinationLng: PLACES.windhoek.lng,
     originLabel: "Windhoek CBD",
     destinationLabel: "Greater Windhoek",
     category: "corporate",

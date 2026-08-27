@@ -1,6 +1,7 @@
 import {
   boolean,
   char,
+  doublePrecision,
   index,
   integer,
   jsonb,
@@ -165,6 +166,17 @@ export const routes = pgTable(
     distanceKm: numeric("distance_km", { precision: 8, scale: 2 }),
     durationMin: integer("duration_min"),
     sortOrder: smallint("sort_order").notNull().default(0),
+    /* Geography. Feeds distance lookups, static route maps and the map pin. */
+    originLat: doublePrecision("origin_lat"),
+    originLng: doublePrecision("origin_lng"),
+    destinationLat: doublePrecision("destination_lat"),
+    destinationLng: doublePrecision("destination_lng"),
+    /**
+     * Encoded polyline of the driven road, cached from Mapbox Directions so
+     * route maps draw the real path without an API call per page view.
+     */
+    routeGeometry: text("route_geometry"),
+
     seoTitle: text("seo_title"),
     seoDescription: text("seo_description"),
     /** Long-form route copy rendered on the landing page. */
@@ -366,6 +378,15 @@ export const bookings = pgTable(
       .references(() => customers.id, { onDelete: "restrict" }),
     pickupLabel: text("pickup_label").notNull(),
     dropoffLabel: text("dropoff_label").notNull(),
+    /**
+     * Optional dropped pin. Namibian street addresses are sparse, so the
+     * curated pick-list stays the primary input and a pin is the precision
+     * upgrade for a guesthouse or home the list does not name.
+     */
+    pickupLat: doublePrecision("pickup_lat"),
+    pickupLng: doublePrecision("pickup_lng"),
+    dropoffLat: doublePrecision("dropoff_lat"),
+    dropoffLng: doublePrecision("dropoff_lng"),
     scheduledAt: timestamp("scheduled_at", { withTimezone: true }).notNull(),
     passengers: smallint("passengers").notNull().default(1),
     luggageCount: smallint("luggage_count").notNull().default(0),

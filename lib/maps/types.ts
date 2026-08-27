@@ -25,6 +25,12 @@ export type RouteView = {
   seoTitle: string | null;
   seoDescription: string | null;
   seoBody: string | null;
+  /** Null until a route has been given coordinates; maps degrade to nothing. */
+  originLat: number | null;
+  originLng: number | null;
+  destinationLat: number | null;
+  destinationLng: number | null;
+  routeGeometry: string | null;
 };
 
 export type VehicleClassView = {
@@ -59,8 +65,8 @@ export type CatalogSource = "database" | "fallback";
 export type RouteLeg = {
   distanceKm: number;
   durationMin: number;
-  /** GeoJSON LineString coordinates, once Mapbox Directions is wired up. */
-  geometry?: [number, number][];
+  /** Encoded polyline (polyline6) of the driven road, from Directions. */
+  encodedGeometry?: string;
 };
 
 /**

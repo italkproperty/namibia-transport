@@ -4,6 +4,7 @@ import { notFound } from "next/navigation";
 import { CheckIcon } from "lucide-react";
 
 import { RouteQuote } from "@/components/booking/route-quote";
+import { RouteMap } from "@/components/marketing/route-map";
 import { SiteFooter } from "@/components/marketing/site-footer";
 import { SiteHeader } from "@/components/marketing/site-header";
 import { formatDistance, formatDuration } from "@/lib/format";
@@ -147,6 +148,11 @@ export default async function RoutePage({ params }: PageProps) {
                   {route.seoBody}
                 </p>
               )}
+
+              {/* Renders nothing without a Mapbox token or coordinates. */}
+              <div className="mt-6 empty:mt-0">
+                <RouteMap route={route} />
+              </div>
 
               {/* -------------------------------------------- inclusions */}
               <section aria-labelledby="included-heading" className="mt-8">

@@ -53,6 +53,11 @@ function catalogRouteToView(route: CatalogRoute): RouteView {
     seoTitle: route.seoTitle ?? null,
     seoDescription: route.seoDescription ?? null,
     seoBody: route.seoBody ?? null,
+    originLat: route.originLat ?? null,
+    originLng: route.originLng ?? null,
+    destinationLat: route.destinationLat ?? null,
+    destinationLng: route.destinationLng ?? null,
+    routeGeometry: null,
   };
 }
 
