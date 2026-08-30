@@ -56,7 +56,14 @@ export function FleetSection({
             key={vehicleClass.id}
             className="bg-card flex flex-col overflow-hidden rounded-2xl border"
           >
-            <div className="bg-brand-subtle/45 border-b px-5 py-4">
+            {/* A drawing sits on the tinted panel; a photograph almost always
+                arrives on a white studio background, so it gets a white one to
+                sit on instead of a peach box around a white rectangle. */}
+            <div
+              className={`border-b px-5 py-4 ${
+                spec.photo ? "bg-card" : "bg-brand-subtle/45"
+              }`}
+            >
               <VehicleImage
                 spec={spec}
                 alt={`${vehicleClass.name} — side view`}
