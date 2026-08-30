@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { ArrowDownIcon, ArrowUpIcon, MapPinIcon } from "lucide-react";
 
+import { AssignDriver } from "@/components/admin/assign-driver";
 import { AdminShell } from "@/components/admin/shell";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -22,6 +23,7 @@ import { isDatabaseConfigured } from "@/db";
 import type { BookingStatus, RouteCategory } from "@/db/schema";
 import { formatDate, formatDateTime } from "@/lib/format";
 import { mapsLink } from "@/lib/maps/bounds";
+import { assignmentsByBooking, listDrivers } from "@/lib/dispatch/queries";
 import { formatNad } from "@/lib/money";
 
 export const metadata: Metadata = {
@@ -99,10 +101,25 @@ export default async function AdminBookingsPage({ searchParams }: PageProps) {
     direction: dirParam === "asc" ? ("asc" as const) : ("desc" as const),
   };
 
-  const [rows, summary] = await Promise.all([
+  const [rows, summary, driverRows, assignments] = await Promise.all([
     listBookings(filters),
     getAdminSummary(),
+    listDrivers(),
+    assignmentsByBooking(),
   ]);
+
+  /**
+   * Only drivers who are active AND have a vehicle on file can be assigned.
+   * What reaches the traveller is the make and the plate; one without the
+   * other is not the promise the rest of the site makes.
+   */
+  const assignable = driverRows
+    .filter((driver) => driver.status === "active" && driver.registration)
+    .map((driver) => ({
+      id: driver.id,
+      fullName: driver.fullName,
+      registration: driver.registration,
+    }));
 
   /** Preserves the other filters when one control changes. */
   function href(next: Record<string, string | undefined>) {
@@ -299,6 +316,7 @@ export default async function AdminBookingsPage({ searchParams }: PageProps) {
                   <TableHead>Type</TableHead>
                   <TableHead>Source</TableHead>
                   <TableHead>Return</TableHead>
+                  <TableHead>Driver</TableHead>
                 </TableRow>
               </TableHeader>
 
@@ -391,6 +409,13 @@ export default async function AdminBookingsPage({ searchParams }: PageProps) {
                       {row.acquisitionSource ?? "—"}
                     </TableCell>
                     <TableCell>{row.isReturn ? "Yes" : "No"}</TableCell>
+                    <TableCell>
+                      <AssignDriver
+                        bookingId={row.id}
+                        drivers={assignable}
+                        current={assignments.get(row.id)}
+                      />
+                    </TableCell>
                   </TableRow>
                 ))}
               </TableBody>

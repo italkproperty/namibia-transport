@@ -688,5 +688,10 @@ export type EnquiryStatus = (typeof enquiryStatusEnum.enumValues)[number];
 export type PricingUnit = (typeof pricingUnitEnum.enumValues)[number];
 export type QuoteStatus = (typeof quoteStatusEnum.enumValues)[number];
 export type BookingStatus = (typeof bookingStatusEnum.enumValues)[number];
+
+export type DriverStatus = (typeof driverStatusEnum.enumValues)[number];
+
+export type AssignmentStatus =
+  (typeof assignmentStatusEnum.enumValues)[number];
 export type CustomerType = (typeof customerTypeEnum.enumValues)[number];
 export type PaymentStatus = (typeof paymentStatusEnum.enumValues)[number];

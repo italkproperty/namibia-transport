@@ -222,3 +222,131 @@ export function confirmationHtml(details: ConfirmationDetails): string {
   </table>
 </body></html>`;
 }
+
+/* -------------------------------------------------- driver assigned */
+
+export type AssignmentDetails = {
+  ref: string;
+  fullName: string;
+  driverName: string;
+  driverPhone?: string | null;
+  vehicle?: string | null;
+  registration?: string | null;
+  scheduledAt: Date;
+  pickupLabel: string;
+  dropoffLabel: string;
+  meetingNote?: string | null;
+  supportWhatsapp?: string | null;
+};
+
+export function assignmentSubject(details: AssignmentDetails): string {
+  return `${details.ref} — your driver is ${details.driverName}`;
+}
+
+/**
+ * The message the whole site is built around.
+ *
+ * "Driver name, vehicle and registration sent to you before pickup" is stated
+ * on the home page, the route pages, the terms and the confirmation email. It
+ * is the answer to the only question an arriving traveller actually has, which
+ * is who am I looking for. So it leads with the name and the plate, and says
+ * nothing else until those are on screen.
+ */
+export function assignmentText(details: AssignmentDetails): string {
+  const lines = [
+    `Hi ${details.fullName},`,
+    "",
+    `Your driver for ${details.ref} is ${details.driverName}.`,
+    "",
+    `Driver:    ${details.driverName}`,
+  ];
+
+  if (details.driverPhone) lines.push(`Phone:     ${details.driverPhone}`);
+  if (details.vehicle) lines.push(`Vehicle:   ${details.vehicle}`);
+  if (details.registration) {
+    lines.push(`Plate:     ${details.registration}`);
+  }
+
+  lines.push(
+    "",
+    `Pickup:    ${formatDateTime(details.scheduledAt)}`,
+    `From:      ${details.pickupLabel}`,
+    `To:        ${details.dropoffLabel}`,
+  );
+
+  if (details.meetingNote) lines.push("", details.meetingNote);
+
+  lines.push(
+    "",
+    `Your booking page: ${SITE.url}/booking/${details.ref}`,
+  );
+
+  if (details.supportWhatsapp) {
+    lines.push(
+      "",
+      `If you cannot find them, message ${details.supportWhatsapp} and quote ${details.ref} — we are in contact with your driver.`,
+    );
+  }
+
+  lines.push("", SITE.name);
+  return lines.join("\n");
+}
+
+export function assignmentHtml(details: AssignmentDetails): string {
+  const row = (label: string, value: string) =>
+    `<tr>
+      <td style="padding:6px 16px 6px 0;color:#6a635e;font-size:14px;white-space:nowrap">${esc(label)}</td>
+      <td style="padding:6px 0;color:#1a1614;font-size:14px;font-weight:500">${esc(value)}</td>
+    </tr>`;
+
+  const rows = [
+    details.driverPhone ? row("Phone", details.driverPhone) : "",
+    details.vehicle ? row("Vehicle", details.vehicle) : "",
+    row("Pickup", formatDateTime(details.scheduledAt)),
+    row("From", details.pickupLabel),
+    row("To", details.dropoffLabel),
+  ].join("");
+
+  const plate = details.registration
+    ? `<div style="background:#fcfaf7;border:1px solid #e2dfdb;border-radius:10px;padding:14px 16px;margin:0 0 18px">
+         <p style="margin:0 0 2px;color:#6a635e;font-size:12px">Registration</p>
+         <p style="margin:0;color:#1a1614;font-size:22px;font-weight:700;letter-spacing:0.06em">${esc(details.registration)}</p>
+       </div>`
+    : "";
+
+  const meeting = details.meetingNote
+    ? `<p style="margin:0 0 18px;color:#6a635e;font-size:14px;line-height:1.5">${esc(details.meetingNote)}</p>`
+    : "";
+
+  const support = details.supportWhatsapp
+    ? `<p style="margin:0;color:#6a635e;font-size:13px;line-height:1.5">
+         Cannot find them? <a href="${esc(whatsappLink(details.supportWhatsapp, `Hi — I cannot find my driver for ${details.ref}.`))}" style="color:#1a1614">Message us</a>
+         and quote ${esc(details.ref)} — we are in contact with your driver.
+       </p>`
+    : "";
+
+  return `<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width">
+<title>${esc(assignmentSubject(details))}</title></head>
+<body style="margin:0;padding:0;background:#fcfaf7;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif">
+  <div style="display:none;max-height:0;overflow:hidden;opacity:0">${esc(details.driverName)}${details.registration ? `, ${esc(details.registration)}` : ""} — ${esc(formatDateTime(details.scheduledAt))}.</div>
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#fcfaf7">
+    <tr><td align="center" style="padding:28px 16px">
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:560px;background:#ffffff;border:1px solid #e2dfdb;border-radius:14px">
+        <tr><td style="padding:28px">
+          <p style="margin:0 0 4px;letter-spacing:0.14em;text-transform:uppercase;font-size:11px;font-weight:600;color:#bc4b00">${esc(SITE.name)} &middot; ${esc(details.ref)}</p>
+          <h1 style="margin:0 0 6px;font-size:22px;line-height:1.25;color:#1a1614">Your driver is ${esc(details.driverName)}</h1>
+          <p style="margin:0 0 18px;color:#6a635e;font-size:14px;line-height:1.5">Hi ${esc(details.fullName)} — this is who to look for.</p>
+          ${plate}
+          <table role="presentation" cellpadding="0" cellspacing="0" style="width:100%;border-top:1px solid #e2dfdb;margin:0 0 16px">${rows}</table>
+          ${meeting}
+          <p style="margin:0 0 18px;font-size:14px">
+            <a href="${esc(`${SITE.url}/booking/${details.ref}`)}" style="color:#bc4b00;font-weight:500">View your booking page</a>
+          </p>
+          <div style="border-top:1px solid #e2dfdb;padding-top:14px">${support}</div>
+        </td></tr>
+      </table>
+    </td></tr>
+  </table>
+</body></html>`;
+}

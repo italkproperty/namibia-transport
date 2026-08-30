@@ -115,6 +115,50 @@ export default async function BookingConfirmationPage({ params }: PageProps) {
               Quote this any time you message us.
             </p>
 
+            {/* The driver, once there is one. This is the answer to the only
+                question an arriving traveller actually has, so it sits above
+                the trip detail rather than among it. */}
+            {detail.driverName && (
+              <div className="bg-success-subtle mt-5 rounded-xl border p-4">
+                <p className="text-success text-xs font-semibold tracking-[0.14em] uppercase">
+                  Your driver
+                </p>
+                <p className="mt-1 text-lg font-semibold">
+                  {detail.driverName}
+                </p>
+                {detail.vehicleRegistration && (
+                  <p className="tabular mt-2 text-sm">
+                    <span className="text-muted-foreground">
+                      Look for{" "}
+                    </span>
+                    <span className="font-medium">
+                      {[
+                        detail.vehicleColour,
+                        detail.vehicleMake,
+                        detail.vehicleModel,
+                      ]
+                        .filter(Boolean)
+                        .join(" ")}
+                    </span>
+                    <span className="ml-2 rounded bg-white/70 px-1.5 py-0.5 font-semibold tracking-wider">
+                      {detail.vehicleRegistration}
+                    </span>
+                  </p>
+                )}
+                {(detail.driverPhone || detail.driverWhatsapp) && (
+                  <p className="text-muted-foreground mt-2 text-sm">
+                    Their number:{" "}
+                    <a
+                      href={`tel:${(detail.driverPhone ?? detail.driverWhatsapp ?? "").replace(/\s/g, "")}`}
+                      className="text-foreground underline underline-offset-2"
+                    >
+                      {detail.driverPhone ?? detail.driverWhatsapp}
+                    </a>
+                  </p>
+                )}
+              </div>
+            )}
+
             <dl className="mt-5 grid gap-x-6 gap-y-2.5 border-t pt-4 text-sm sm:grid-cols-2">
               <Row label="Route">{routeLabel}</Row>
               <Row label="Pickup">{formatDateTime(booking.scheduledAt)}</Row>
