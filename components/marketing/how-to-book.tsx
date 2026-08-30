@@ -1,10 +1,11 @@
 import { CheckIcon, PlaneIcon } from "lucide-react";
 
-import { VehicleArt } from "@/components/vehicles/vehicle-art";
+import { VehicleImage } from "@/components/vehicles/vehicle-image";
 import { defaultTripDate } from "@/lib/booking/trip-params";
 import { shortPlace } from "@/lib/format";
 import type { RouteView } from "@/lib/maps";
 import { formatNad } from "@/lib/money";
+import { specFor } from "@/lib/vehicles";
 
 /**
  * How the booking actually goes, shown as the screens rather than as icons.
@@ -26,6 +27,8 @@ export function HowToBook({
 }) {
   const perPerson = route.pricingUnit === "per_person";
   const price = formatNad(route.fixedPrice);
+  const carSpec = specFor("private-sedan");
+  const suvSpec = specFor("suv-4x4");
 
   // The same date the real widget opens on, so the miniature can never go
   // stale the way a hard-coded "Fri 12 Sep" would. Namibia is UTC+02:00 all
@@ -67,12 +70,14 @@ export function HowToBook({
               <MockField label="Date">{exampleDate}</MockField>
               <MockField label="Time">14:30</MockField>
             </div>
+            {/* The same two vehicles the real picker shows, so the miniature
+                is a picture of the product rather than of something like it. */}
             <div className="grid grid-cols-2 gap-1.5">
               <div className="bg-card rounded border px-1.5 py-1">
-                <VehicleArt kind="sedan" className="opacity-90" />
+                {carSpec && <VehicleImage spec={carSpec} alt="" />}
               </div>
               <div className="rounded border border-dashed px-1.5 py-1 opacity-45">
-                <VehicleArt kind="suv" />
+                {suvSpec && <VehicleImage spec={suvSpec} alt="" />}
               </div>
             </div>
             <div className="flex items-end justify-between border-t pt-2">

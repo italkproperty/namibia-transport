@@ -14,7 +14,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { useCountUp } from "@/components/booking/use-count-up";
-import { VehicleArt } from "@/components/vehicles/vehicle-art";
+import { VehicleImage } from "@/components/vehicles/vehicle-image";
 import type { TripState } from "@/components/booking/use-trip";
 import { defaultTripDate, TIME_SLOTS } from "@/lib/booking/trip-params";
 import { formatDuration } from "@/lib/format";
@@ -158,9 +158,11 @@ export function QuoteWidget({
 
 /**
  * Both classes show their price and their shape, so choosing is a comparison
- * rather than a guess. The silhouette is doing real work here: "Private Car"
- * and "SUV / 4x4" are two strings, but a low car next to a tall one on big
- * wheels says what the extra money buys without being read.
+ * rather than a guess. The picture is doing real work here: "Private Car" and
+ * "SUV / 4x4" are two strings, but a low car beside a tall one on big wheels
+ * says what the extra money buys without being read. It shows the same
+ * photograph the vehicles section does — this is the surface most people
+ * actually look at, so it is the last place that should differ.
  */
 export function VehicleToggle({ trip }: { trip: TripState }) {
   return (
@@ -193,12 +195,13 @@ export function VehicleToggle({ trip }: { trip: TripState }) {
               ].join(" ")}
             >
               {spec && (
-                <VehicleArt
-                  kind={spec.art}
+                <VehicleImage
+                  spec={spec}
+                  alt=""
                   className={
                     isSelected
-                      ? "mx-auto max-w-[5.5rem]"
-                      : "mx-auto max-w-[5.5rem] opacity-70"
+                      ? "mx-auto max-w-[6rem]"
+                      : "mx-auto max-w-[6rem] opacity-60"
                   }
                 />
               )}
