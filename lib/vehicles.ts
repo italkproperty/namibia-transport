@@ -32,10 +32,20 @@ export type VehicleSpec = {
   /** Concrete, checkable facts — never adjectives. */
   points: string[];
   /**
-   * A photograph of a real partner vehicle, once one exists — a path under
-   * public/vehicles/. Setting it retires the drawing for that class with no
-   * other change. Deliberately not a manufacturer press shot: that is someone
-   * else's copyright and implies a fleet we do not own.
+   * A photograph, once one exists — a path under public/vehicles/. Setting it
+   * retires the drawing for that class everywhere at once, with no other
+   * change, and the card swaps its tinted panel for a white one to suit a
+   * photographic background.
+   *
+   * Drop files in as public/vehicles/<slug>.jpg, so:
+   *   public/vehicles/private-sedan.jpg   → the Private Car class
+   *   public/vehicles/suv-4x4.jpg         → the SUV / 4x4 class
+   *   public/vehicles/minibus.jpg         → the enquiry-only Quantum
+   * Side-on landscape, roughly 1600px wide, plain background, under ~400KB.
+   *
+   * A photograph of an actual partner vehicle is worth more here than a
+   * manufacturer press shot, which is someone else's copyright and implies a
+   * fleet we do not own.
    */
   photo?: string;
   photoCredit?: string;
