@@ -48,6 +48,12 @@ export type VehicleSpec = {
    * fleet we do not own.
    */
   photo?: string;
+  /**
+   * Mirror the photograph horizontally. Stock vehicle photography does not
+   * agree on which way a car faces, and three cars pointing different ways on
+   * one page reads as a mistake before anyone works out why.
+   */
+  flip?: boolean;
   photoCredit?: string;
 };
 
@@ -55,6 +61,7 @@ export const VEHICLE_SPECS: Record<string, VehicleSpec> = {
   "private-sedan": {
     slug: "private-sedan",
     art: "sedan",
+    photo: "/vehicles/private-sedan.png",
     typicalModels: "VW Polo Vivo, Toyota Corolla or Corolla Quest",
     bestFor: "Couples, solo travellers and business trips on tarred routes.",
     points: [
@@ -66,6 +73,9 @@ export const VEHICLE_SPECS: Record<string, VehicleSpec> = {
   "suv-4x4": {
     slug: "suv-4x4",
     art: "suv",
+    photo: "/vehicles/suv-4x4.webp",
+    // Shot nose-right; the other two face left.
+    flip: true,
     typicalModels: "Toyota Fortuner or Hilux double cab",
     bestFor: "Families, camera gear, and anything that leaves the tar.",
     points: [
@@ -94,6 +104,7 @@ export const ENQUIRY_ONLY_VEHICLES: (VehicleSpec & {
     name: "Minibus",
     capacity: "6–13 passengers",
     art: "van",
+    photo: "/vehicles/minibus.webp",
     typicalModels: "Toyota Quantum 14-seater",
     bestFor: "Tour groups, extended families and conference arrivals.",
     points: [

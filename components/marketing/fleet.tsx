@@ -56,12 +56,14 @@ export function FleetSection({
             key={vehicleClass.id}
             className="bg-card flex flex-col overflow-hidden rounded-2xl border"
           >
-            {/* A drawing sits on the tinted panel; a photograph almost always
-                arrives on a white studio background, so it gets a white one to
-                sit on instead of a peach box around a white rectangle. */}
+            {/* A drawing sits on the brand-tinted panel. Photographs get a
+                soft neutral instead: stock vehicle shots do not agree on a
+                background — one cut out on white, one on a grey studio sweep,
+                one transparent — and a mid neutral is the one panel none of
+                them reads as a pasted-on box against. */}
             <div
               className={`border-b px-5 py-4 ${
-                spec.photo ? "bg-card" : "bg-brand-subtle/45"
+                spec.photo ? "bg-muted/50" : "bg-brand-subtle/45"
               }`}
             >
               <VehicleImage
