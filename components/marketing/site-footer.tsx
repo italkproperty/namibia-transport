@@ -37,7 +37,7 @@ export function SiteFooter({ routes = [] }: { routes?: RouteView[] }) {
                     >
                       {route.originLabel.replace(
                         " International Airport (WDH)",
-                        ""
+                        "",
                       )}{" "}
                       to {route.destinationLabel}
                     </Link>
@@ -150,7 +150,8 @@ export function SiteFooter({ routes = [] }: { routes?: RouteView[] }) {
         <p className="text-muted-foreground text-xs">
           &copy; {new Date().getFullYear()} {SITE.name}
           {company.registration ? ` · ${company.registration}` : ""}. Transfers
-          are fulfilled by vetted independent Namibian partner drivers.
+          are fulfilled by independent Namibian partner drivers we select and
+          brief.
         </p>
       </div>
     </footer>

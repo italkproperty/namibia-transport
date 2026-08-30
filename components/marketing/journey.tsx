@@ -33,7 +33,7 @@ const STAGES = [
     key: "ASSIGNED",
     icon: UserCheckIcon,
     title: "Assigned",
-    body: "A vetted transport partner is put on your journey.",
+    body: "One of our transport partners is put on your journey.",
   },
   {
     key: "CONFIRMED",
@@ -86,7 +86,11 @@ export function JourneyTimeline({
 
             <div className="flex flex-col items-start lg:items-center lg:text-center">
               <span className="bg-brand-subtle text-brand relative z-10 flex size-10 items-center justify-center rounded-full">
-                <stage.icon className="size-[18px]" strokeWidth={1.9} aria-hidden />
+                <stage.icon
+                  className="size-[18px]"
+                  strokeWidth={1.9}
+                  aria-hidden
+                />
               </span>
 
               <p className="text-muted-foreground tabular mt-3 text-[0.65rem] font-semibold tracking-[0.12em]">

@@ -46,7 +46,7 @@ export const INCLUSIONS = [
   },
   {
     title: "Professional local drivers",
-    body: "Vetted Namibian partner drivers who know the roads they drive.",
+    body: "Namibian partner drivers we select and brief, who know the roads they drive.",
   },
   {
     title: "One number, start to finish",

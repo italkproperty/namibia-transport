@@ -11,13 +11,14 @@ import { SITE } from "@/lib/site";
 
 export const metadata: Metadata = {
   title: "About us",
-  description: `Who is behind ${SITE.name}: a Namibian booking and dispatch operation working with vetted independent partner drivers.`,
+  description: `Who is behind ${SITE.name}: a Namibian booking and dispatch operation working with independent partner drivers it selects and briefs.`,
   alternates: { canonical: `${SITE.url}/about` },
 };
 
 /**
  * Honest by design: this page explains the model as it actually works —
- * a booking and operations layer over vetted independent drivers — and makes
+ * a booking and operations layer over independent drivers it selects and
+ * briefs — and makes
  * no claims about history, fleet size or staff that do not exist yet.
  */
 export default async function AboutPage() {
@@ -39,29 +40,27 @@ export default async function AboutPage() {
           <div className="mt-6 space-y-5 leading-relaxed text-pretty">
             <p>
               {SITE.name} exists because arriving in Namibia should not begin
-              with negotiating at a kerb. We are a Namibian booking and
-              dispatch operation based in {company.location}: you book online
-              at a fixed price, and we take responsibility for everything that
-              has to happen before a car door opens — confirming the trip,
-              watching the flight, assigning the right driver and vehicle, and
-              staying reachable until you are where you are going.
+              with negotiating at a kerb. We are a Namibian booking and dispatch
+              operation based in {company.location}: you book online at a fixed
+              price, and we take responsibility for everything that has to
+              happen before a car door opens — confirming the trip, watching the
+              flight, assigning the right driver and vehicle, and staying
+              reachable until you are where you are going.
             </p>
             <p>
-              The driving itself is done by vetted independent Namibian
-              partner drivers. We select them, brief them on our standard —
-              name-board meet &amp; greet, no meter, no detours, help with
-              luggage — and we stand behind every trip they take for us. If a
-              driver has an emergency, re-assigning the trip is our problem,
-              never yours.
+              The driving itself is done by independent Namibian partner
+              drivers. We select them, brief them on our standard — name-board
+              meet &amp; greet, no meter, no detours, help with luggage — and we
+              stand behind every trip they take for us. If a driver has an
+              emergency, re-assigning the trip is our problem, never yours.
             </p>
             <p>
               We are deliberately transparent about being a young company. We
               would rather show you exactly how a booking works, quote a price
-              that cannot move, and be reachable on WhatsApp at every step,
-              than borrow credibility we have not earned yet. Our standards
-              are simple: a confirmed booking is a kept booking, a quoted
-              price is the final price, and a message to us gets answered by
-              a person.
+              that cannot move, and be reachable on WhatsApp at every step, than
+              borrow credibility we have not earned yet. Our standards are
+              simple: a confirmed booking is a kept booking, a quoted price is
+              the final price, and a message to us gets answered by a person.
             </p>
           </div>
 
@@ -84,13 +83,16 @@ export default async function AboutPage() {
               priced per vehicle.
             </li>
             <li>
-              Corporate and group transport on account — quoted online,
-              invoiced monthly.
+              Corporate and group transport on account — quoted online, invoiced
+              monthly.
             </li>
           </ul>
 
           <div className="mt-8 flex flex-wrap gap-2">
-            <Button asChild className="press bg-brand text-brand-foreground hover:bg-brand-hover">
+            <Button
+              asChild
+              className="press bg-brand text-brand-foreground hover:bg-brand-hover"
+            >
               <Link href="/book">Book a transfer</Link>
             </Button>
             <Button asChild variant="outline" className="press">

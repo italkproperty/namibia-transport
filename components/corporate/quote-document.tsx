@@ -1,6 +1,9 @@
 import { BrandMark } from "@/components/brand/logo";
 import { getCompanyInfo } from "@/lib/company";
-import { QUOTE_SERVICES, type QuoteService } from "@/lib/corporate/quote-pricing";
+import {
+  QUOTE_SERVICES,
+  type QuoteService,
+} from "@/lib/corporate/quote-pricing";
 import type { QuoteDetail } from "@/lib/corporate/quote-queries";
 import { formatDate } from "@/lib/format";
 import { formatNad } from "@/lib/money";
@@ -34,7 +37,10 @@ export function QuoteDocument({ detail }: { detail: QuoteDetail }) {
               {company.registration ? ` · ${company.registration}` : ""}
             </p>
             <p className="text-muted-foreground text-xs">
-              {[company.whatsapp && `WhatsApp ${company.whatsapp}`, company.email]
+              {[
+                company.whatsapp && `WhatsApp ${company.whatsapp}`,
+                company.email,
+              ]
                 .filter(Boolean)
                 .join(" · ")}
             </p>
@@ -82,7 +88,9 @@ export function QuoteDocument({ detail }: { detail: QuoteDetail }) {
             {[quote.email, quote.whatsapp].filter(Boolean).join(" · ")}
           </p>
           {quote.billingAddress && (
-            <p className="text-muted-foreground text-sm">{quote.billingAddress}</p>
+            <p className="text-muted-foreground text-sm">
+              {quote.billingAddress}
+            </p>
           )}
         </div>
         <div>
@@ -173,16 +181,18 @@ export function QuoteDocument({ detail }: { detail: QuoteDetail }) {
               : "This is a fixed quotation for the requirement described above."}
           </li>
           <li>
-            Valid until {quote.validUntil ? formatDate(quote.validUntil) : "the date shown"};
-            pricing thereafter on request.
+            Valid until{" "}
+            {quote.validUntil ? formatDate(quote.validUntil) : "the date shown"}
+            ; pricing thereafter on request.
           </li>
           <li>
             Invoicing monthly on account, or per engagement — payment details
             are confirmed on acceptance. No payment is due with this document.
           </li>
           <li>
-            Transfers are fulfilled by vetted independent Namibian partner
-            drivers under {SITE.name}&rsquo;s booking, standards and support.
+            Transfers are fulfilled by independent Namibian partner drivers we
+            select and brief, under {SITE.name}&rsquo;s booking, standards and
+            support.
           </li>
         </ul>
       </div>

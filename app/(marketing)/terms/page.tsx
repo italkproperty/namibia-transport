@@ -34,8 +34,8 @@ export default async function TermsPage() {
             Booking terms &amp; cancellation policy
           </h1>
           <p className="text-muted-foreground mt-2 text-sm">
-            Written to be read, not buried. If anything here is unclear,
-            message us before you book.
+            Written to be read, not buried. If anything here is unclear, message
+            us before you book.
           </p>
 
           <div className="mt-8 space-y-8">
@@ -67,8 +67,8 @@ export default async function TermsPage() {
                   cancellation. Anything already paid is refunded in full.
                 </li>
                 <li>
-                  <strong>Within 24 hours of pickup:</strong> 50% of the fare
-                  is payable, reflecting the driver time reserved for you.
+                  <strong>Within 24 hours of pickup:</strong> 50% of the fare is
+                  payable, reflecting the driver time reserved for you.
                 </li>
                 <li>
                   <strong>No-show at pickup:</strong> the full fare is payable.
@@ -83,18 +83,17 @@ export default async function TermsPage() {
 
             <Section title="If your flight is delayed">
               <p>
-                Give us your flight number and we track the flight. Your
-                pickup moves with your actual landing time at no extra charge
-                — a delayed flight never becomes a missed transfer or a
-                waiting fee.
+                Give us your flight number and we track the flight. Your pickup
+                moves with your actual landing time at no extra charge — a
+                delayed flight never becomes a missed transfer or a waiting fee.
               </p>
             </Section>
 
             <Section title="If a driver cannot make it">
               <p>
-                Re-assignment is our responsibility, not yours. If your
-                assigned driver has an emergency, our operations team places
-                another vetted driver on your trip and tells you on WhatsApp —
+                Re-assignment is our responsibility, not yours. If your assigned
+                driver has an emergency, our operations team places another of
+                our partner drivers on your trip and tells you on WhatsApp —
                 same price, same standard. If we ever fail to provide the
                 transfer at all, you pay nothing and anything paid is refunded
                 in full.
@@ -122,12 +121,12 @@ export default async function TermsPage() {
 
             <Section title="Who provides the transport">
               <p>
-                Trips are fulfilled by vetted independent Namibian partner
-                drivers operating under our booking, standards and support.
-                Your contract for the booking, and every question about it, is
-                with {SITE.name}
-                {company.registration ? ` (${company.registration})` : ""} —
-                one point of responsibility, reachable on WhatsApp.
+                Trips are fulfilled by independent Namibian partner drivers we
+                select and brief, operating under our booking, standards and
+                support. Your contract for the booking, and every question about
+                it, is with {SITE.name}
+                {company.registration ? ` (${company.registration})` : ""} — one
+                point of responsibility, reachable on WhatsApp.
               </p>
             </Section>
           </div>

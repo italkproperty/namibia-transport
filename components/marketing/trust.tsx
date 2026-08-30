@@ -48,7 +48,11 @@ const TRUST_POINTS = [
   },
 ];
 
-export function WhyTrustUs({ headingId = "trust-heading" }: { headingId?: string }) {
+export function WhyTrustUs({
+  headingId = "trust-heading",
+}: {
+  headingId?: string;
+}) {
   return (
     <section aria-labelledby={headingId}>
       <h2 id={headingId} className="text-xl sm:text-2xl">
@@ -57,7 +61,11 @@ export function WhyTrustUs({ headingId = "trust-heading" }: { headingId?: string
       <ul className="mt-5 grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
         {TRUST_POINTS.map((point) => (
           <li key={point.title} className="bg-card rounded-xl border p-4">
-            <point.icon className="text-brand size-5" strokeWidth={1.75} aria-hidden />
+            <point.icon
+              className="text-brand size-5"
+              strokeWidth={1.75}
+              aria-hidden
+            />
             <p className="mt-2.5 text-sm font-semibold">{point.title}</p>
             <p className="text-muted-foreground mt-1 text-sm leading-snug text-pretty">
               {point.body}
@@ -131,7 +139,7 @@ export function MeetingPoint() {
               <a
                 href={whatsappLink(
                   company.whatsapp,
-                  "Hi — I have landed and cannot find my driver."
+                  "Hi — I have landed and cannot find my driver.",
                 )}
                 className="text-foreground underline underline-offset-2"
               >
@@ -205,7 +213,7 @@ const CONTINGENCIES = [
   {
     question: "What if my driver has an emergency?",
     answer:
-      "Re-assignment is our job, not yours. Another vetted driver is placed on your trip at the same price, and we tell you immediately.",
+      "Re-assignment is our job, not yours. Another of our partner drivers is placed on your trip at the same price, and we tell you immediately.",
   },
   {
     question: "What if I land late at night?",
@@ -242,7 +250,9 @@ export function Contingencies({
       <dl className="mt-6 grid gap-x-8 gap-y-5 sm:grid-cols-2 lg:grid-cols-3">
         {CONTINGENCIES.map((item) => (
           <div key={item.question}>
-            <dt className="text-sm font-semibold text-pretty">{item.question}</dt>
+            <dt className="text-sm font-semibold text-pretty">
+              {item.question}
+            </dt>
             <dd className="text-muted-foreground mt-1 text-sm leading-snug text-pretty">
               {item.answer}
             </dd>
@@ -272,16 +282,19 @@ export function SupportStrip() {
             Need help with a booking?
           </h2>
           <p className="text-primary-foreground/70 mt-1 max-w-md text-sm leading-snug">
-            Coordination from {company.location}, {SUPPORT.officeHours}. On
-            your travel day we are reachable throughout your journey — quote
-            your reference and we can see the whole trip.
+            Coordination from {company.location}, {SUPPORT.officeHours}. On your
+            travel day we are reachable throughout your journey — quote your
+            reference and we can see the whole trip.
           </p>
         </div>
 
         <div className="flex flex-wrap gap-2.5">
           {company.whatsapp && (
             <a
-              href={whatsappLink(company.whatsapp, "Hi — I need help with a booking.")}
+              href={whatsappLink(
+                company.whatsapp,
+                "Hi — I need help with a booking.",
+              )}
               className="press bg-brand text-brand-foreground hover:bg-brand-hover inline-flex h-11 items-center gap-2 rounded-md px-5 text-sm font-medium"
             >
               <MessageCircleIcon className="size-4" aria-hidden />
@@ -332,13 +345,14 @@ export function OperationsSection() {
           </p>
           <p className="mt-1.5 font-semibold">{company.location}</p>
           <p className="text-muted-foreground mt-2 text-sm leading-relaxed text-pretty">
-            &ldquo;We coordinate every booking from confirmation through
-            pickup. Our job is to make sure your driver knows exactly where to
-            be, before you land — and to answer the phone if anything about
-            that changes.&rdquo;
+            &ldquo;We coordinate every booking from confirmation through pickup.
+            Our job is to make sure your driver knows exactly where to be,
+            before you land — and to answer the phone if anything about that
+            changes.&rdquo;
           </p>
           <p className="text-muted-foreground mt-3 text-xs">
-            Coordination {SUPPORT.officeHours} · {SUPPORT.travelDay.toLowerCase()}
+            Coordination {SUPPORT.officeHours} ·{" "}
+            {SUPPORT.travelDay.toLowerCase()}
           </p>
         </div>
 
@@ -351,9 +365,9 @@ export function OperationsSection() {
           </p>
           <p className="text-muted-foreground mt-2 text-sm leading-relaxed text-pretty">
             We do not own the cars — we choose the people. Each partner is
-            selected, briefed on our standard, and re-checked on the strength
-            of the trips they run for us: name-board meet &amp; greet, help
-            with luggage, no meter, no detours.
+            selected, briefed on our standard, and re-checked on the strength of
+            the trips they run for us: name-board meet &amp; greet, help with
+            luggage, no meter, no detours.
           </p>
           <p className="text-muted-foreground mt-3 text-xs">
             Operating Windhoek · Hosea Kutako · Swakopmund
@@ -450,7 +464,9 @@ export async function ReviewBadge() {
           />
         ))}
       </span>
-      <span className="tabular font-semibold">{summary.average.toFixed(1)}/5</span>
+      <span className="tabular font-semibold">
+        {summary.average.toFixed(1)}/5
+      </span>
       <span className="text-muted-foreground">
         from {summary.count} traveller{summary.count === 1 ? "" : "s"}
       </span>
