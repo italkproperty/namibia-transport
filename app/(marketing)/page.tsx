@@ -3,6 +3,8 @@ import { ArrowRightIcon, BuildingIcon } from "lucide-react";
 
 import { HomeQuote } from "@/components/booking/home-quote";
 import { DuneScene } from "@/components/marketing/dune-scene";
+import { FleetSection } from "@/components/marketing/fleet";
+import { HowToBook } from "@/components/marketing/how-to-book";
 import { JourneyTimeline } from "@/components/marketing/journey";
 import { SiteFooter } from "@/components/marketing/site-footer";
 import { SiteHeader } from "@/components/marketing/site-header";
@@ -59,9 +61,9 @@ export default async function HomePage({ searchParams }: PageProps) {
               Reliable private transfers across Namibia.
             </h1>
             <p className="text-muted-foreground mt-2 max-w-xl text-sm text-pretty sm:text-base">
-              From the airport to your hotel, from Windhoek to the coast —
-              fixed prices, flight monitoring and one operations team behind
-              every trip.
+              From the airport to your hotel, from Windhoek to the coast — fixed
+              prices, flight monitoring and one operations team behind every
+              trip.
             </p>
 
             {/* Renders only once real published reviews exist. */}
@@ -92,6 +94,20 @@ export default async function HomePage({ searchParams }: PageProps) {
             <WhyTrustUs />
           </div>
         </div>
+
+        {/* ------------------------------------------------ what you get in */}
+        <div className="mx-auto max-w-5xl px-4 py-10 sm:px-6 sm:py-12">
+          <FleetSection vehicleClasses={vehicleClasses} />
+        </div>
+
+        {/* ------------------------------------------- how the booking goes */}
+        {routes.length > 0 && (
+          <div className="border-y">
+            <div className="mx-auto max-w-5xl px-4 py-10 sm:px-6 sm:py-12">
+              <HowToBook route={routes[0]} />
+            </div>
+          </div>
+        )}
 
         {/* --------------------------------------------------- the journey */}
         <div className="mx-auto max-w-5xl px-4 py-10 sm:px-6 sm:py-12">

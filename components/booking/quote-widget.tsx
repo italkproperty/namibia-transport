@@ -14,11 +14,13 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { useCountUp } from "@/components/booking/use-count-up";
+import { VehicleArt } from "@/components/vehicles/vehicle-art";
 import type { TripState } from "@/components/booking/use-trip";
 import { defaultTripDate, TIME_SLOTS } from "@/lib/booking/trip-params";
 import { formatDuration } from "@/lib/format";
 import { formatNad } from "@/lib/money";
 import { routeTitle } from "@/lib/route-content";
+import { specFor } from "@/lib/vehicles";
 import type { RouteView } from "@/lib/maps";
 
 /**
@@ -110,7 +112,7 @@ export function QuoteWidget({
                   <SelectItem key={n} value={String(n)}>
                     {n}
                   </SelectItem>
-                )
+                ),
               )}
             </SelectContent>
           </Select>
@@ -154,7 +156,12 @@ export function QuoteWidget({
   );
 }
 
-/** Both classes show their price, so choosing is a comparison, not a guess. */
+/**
+ * Both classes show their price and their shape, so choosing is a comparison
+ * rather than a guess. The silhouette is doing real work here: "Private Sedan"
+ * and "SUV / 4x4" are two strings, but a low car next to a tall one on big
+ * wheels says what the extra money buys without being read.
+ */
 export function VehicleToggle({ trip }: { trip: TripState }) {
   return (
     <div className="grid gap-1.5">
@@ -169,6 +176,7 @@ export function VehicleToggle({ trip }: { trip: TripState }) {
           const isSelected = id === trip.vehicleClass.id;
           const fare = trip.fares.get(id) ?? 0;
           const tooSmall = capacity < trip.passengers;
+          const spec = specFor(vehicleClass.slug);
 
           return (
             <button
@@ -184,6 +192,16 @@ export function VehicleToggle({ trip }: { trip: TripState }) {
                 isSelected ? "bg-card shadow-card" : "hover:bg-card/60",
               ].join(" ")}
             >
+              {spec && (
+                <VehicleArt
+                  kind={spec.art}
+                  className={
+                    isSelected
+                      ? "mx-auto max-w-[5.5rem]"
+                      : "mx-auto max-w-[5.5rem] opacity-70"
+                  }
+                />
+              )}
               {/* Wraps rather than truncates: the rail is narrow and the name matters. */}
               <span className="block text-xs leading-tight font-medium">
                 {name}

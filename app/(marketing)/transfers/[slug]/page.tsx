@@ -4,6 +4,7 @@ import { notFound } from "next/navigation";
 import { CheckIcon } from "lucide-react";
 
 import { RouteQuote } from "@/components/booking/route-quote";
+import { FleetSection } from "@/components/marketing/fleet";
 import { RouteMap } from "@/components/marketing/route-map";
 import { SiteFooter } from "@/components/marketing/site-footer";
 import { SiteHeader } from "@/components/marketing/site-header";
@@ -185,6 +186,14 @@ export default async function RoutePage({ params }: PageProps) {
                   ))}
                 </ul>
               </section>
+
+              {/* --------------------------------------------- the cars */}
+              <div className="mt-8">
+                <FleetSection
+                  vehicleClasses={vehicleClasses}
+                  headingId="route-fleet-heading"
+                />
+              </div>
 
               {/* --------------------------------------------------- faq */}
               <section aria-labelledby="faq-heading" className="mt-8">
