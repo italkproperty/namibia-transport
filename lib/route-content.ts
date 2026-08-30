@@ -25,8 +25,8 @@ export function routeFaqs(route: RouteView): Faq[] {
     {
       question: `How much is a transfer from ${shortPlace(route.originLabel)} to ${route.destinationLabel}?`,
       answer: perPerson
-        ? `${price} per person in a private sedan. The price is fixed when you book — there is no meter, no surge pricing and no airport surcharge. A larger SUV or 4x4 is available at a higher fixed rate.`
-        : `${price} for the whole vehicle in a private sedan. The price is fixed when you book — there is no meter, no surge pricing and no airport surcharge. A larger SUV or 4x4 is available at a higher fixed rate.`,
+        ? `${price} per person in a private car. The price is fixed when you book — there is no meter, no surge pricing and no airport surcharge. A larger SUV or 4x4 is available at a higher fixed rate.`
+        : `${price} for the whole vehicle in a private car. The price is fixed when you book — there is no meter, no surge pricing and no airport surcharge. A larger SUV or 4x4 is available at a higher fixed rate.`,
     },
     {
       question: "Is the price per person or per vehicle?",
@@ -54,7 +54,7 @@ export function routeFaqs(route: RouteView): Faq[] {
         question: "Where will I meet my driver?",
         answer:
           "Inside the arrivals hall, holding a name board, after you clear immigration and collect your bags. If anything goes wrong you will have a WhatsApp number to reach us on directly.",
-      }
+      },
     );
   } else {
     faqs.push({

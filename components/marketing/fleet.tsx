@@ -9,7 +9,7 @@ import { ENQUIRY_ONLY_VEHICLES, specFor } from "@/lib/vehicles";
 /**
  * The vehicles, shown rather than described in a dropdown.
  *
- * A traveller choosing between "Private Sedan" and "SUV / 4x4" in a select box
+ * A traveller choosing between "Private Car" and "SUV / 4x4" in a select box
  * is choosing between two strings. Seeing the shapes side by side — one low
  * and long, one tall on big wheels — makes the N$260 difference obvious
  * without reading a word, and makes the booking feel like it is attached to a

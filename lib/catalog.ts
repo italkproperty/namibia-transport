@@ -33,9 +33,9 @@ export const CATALOG_VEHICLE_CLASSES: NewVehicleClass[] = [
   {
     id: VEHICLE_CLASS_IDS.sedan,
     slug: "private-sedan",
-    name: "Private Sedan",
+    name: "Private Car",
     description:
-      "Air-conditioned sedan for up to 3 passengers. The standard choice for couples, solo travellers and business trips.",
+      "Air-conditioned hatchback or sedan for up to 3 passengers. The standard choice for couples, solo travellers and business trips.",
     capacity: 3,
     luggageCapacity: 3,
     priceMultiplier: "1.00",
@@ -184,12 +184,11 @@ export const CATALOG_ROUTES: NewRoute[] = [
     distanceKm: "380.00",
     durationMin: 330,
     sortOrder: 50,
-    seoTitle:
-      "Hosea Kutako Airport to Sossusvlei Transfer — Private 4x4",
+    seoTitle: "Hosea Kutako Airport to Sossusvlei Transfer — Private 4x4",
     seoDescription:
       "Private 4x4 transfer from Hosea Kutako International Airport (WDH) to the Sossusvlei lodges via the Spreetshoogte or Remhoogte pass. Fixed price for the vehicle, door-to-door at your lodge.",
     seoBody:
-      "Sossusvlei is around 380 kilometres from the airport but takes about five and a half hours, because the second half is gravel — south through Rehoboth, then west over the Spreetshoogte or Remhoogte pass and down onto the Namib plain. The passes are steep and the district roads are corrugated in places, so this route runs in the SUV or 4x4 rather than a sedan. Most lodges sit near the Sesriem gate; give us the lodge name when you book and the driver takes you to reception rather than to a junction. If you are flying in and driving straight out, plan to arrive in daylight — the last section is not a road to meet for the first time after dark.",
+      "Sossusvlei is around 380 kilometres from the airport but takes about five and a half hours, because the second half is gravel — south through Rehoboth, then west over the Spreetshoogte or Remhoogte pass and down onto the Namib plain. The passes are steep and the district roads are corrugated in places, so this route runs in the SUV or 4x4 rather than the small car. Most lodges sit near the Sesriem gate; give us the lodge name when you book and the driver takes you to reception rather than to a junction. If you are flying in and driving straight out, plan to arrive in daylight — the last section is not a road to meet for the first time after dark.",
   },
   {
     id: ROUTE_IDS.wdhEtosha,
@@ -230,8 +229,7 @@ export const CATALOG_ROUTES: NewRoute[] = [
     distanceKm: "395.00",
     durationMin: 260,
     sortOrder: 70,
-    seoTitle:
-      "Windhoek to Walvis Bay Private Transfer — Fixed Price",
+    seoTitle: "Windhoek to Walvis Bay Private Transfer — Fixed Price",
     seoDescription:
       "Private car from Windhoek to Walvis Bay on the B2. Fixed price for the whole vehicle, hotel pickup, comfort stops and professional Namibian drivers.",
     seoBody:
@@ -261,5 +259,5 @@ export const CATALOG_ROUTES: NewRoute[] = [
 
 /** Slug -> route, for O(1) fallback lookups. */
 export const CATALOG_ROUTES_BY_SLUG = new Map(
-  CATALOG_ROUTES.map((route) => [route.slug, route])
+  CATALOG_ROUTES.map((route) => [route.slug, route]),
 );

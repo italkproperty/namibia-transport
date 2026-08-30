@@ -199,126 +199,147 @@ function Mirror({ d }: { d: string }) {
 /* --------------------------------------------------------------- the cars */
 
 /**
- * The small car — a current hatchback on the Polo Vivo / Golf footprint, which
- * is what most Namibian small cars actually are. Short overhangs at both ends,
- * a roof arcing continuously into a steeply raked tailgate with a spoiler at
- * its top, a hard crease low on the doors, and eighteens filling the arches.
+ * The small car — a hatchback on the Golf / Polo Vivo footprint, which is what
+ * most small cars on Namibian roads actually are. 4.28 m over a 2.64 m
+ * wheelbase, so the overhangs are short at both ends; a compact cabin rather
+ * than a long one; and, the point of the shape, a roof that falls straight
+ * into a steeply raked tailgate with a spoiler on top, instead of levelling
+ * off into a boot deck. There is no third box.
  */
 function Sedan() {
   return (
     <g>
-      <Ground cx={158} rx={132} />
+      <Ground cx={152} rx={126} />
 
       <path
-        d="M22 80 C22 70 26 63 34 61
-           L66 59 L96 57
-           C108 47 124 34 142 28
-           C156 23.5 176 22.5 196 24.5
-           C214 26.5 228 31 238 38
-           L260 61
-           C272 69 282 75 284 82 L284 87
-           C284 91 280 94 275 94.5 L264 95
-           A22 21 0 0 0 220 95 L96 95 A22 21 0 0 0 52 95
-           L34 94 C28 93 22 88 22 80 Z"
+        d="M26 82 C26 72 30 65 38 63
+           L70 60 L104 57
+           C118 47 136 33 158 27
+           C174 23 194 22.5 210 25
+           C222 27 232 31 240 38
+           L266 66
+           C274 72 280 76 282 82 L282 87
+           C282 91 278 94 273 94.5 L265 95
+           A21 20 0 0 0 223 95 L101 95 A21 20 0 0 0 59 95
+           L38 94 C31 93 26 89 26 82 Z"
         {...bodyStyle}
       />
 
       {/* Value, not hue: a soft shadow low on the flank. */}
       <path
-        d="M54 82 C126 78 198 77 268 82 L268 92 C198 88 126 89 54 92 Z"
+        d="M60 82 C126 78 190 77 262 82 L262 92 C190 88 126 89 60 92 Z"
         fill="var(--foreground)"
         opacity="0.05"
       />
 
-      {/* One continuous glasshouse. Blacked-out pillars are the whole trick. */}
+      {/* One continuous glasshouse, carried down the tailgate the way a hatch
+          does — the rear screen is the tailgate, not a separate rear window. */}
       <path
-        d="M106 56 C118 46 132 35 148 30 C160 26.5 178 25.5 196 27.5
-           C212 29.5 224 34 234 41 L242 56 Z"
+        d="M114 55 C126 46 142 34 160 29 C176 25.5 194 25 210 27.5
+           C220 29 230 33 238 40 L250 57 Z"
         {...glassStyle}
       />
       <path
-        d="M114 56 C125 45 137 36 150 32 L160 32 C143 38 129 47 122 56 Z"
+        d="M122 55 C133 45 146 35 160 31 L170 31 C152 37 138 46 130 55 Z"
         {...glareStyle}
       />
-      <path d="M172 26 L172 56" {...dividerStyle} />
-      <path d="M210 29 L210 56" {...dividerStyle} />
-      <path d="M107 56 L241 56" {...chromeStyle} />
+      <path d="M178 26 L178 55" {...dividerStyle} />
+      <path d="M212 28 L212 56" {...dividerStyle} />
+      <path d="M115 55 L246 56" {...chromeStyle} />
+
+      {/* Tailgate spoiler, standing proud of the roofline where it breaks. */}
+      <path
+        d="M230 32 L252 46 L248 50 L227 36 Z"
+        {...blackTrim}
+        fillOpacity={0.5}
+      />
 
       <path
-        d="M40 77 C120 73 200 71 278 76"
+        d="M44 78 C120 74 190 72 274 78"
         {...creaseStyle}
         strokeWidth={1.7}
       />
-      <path d="M100 62 C150 60 200 61 250 65" {...creaseStyle} />
+      <path d="M108 61 C150 59 195 60 240 64" {...creaseStyle} />
 
-      <path d="M180 57 L180 91" {...shutStyle} />
-      <path d="M148 66 L160 66" {...handleStyle} />
-      <path d="M194 67 L206 67" {...handleStyle} />
+      <path d="M184 56 L184 91" {...shutStyle} />
+      <path d="M156 63 L168 63" {...handleStyle} />
+      <path d="M198 64 L210 64" {...handleStyle} />
 
-      <Mirror d="M116 57 L103 53 C100 52 98.5 54 100 56 L107 61 L117 61 Z" />
+      <Mirror d="M126 56 L112 52 C109 51 107.5 53 109 55 L116 60 L127 60 Z" />
 
-      {/* Headlamp: a dark cluster with a lit lens inside it. */}
-      <path d="M28 70 L34 63 L54 62.5 L53 67.5 Z" {...darkLamp} />
-      <path d="M31 68 L35 64.5 L52 64 L51.5 66.5 Z" {...lensStyle} />
-      <path d="M250 63 L264 72 L261 78 L247 69 Z" {...tailLampStyle} />
+      {/* Headlamp: tapering back out of the front face into the fender. */}
+      <path d="M31 72 L39 64 L60 63 L58 69 Z" {...darkLamp} />
+      <path d="M34 70 L40 65.5 L58 64.8 L57 67 Z" {...lensStyle} />
+      <path d="M252 60 L268 70 L264 77 L248 67 Z" {...tailLampStyle} />
 
-      <Wheel cx={74} r={22} spokes={5} />
-      <Wheel cx={242} r={22} spokes={5} />
+      <Wheel cx={80} r={20} spokes={5} />
+      <Wheel cx={244} r={20} spokes={5} />
     </g>
   );
 }
 
 /**
  * SUV — the Toyota Fortuner: 4.80 m, 2.75 m wheelbase, 1.84 m tall on 18s.
- * Level roof the whole length under rails and a rear spoiler, a near-vertical
- * tailgate, squared black arch trim over tyres that fill it, black sill
- * cladding above a running board, and the rear quarter window kicking up at
- * its leading edge behind a body-coloured pillar — the one line no estate has.
+ * The shape lives in four places: a short blunt nose carrying a flat bonnet
+ * high at the window line; a level roof running the whole length under rails
+ * to a near-vertical tailgate with a spoiler; wheel arches cut square and
+ * proud, with real daylight between the trim and the top of the tyre; and the
+ * rear quarter window kicking up at its leading edge, which is the line no
+ * estate car has.
  */
 function Suv() {
   return (
     <g>
-      <Ground cx={154} rx={138} />
+      <Ground cx={156} rx={138} />
 
       <rect
-        x="138"
+        x="144"
         y="9.5"
-        width="106"
+        width="104"
         height="4.5"
         rx="2"
         {...blackTrim}
         fillOpacity={0.5}
       />
-
       <path
-        d="M20 76 C20 66 24 58 32 55
-           L68 52 L100 51 L130 17 C132 15 135 14 138 14
-           L250 14 C257 14 262 16 265 21 L280 46
-           C287 56 290 66 290 76 L290 86
-           C290 90 286 93 281 93.5 L259 95
-           A23 23 0 0 0 213 95 L95 95 A23 23 0 0 0 49 95
-           L34 93 C26 92 20 86 20 76 Z"
+        d="M248 14 L266 19 L263 23 L246 18 Z"
+        {...blackTrim}
+        fillOpacity={0.5}
+      />
+
+      {/* Squared arches are cut into the body itself, so the trim sits on the
+          edge rather than floating over a semicircle that disagrees with it. */}
+      <path
+        d="M22 74 C22 64 26 58 34 55
+           L70 53 L106 52 L136 17 C138 15 141 14 144 14
+           L252 14 C260 14 266 16 269 21 L284 48
+           C291 58 294 68 294 78 L294 87
+           C294 91 290 94 285 94.5 L265 95
+           L263 79 C262 73 257 69 250 68 L226 68 C219 69 214 73 213 79
+           L211 95 L99 95
+           L97 79 C96 73 91 69 84 68 L60 68 C53 69 48 73 47 79
+           L45 95 L34 93 C27 92 22 86 22 74 Z"
         {...bodyStyle}
       />
 
       <path
-        d="M52 74 C130 69 210 68 286 74 L286 90 C210 85 130 86 52 90 Z"
+        d="M52 74 C130 69 210 68 288 74 L288 90 C210 85 130 86 52 90 Z"
         fill="var(--foreground)"
         opacity="0.05"
       />
 
       {/* Main glasshouse, then the quarter behind a body-coloured pillar. */}
       <path
-        d="M110 48 L132 18 C134 16 137 15.5 140 15.5 L238 15.5 L238 48 Z"
+        d="M116 49 L138 18 C140 16 143 15.5 146 15.5 L242 15.5 L242 49 Z"
         {...glassStyle}
       />
-      <path d="M117 48 L137 17 L147 17 L127 48 Z" {...glareStyle} />
-      <path d="M162 15.5 L162 48" {...dividerStyle} />
-      <path d="M200 15.5 L200 48" {...dividerStyle} />
-      <path d="M111 48 L237 48" {...chromeStyle} />
+      <path d="M123 49 L143 17 L153 17 L133 49 Z" {...glareStyle} />
+      <path d="M168 15.5 L168 49" {...dividerStyle} />
+      <path d="M206 15.5 L206 49" {...dividerStyle} />
+      <path d="M117 49 L241 49" {...chromeStyle} />
       {/* The kick: the quarter glass rises at its leading edge. Pure Fortuner. */}
       <path
-        d="M246 16 L250 16 C256 16 260 18 262 22 L275 48 L256 48 L246 33 Z"
+        d="M248 15.5 L252 15.5 C258 15.5 262 17.5 264 21.5 L277 49 L258 49 L248 34 Z"
         {...glassStyle}
       />
 
@@ -326,71 +347,73 @@ function Suv() {
       <rect
         x="30"
         y="80"
+        width="16"
+        height="12"
+        rx="3"
+        {...blackTrim}
+        fillOpacity={0.5}
+      />
+      <rect
+        x="100"
+        y="80"
+        width="110"
+        height="12"
+        rx="3"
+        {...blackTrim}
+        fillOpacity={0.5}
+      />
+      <rect
+        x="264"
+        y="80"
         width="20"
         height="12"
         rx="3"
         {...blackTrim}
         fillOpacity={0.5}
       />
-      <rect
-        x="96"
-        y="80"
-        width="114"
-        height="12"
-        rx="3"
-        {...blackTrim}
-        fillOpacity={0.5}
-      />
-      <rect
-        x="256"
-        y="80"
-        width="26"
-        height="12"
-        rx="3"
-        {...blackTrim}
-        fillOpacity={0.5}
-      />
-      <rect x="100" y="91" width="106" height="6" rx="3" {...blackTrim} />
+      <rect x="104" y="91" width="102" height="6" rx="3" {...blackTrim} />
 
-      {/* Squared arch trim, proud of the cut. */}
+      {/* Arch trim, tracing the squared cut exactly. */}
       <path
-        d="M46 95 A26 26 0 0 1 98 95"
+        d="M45 95 L47 79 C48 73 53 69 60 68 L84 68 C91 69 96 73 97 79 L99 95"
         fill="none"
         stroke="var(--foreground)"
-        strokeOpacity="0.5"
+        strokeOpacity="0.6"
         strokeWidth="4"
+        strokeLinejoin="round"
         strokeLinecap="round"
       />
       <path
-        d="M210 95 A26 26 0 0 1 262 95"
+        d="M211 95 L213 79 C214 73 219 69 226 68 L250 68 C257 69 262 73 263 79 L265 95"
         fill="none"
         stroke="var(--foreground)"
-        strokeOpacity="0.5"
+        strokeOpacity="0.6"
         strokeWidth="4"
+        strokeLinejoin="round"
         strokeLinecap="round"
       />
 
       <path
-        d="M40 63 C120 58 200 57 284 63"
+        d="M42 62 C120 57 200 56 288 62"
         {...creaseStyle}
         strokeWidth={1.7}
       />
-      <path d="M104 53 C160 51 210 52 268 57" {...creaseStyle} />
+      <path d="M110 55 C165 53 215 54 272 59" {...creaseStyle} />
 
-      <path d="M166 49 L166 82" {...shutStyle} />
-      <path d="M204 49 L204 82" {...shutStyle} />
-      <path d="M241 49 L241 82" {...shutStyle} />
-      <path d="M146 57 L158 57" {...handleStyle} />
-      <path d="M184 57 L196 57" {...handleStyle} />
+      <path d="M170 50 L170 80" {...shutStyle} />
+      <path d="M208 50 L208 80" {...shutStyle} />
+      <path d="M245 50 L245 80" {...shutStyle} />
+      <path d="M150 58 L162 58" {...handleStyle} />
+      <path d="M188 58 L200 58" {...handleStyle} />
 
-      <Mirror d="M114 49 L101 45 C98 44 96.5 46 98 48 L105 53 L115 53 Z" />
+      <Mirror d="M124 50 L110 46 C107 45 105.5 47 107 49 L114 54 L125 54 Z" />
 
-      <path d="M25 66 L31 57 L54 55.5 L53 62 Z" {...darkLamp} />
-      <path d="M28 64 L32.5 58.5 L52 57.5 L51.5 60.5 Z" {...lensStyle} />
-      <path d="M275 52 L285 55 L285 70 L276 67 Z" {...tailLampStyle} />
+      <path d="M27 66 L34 56 L58 54.5 L57 61 Z" {...darkLamp} />
+      <path d="M30 64 L35.5 57.5 L56 56.5 L55.5 59.5 Z" {...lensStyle} />
+      <path d="M279 51 L289 54 L289 70 L280 67 Z" {...tailLampStyle} />
 
       <Wheel cx={72} r={23} spokes={10} />
-      <Wheel cx={236} r={23} spokes={10} />
+      <Wheel cx={238} r={23} spokes={10} />
     </g>
   );
 }

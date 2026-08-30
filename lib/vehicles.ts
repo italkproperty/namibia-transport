@@ -45,7 +45,7 @@ export const VEHICLE_SPECS: Record<string, VehicleSpec> = {
   "private-sedan": {
     slug: "private-sedan",
     art: "sedan",
-    typicalModels: "Toyota Corolla, Corolla Quest or VW Polo sedan",
+    typicalModels: "VW Polo Vivo, Toyota Corolla or Corolla Quest",
     bestFor: "Couples, solo travellers and business trips on tarred routes.",
     points: [
       "Air-conditioned, and the whole car is yours — no shared seats",
@@ -61,7 +61,7 @@ export const VEHICLE_SPECS: Record<string, VehicleSpec> = {
     points: [
       "Higher clearance for gravel — the D-roads to Sesriem and Etosha",
       "Room for oversized bags, tripods and cool boxes",
-      "The class we quote for Sossusvlei, because a sedan should not do it",
+      "The class we quote for Sossusvlei, because a small car should not do it",
     ],
   },
 };

@@ -116,7 +116,7 @@ export const GUIDES: Guide[] = [
         heading: "Why the distance misleads",
         body: [
           "The kilometre count suggests four hours; the roads do not. Once you turn off the tar, the district roads are corrugated in places and the passes are steep and winding. Averaging 60 to 70 km/h on that surface is normal and sensible.",
-          "This is why the route runs in an SUV or 4x4 rather than a sedan.",
+          "This is why the route runs in an SUV or 4x4 rather than a small car.",
         ],
       },
       {
@@ -139,7 +139,8 @@ export const GUIDES: Guide[] = [
   {
     slug: "getting-to-etosha",
     title: "Getting to Etosha: which gate you need",
-    metaTitle: "How to Get to Etosha National Park — Gates, Drive Time, Transfers",
+    metaTitle:
+      "How to Get to Etosha National Park — Gates, Drive Time, Transfers",
     metaDescription:
       "Etosha is about 450 km north of Hosea Kutako. Andersson Gate serves Okaukuejo, Von Lindequist serves Namutoni, and they are hours apart. How to plan around gate closing time.",
     answer:

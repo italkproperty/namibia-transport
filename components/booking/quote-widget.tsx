@@ -158,7 +158,7 @@ export function QuoteWidget({
 
 /**
  * Both classes show their price and their shape, so choosing is a comparison
- * rather than a guess. The silhouette is doing real work here: "Private Sedan"
+ * rather than a guess. The silhouette is doing real work here: "Private Car"
  * and "SUV / 4x4" are two strings, but a low car next to a tall one on big
  * wheels says what the extra money buys without being read.
  */
