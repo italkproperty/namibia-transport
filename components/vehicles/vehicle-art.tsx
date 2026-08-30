@@ -7,25 +7,32 @@ import * as React from "react";
  * manufacturer's press or advertising shot is somebody else's copyright, and
  * putting one on a booking page implies a fleet that does not exist — the two
  * things CLAUDE.md is most insistent we never do. A drawing states the class
- * (how big, how many doors, how much glass, how high it sits) without
- * pretending to be a specific car sitting in a specific yard.
+ * without pretending to be a specific car sitting in a specific yard.
  *
  * This is scaffolding for real photography, not a substitute for it. The
  * moment there is a photograph of an actual partner vehicle, set `photo` on
  * the spec in lib/vehicles.ts and the drawing steps aside — see VehicleImage.
  *
- * The details that separate a modern car from a 1990s one, and which are the
- * whole job here: a high shoulder line with a shallow glasshouse rather than
- * a tall greenhouse on a thin body; a steeply raked windscreen; wheels large
- * enough to fill their arches; swept lamps instead of rounded blocks; a
- * crease running the length of the flank; and a door mirror, whose absence
- * reads as "toy" faster than any other single omission.
+ * Two earlier passes got the proportions right and still looked like clip art,
+ * because what separates a modern car from a cartoon of one is rendering, not
+ * measurement. Held against a real Fortuner and a real Golf, the differences
+ * all sat in the same three places:
  *
- * Proportions are real, taken from the vehicle each class actually describes.
- * Everything is drawn from theme tokens, so it inverts correctly in dark mode
- * and costs no network request, no image decode and no layout shift. There
- * are deliberately no gradients or clip paths: several of these render on one
- * page, and SVG defs share the document id namespace.
+ *  · The glasshouse is one continuous near-black mass. Blacked-out pillars
+ *    mean the windows read as a single dark band with hairline dividers, not
+ *    as separate pale panes with body-coloured gaps between them.
+ *  · The wheels are dark and busy and fill their arches. A pale disc with five
+ *    fat spokes is the loudest toy-car tell there is.
+ *  · The body is a near-white surface with tonal shading and a hairline edge.
+ *    A heavy coloured outline around a flat fill is what says "clip art".
+ *
+ * So the brand colour is an accent now — the tail lamps, and nothing else —
+ * and the drawing carries its weight in value rather than hue.
+ *
+ * Everything is theme tokens, so it inverts in dark mode and costs no network
+ * request, no image decode and no layout shift. Deliberately no gradients or
+ * clip paths: several of these render on one page and SVG defs share the
+ * document id namespace.
  */
 
 export type VehicleArtKind = "sedan" | "suv" | "van";
@@ -35,117 +42,132 @@ const GROUND = 118;
 /* ----------------------------------------------------------------- styles */
 
 const bodyStyle = {
-  fill: "var(--brand)",
-  fillOpacity: 0.12,
-  stroke: "var(--brand)",
-  strokeOpacity: 0.82,
-  strokeWidth: 2.4,
+  fill: "var(--background)",
+  stroke: "var(--foreground)",
+  strokeOpacity: 0.34,
+  strokeWidth: 1.7,
   strokeLinejoin: "round",
   strokeLinecap: "round",
 } as const;
 
-const glassStyle = {
-  fill: "var(--brand)",
-  fillOpacity: 0.28,
+/** The glasshouse: one mass, near-black, pillars included. */
+const glassStyle = { fill: "var(--foreground)", fillOpacity: 0.84 } as const;
+
+/** Hairline door frames inside that mass, and the chrome strip beneath it. */
+const dividerStyle = {
+  stroke: "var(--background)",
+  strokeOpacity: 0.34,
+  strokeWidth: 1.1,
+  strokeLinecap: "round",
+  fill: "none",
 } as const;
 
-/** The reflection streak across the glass. Cheap, and it stops it reading flat. */
-const glareStyle = {
-  fill: "var(--background)",
-  fillOpacity: 0.3,
+const chromeStyle = {
+  stroke: "var(--background)",
+  strokeOpacity: 0.5,
+  strokeWidth: 1.4,
+  strokeLinecap: "round",
+  fill: "none",
 } as const;
+
+const glareStyle = { fill: "var(--background)", fillOpacity: 0.14 } as const;
 
 /** Panel creases and shut lines — the flank looks pressed, not extruded. */
 const creaseStyle = {
-  stroke: "var(--brand)",
-  strokeOpacity: 0.42,
-  strokeWidth: 1.6,
+  stroke: "var(--foreground)",
+  strokeOpacity: 0.17,
+  strokeWidth: 1.4,
   strokeLinecap: "round",
   fill: "none",
 } as const;
 
 const shutStyle = {
-  stroke: "var(--brand)",
-  strokeOpacity: 0.5,
-  strokeWidth: 1.8,
+  stroke: "var(--foreground)",
+  strokeOpacity: 0.22,
+  strokeWidth: 1.3,
   strokeLinecap: "round",
   fill: "none",
 } as const;
 
 const handleStyle = {
-  stroke: "var(--brand)",
-  strokeOpacity: 0.62,
-  strokeWidth: 2.6,
+  stroke: "var(--foreground)",
+  strokeOpacity: 0.38,
+  strokeWidth: 2.4,
   strokeLinecap: "round",
   fill: "none",
 } as const;
 
-/** Light catching the top of the body. One stroke, and the panel gains a curve. */
-const sheenStyle = {
-  stroke: "var(--background)",
-  strokeOpacity: 0.55,
-  strokeWidth: 2,
-  strokeLinecap: "round",
-  fill: "none",
-} as const;
+/** Black plastic: arch trim, sill cladding, running boards, mirrors. */
+const blackTrim = { fill: "var(--foreground)", fillOpacity: 0.78 } as const;
+const darkLamp = { fill: "var(--foreground)", fillOpacity: 0.72 } as const;
+const lensStyle = { fill: "var(--background)", fillOpacity: 0.45 } as const;
 
-const lampStyle = { fill: "var(--brand)", fillOpacity: 0.6 } as const;
-const trimStyle = { fill: "var(--brand)", fillOpacity: 0.34 } as const;
+/** The one place the brand colour appears, and the one place a car is red. */
+const tailLampStyle = { fill: "var(--brand)", fillOpacity: 0.8 } as const;
 
 /* ------------------------------------------------------------------ parts */
 
 /**
- * A wheel with a five-spoke alloy. A plain dark disc is the single biggest
- * reason a drawn car looks old — modern wheels are mostly rim, not sidewall.
+ * A wheel with a dark multi-spoke alloy filling its arch. Spoke count is the
+ * difference between a hot-hatch rim and a 4x4 one, so it is a parameter.
  */
-function Wheel({ cx, r }: { cx: number; r: number }) {
+function Wheel({
+  cx,
+  r,
+  spokes = 5,
+}: {
+  cx: number;
+  r: number;
+  spokes?: number;
+}) {
   const cy = GROUND - r;
-  const rim = r * 0.66;
-  const spokes = Array.from({ length: 5 }, (_, i) => {
-    const angle = ((i * 72 - 90) * Math.PI) / 180;
+  const rim = r * 0.68;
+  const arms = Array.from({ length: spokes }, (_, i) => {
+    const angle = ((i * (360 / spokes) - 90) * Math.PI) / 180;
     return {
-      x: cx + Math.cos(angle) * rim * 0.84,
-      y: cy + Math.sin(angle) * rim * 0.84,
+      x: cx + Math.cos(angle) * rim * 0.82,
+      y: cy + Math.sin(angle) * rim * 0.82,
     };
   });
 
   return (
     <g>
-      <circle cx={cx} cy={cy} r={r} fill="var(--foreground)" opacity="0.9" />
-      {/* Sidewall, then the rim face: the gap between them is what reads as tyre. */}
-      <circle
-        cx={cx}
-        cy={cy}
-        r={r * 0.82}
-        fill="var(--foreground)"
-        opacity="0.5"
-      />
-      <circle cx={cx} cy={cy} r={rim} fill="var(--background)" opacity="0.96" />
-      {spokes.map((spoke, i) => (
+      <circle cx={cx} cy={cy} r={r} fill="var(--foreground)" opacity="0.93" />
+      <circle cx={cx} cy={cy} r={rim} fill="var(--foreground)" opacity="0.52" />
+      {arms.map((arm, i) => (
         <line
           key={i}
           x1={cx}
           y1={cy}
-          x2={spoke.x}
-          y2={spoke.y}
-          stroke="var(--foreground)"
-          strokeOpacity="0.22"
-          strokeWidth={r * 0.15}
+          x2={arm.x}
+          y2={arm.y}
+          stroke="var(--background)"
+          strokeOpacity="0.4"
+          strokeWidth={r * 0.13}
           strokeLinecap="round"
         />
       ))}
       <circle
         cx={cx}
         cy={cy}
-        r={r * 0.15}
-        fill="var(--foreground)"
-        opacity="0.45"
+        r={rim}
+        fill="none"
+        stroke="var(--background)"
+        strokeOpacity="0.22"
+        strokeWidth="1"
+      />
+      <circle
+        cx={cx}
+        cy={cy}
+        r={r * 0.13}
+        fill="var(--background)"
+        opacity="0.5"
       />
     </g>
   );
 }
 
-/** Contact shadow. Tight and dark under the car, not a wide grey oval. */
+/** Contact shadow. Tight under the car, not a wide grey oval. */
 function Ground({ cx, rx }: { cx: number; rx: number }) {
   return (
     <>
@@ -160,205 +182,215 @@ function Ground({ cx, rx }: { cx: number; rx: number }) {
       <ellipse
         cx={cx}
         cy={GROUND + 2}
-        rx={rx * 0.72}
+        rx={rx * 0.7}
         ry={2.2}
         fill="var(--foreground)"
-        opacity="0.09"
+        opacity="0.1"
       />
     </>
   );
 }
 
+/** Door mirror, seated against the A-pillar so it reads as bolted on. */
+function Mirror({ d }: { d: string }) {
+  return <path d={d} {...blackTrim} fillOpacity={0.6} />;
+}
+
 /* --------------------------------------------------------------- the cars */
 
 /**
- * Sedan — the VW Polo sedan / Corolla footprint: 4.4 m, 2.55 m wheelbase,
- * 1.45 m tall. What dates a drawn saloon is not the three-box shape, it is the
- * balance: a long bonnet, a cabin pushed forward and a boot deck running on
- * behind it turns a car into a 1980s Cortina. So the cabin sits back over the
- * rear axle, the boot is short and high, the windscreen and C-pillar are raked
- * to nearly the same angle, and a shadow under the rocker stops the flank
- * reading as one flat slab.
+ * The small car — a current hatchback on the Polo Vivo / Golf footprint, which
+ * is what most Namibian small cars actually are. Short overhangs at both ends,
+ * a roof arcing continuously into a steeply raked tailgate with a spoiler at
+ * its top, a hard crease low on the doors, and eighteens filling the arches.
  */
 function Sedan() {
   return (
     <g>
       <Ground cx={158} rx={132} />
 
-      {/* The roof is one continuous arc from screen to boot, not a flat panel
-          between two corners. That single curve is most of what separates a
-          current small saloon from a 1990s three-box. */}
       <path
-        d="M24 82 C24 73 29 67 37 65
-           L68 60 L100 56
-           C112 44 128 32 148 27
-           C160 24.5 176 24 190 25.5
-           C206 27 218 33 228 42
-           L244 54 L272 56
-           C286 58 294 66 296 76 L296 84
-           C296 89 292 92.5 286 93 L262 94
-           A22 21 0 0 0 218 94 L95 94 A22 21 0 0 0 53 94
-           L34 93 C28 92.5 24 89 24 82 Z"
+        d="M22 80 C22 70 26 63 34 61
+           L66 59 L96 57
+           C108 47 124 34 142 28
+           C156 23.5 176 22.5 196 24.5
+           C214 26.5 228 31 238 38
+           L260 61
+           C272 69 282 75 284 82 L284 87
+           C284 91 280 94 275 94.5 L264 95
+           A22 21 0 0 0 220 95 L96 95 A22 21 0 0 0 52 95
+           L34 94 C28 93 22 88 22 80 Z"
         {...bodyStyle}
       />
 
-      {/* Underbody shadow: the cheapest way to stop a flank reading as a slab. */}
-      <rect
-        x="96"
-        y="87"
-        width="122"
-        height="7"
+      {/* Value, not hue: a soft shadow low on the flank. */}
+      <path
+        d="M54 82 C126 78 198 77 268 82 L268 92 C198 88 126 89 54 92 Z"
         fill="var(--foreground)"
-        opacity="0.06"
+        opacity="0.05"
       />
 
+      {/* One continuous glasshouse. Blacked-out pillars are the whole trick. */}
       <path
-        d="M110 54 C120 44 134 34 150 30 L172 30 L172 54 Z"
+        d="M106 56 C118 46 132 35 148 30 C160 26.5 178 25.5 196 27.5
+           C212 29.5 224 34 234 41 L242 56 Z"
         {...glassStyle}
       />
       <path
-        d="M117 54 C126 45 138 37 151 33 L160 33 C145 38 132 46 125 54 Z"
+        d="M114 56 C125 45 137 36 150 32 L160 32 C143 38 129 47 122 56 Z"
         {...glareStyle}
       />
-      <path
-        d="M179 30 L190 30.5 C202 32 212 37 220 45 L227 54 L179 54 Z"
-        {...glassStyle}
-      />
+      <path d="M172 26 L172 56" {...dividerStyle} />
+      <path d="M210 29 L210 56" {...dividerStyle} />
+      <path d="M107 56 L241 56" {...chromeStyle} />
 
-      {/* A crease that rises towards the rear, and a soft line above the rocker. */}
-      <path d="M40 74 C130 69 220 65 288 66" {...creaseStyle} />
       <path
-        d="M56 86 C140 83 216 83 282 85"
+        d="M40 77 C120 73 200 71 278 76"
         {...creaseStyle}
-        strokeOpacity={0.22}
+        strokeWidth={1.7}
       />
-      <path d="M152 26 C168 24.5 182 24.5 194 26" {...sheenStyle} />
+      <path d="M100 62 C150 60 200 61 250 65" {...creaseStyle} />
 
-      <path d="M176 55 L176 90" {...shutStyle} />
-      <path d="M152 62 L164 62" {...handleStyle} />
-      <path d="M188 62 L200 62" {...handleStyle} />
+      <path d="M180 57 L180 91" {...shutStyle} />
+      <path d="M148 66 L160 66" {...handleStyle} />
+      <path d="M194 67 L206 67" {...handleStyle} />
 
-      {/* Door mirror, seated in the wedge between bonnet and A-pillar so it
-          reads as bolted on rather than floating alongside. */}
-      <path
-        d="M116 54 L103 50 C100 49 98.5 51 100 53 L107 58 L117 58 Z"
-        fill="var(--brand)"
-        fillOpacity="0.55"
-      />
+      <Mirror d="M116 57 L103 53 C100 52 98.5 54 100 56 L107 61 L117 61 Z" />
 
-      {/* Big swept lamps wrapping into the flank. */}
-      <path d="M27 69 L49 65 L51 72 L30 77 Z" {...lampStyle} />
-      <path d="M276 61 L292 65 L293 75 L277 71 Z" {...lampStyle} />
+      {/* Headlamp: a dark cluster with a lit lens inside it. */}
+      <path d="M28 70 L34 63 L54 62.5 L53 67.5 Z" {...darkLamp} />
+      <path d="M31 68 L35 64.5 L52 64 L51.5 66.5 Z" {...lensStyle} />
+      <path d="M250 63 L264 72 L261 78 L247 69 Z" {...tailLampStyle} />
 
-      <Wheel cx={74} r={21} />
-      <Wheel cx={239} r={21} />
+      <Wheel cx={74} r={22} spokes={5} />
+      <Wheel cx={242} r={22} spokes={5} />
     </g>
   );
 }
 
 /**
- * SUV — the Toyota Fortuner: 4.80 m long, 2.75 m wheelbase, 1.84 m tall on
- * 18s. Its signatures are a tall upright nose with the bonnet carried just
- * under the window line, a roof running dead level the whole length to a
- * near-vertical tailgate, arches flared proud of the body, sill cladding
- * under a running board, and the rear quarter window that kicks up at its
- * leading edge — the one line no estate car has.
+ * SUV — the Toyota Fortuner: 4.80 m, 2.75 m wheelbase, 1.84 m tall on 18s.
+ * Level roof the whole length under rails and a rear spoiler, a near-vertical
+ * tailgate, squared black arch trim over tyres that fill it, black sill
+ * cladding above a running board, and the rear quarter window kicking up at
+ * its leading edge behind a body-coloured pillar — the one line no estate has.
  */
 function Suv() {
   return (
     <g>
       <Ground cx={154} rx={138} />
 
-      <rect x="146" y="9" width="98" height="5" rx="2.5" {...trimStyle} />
+      <rect
+        x="138"
+        y="9.5"
+        width="106"
+        height="4.5"
+        rx="2"
+        {...blackTrim}
+        fillOpacity={0.5}
+      />
 
       <path
-        d="M22 78 C22 68 26 58 34 55
-           L68 51 L102 50 L132 17 C134 15 137 14 140 14
-           L248 14 C255 14 261 16 264 21 L280 46
-           C286 56 289 66 289 75 L289 84
-           C289 89 285 92.5 279 93 L257 95
-           A23 23 0 0 0 211 95 L94 95 A23 23 0 0 0 48 95
-           L34 93 C27 92 22 87 22 78 Z"
+        d="M20 76 C20 66 24 58 32 55
+           L68 52 L100 51 L130 17 C132 15 135 14 138 14
+           L250 14 C257 14 262 16 265 21 L280 46
+           C287 56 290 66 290 76 L290 86
+           C290 90 286 93 281 93.5 L259 95
+           A23 23 0 0 0 213 95 L95 95 A23 23 0 0 0 49 95
+           L34 93 C26 92 20 86 20 76 Z"
         {...bodyStyle}
       />
 
       <path
-        d="M112 46 L134 17 C136 15 139 14.5 142 14.5 L162 14.5 L162 46 Z"
+        d="M52 74 C130 69 210 68 286 74 L286 90 C210 85 130 86 52 90 Z"
+        fill="var(--foreground)"
+        opacity="0.05"
+      />
+
+      {/* Main glasshouse, then the quarter behind a body-coloured pillar. */}
+      <path
+        d="M110 48 L132 18 C134 16 137 15.5 140 15.5 L238 15.5 L238 48 Z"
         {...glassStyle}
       />
-      <path d="M118 46 L137 16 L147 16 L128 46 Z" {...glareStyle} />
-      <path d="M169 14.5 L199 14.5 L199 46 L169 46 Z" {...glassStyle} />
-      <path d="M206 14.5 L234 14.5 L234 46 L206 46 Z" {...glassStyle} />
+      <path d="M117 48 L137 17 L147 17 L127 48 Z" {...glareStyle} />
+      <path d="M162 15.5 L162 48" {...dividerStyle} />
+      <path d="M200 15.5 L200 48" {...dividerStyle} />
+      <path d="M111 48 L237 48" {...chromeStyle} />
       {/* The kick: the quarter glass rises at its leading edge. Pure Fortuner. */}
       <path
-        d="M241 14.5 L248 14.5 C254 14.5 258 16.5 261 21 L272 46 L252 46 L241 33 Z"
+        d="M246 16 L250 16 C256 16 260 18 262 22 L275 48 L256 48 L246 33 Z"
         {...glassStyle}
       />
 
-      {/* Sill cladding, then the running board slung under it. */}
+      {/* Black plastic: cladding carried into both bumpers, then the step. */}
       <rect
-        x="25"
-        y="81"
-        width="22"
-        height="11"
+        x="30"
+        y="80"
+        width="20"
+        height="12"
         rx="3"
-        {...trimStyle}
-        fillOpacity={0.2}
+        {...blackTrim}
+        fillOpacity={0.5}
       />
       <rect
         x="96"
-        y="81"
+        y="80"
         width="114"
         height="12"
         rx="3"
-        {...trimStyle}
-        fillOpacity={0.2}
+        {...blackTrim}
+        fillOpacity={0.5}
       />
       <rect
-        x="259"
-        y="81"
+        x="256"
+        y="80"
         width="26"
-        height="11"
+        height="12"
         rx="3"
-        {...trimStyle}
-        fillOpacity={0.2}
+        {...blackTrim}
+        fillOpacity={0.5}
       />
-      <rect x="100" y="92" width="106" height="6" rx="3" {...trimStyle} />
+      <rect x="100" y="91" width="106" height="6" rx="3" {...blackTrim} />
 
-      <path d="M40 63 C120 57 200 56 284 62" {...creaseStyle} />
-      <path d="M142 14.5 L246 14.5" {...sheenStyle} />
-
-      <path d="M165 47 L165 83" {...shutStyle} />
-      <path d="M202 47 L202 83" {...shutStyle} />
-      <path d="M237 47 L237 83" {...shutStyle} />
-      <path d="M145 55 L157 55" {...handleStyle} />
-      <path d="M182 55 L194 55" {...handleStyle} />
+      {/* Squared arch trim, proud of the cut. */}
+      <path
+        d="M46 95 A26 26 0 0 1 98 95"
+        fill="none"
+        stroke="var(--foreground)"
+        strokeOpacity="0.5"
+        strokeWidth="4"
+        strokeLinecap="round"
+      />
+      <path
+        d="M210 95 A26 26 0 0 1 262 95"
+        fill="none"
+        stroke="var(--foreground)"
+        strokeOpacity="0.5"
+        strokeWidth="4"
+        strokeLinecap="round"
+      />
 
       <path
-        d="M116 47 L103 43 C100 42 98.5 44 100 46 L107 51 L117 51 Z"
-        fill="var(--brand)"
-        fillOpacity="0.55"
-      />
-
-      {/* Flared arches: the lip proud of the cut is what reads as 4x4. */}
-      <path
-        d="M45 95 A26 26 0 0 1 97 95"
+        d="M40 63 C120 58 200 57 284 63"
         {...creaseStyle}
-        strokeWidth={2.6}
-        strokeOpacity={0.5}
+        strokeWidth={1.7}
       />
-      <path
-        d="M208 95 A26 26 0 0 1 260 95"
-        {...creaseStyle}
-        strokeWidth={2.6}
-        strokeOpacity={0.5}
-      />
+      <path d="M104 53 C160 51 210 52 268 57" {...creaseStyle} />
 
-      <path d="M26 63 L52 58 L55 68 L30 74 Z" {...lampStyle} />
-      <path d="M278 52 L288 55 L288 72 L279 68 Z" {...lampStyle} />
+      <path d="M166 49 L166 82" {...shutStyle} />
+      <path d="M204 49 L204 82" {...shutStyle} />
+      <path d="M241 49 L241 82" {...shutStyle} />
+      <path d="M146 57 L158 57" {...handleStyle} />
+      <path d="M184 57 L196 57" {...handleStyle} />
 
-      <Wheel cx={71} r={23} />
-      <Wheel cx={234} r={23} />
+      <Mirror d="M114 49 L101 45 C98 44 96.5 46 98 48 L105 53 L115 53 Z" />
+
+      <path d="M25 66 L31 57 L54 55.5 L53 62 Z" {...darkLamp} />
+      <path d="M28 64 L32.5 58.5 L52 57.5 L51.5 60.5 Z" {...lensStyle} />
+      <path d="M275 52 L285 55 L285 70 L276 67 Z" {...tailLampStyle} />
+
+      <Wheel cx={72} r={23} spokes={10} />
+      <Wheel cx={236} r={23} spokes={10} />
     </g>
   );
 }
@@ -375,59 +407,59 @@ function Van() {
       <Ground cx={158} rx={146} />
 
       <path
-        d="M22 96 C17 96 14 93 14 89 L14 64 C14 54 18 45 26 38
-           L42 25 C48 19 56 16 65 16 L272 16
-           C286 16 296 24 299 37 L304 65 L304 89
-           C304 93 301 96 297 96 L259 96 A23 23 0 0 0 213 96
-           L83 96 A23 23 0 0 0 37 96 Z"
+        d="M20 78 C20 60 24 45 32 38
+           L44 26 C50 20 58 17 67 17 L272 17
+           C286 17 296 25 299 38 L304 66 L304 86
+           C304 90 300 94 295 94.5 L259 96
+           A23 23 0 0 0 213 96 L85 96 A23 23 0 0 0 39 96
+           L30 94 C24 93 20 87 20 78 Z"
         {...bodyStyle}
       />
 
       <path
-        d="M31 49 C33 38 39 29 48 24 C53 21 59 20 66 20 L77 20 L77 49 Z"
-        {...glassStyle}
-      />
-      <path
-        d="M38 49 C40 39 46 30 54 25 L63 25 C53 31 47 39 45 49 Z"
-        {...glareStyle}
-      />
-      <path
-        d="M88 20 L256 20 C266 20 273 26 275 35 L279 49 L88 49 Z"
-        {...glassStyle}
-      />
-      <path d="M139 20 L139 49" stroke="var(--card)" strokeWidth={2.5} />
-      <path d="M197 20 L197 49" stroke="var(--card)" strokeWidth={2.5} />
-      <path d="M252 20 L252 49" stroke="var(--card)" strokeWidth={2.5} />
-
-      <path d="M32 62 C120 58 220 58 300 63" {...creaseStyle} />
-      <path d="M66 17 L262 17" {...sheenStyle} />
-      <rect
-        x="86"
-        y="88"
-        width="130"
-        height="8"
+        d="M40 78 C130 74 220 73 300 78 L300 91 C220 87 130 88 40 92 Z"
         fill="var(--foreground)"
         opacity="0.05"
       />
 
-      {/* The sliding door, which is how passengers actually get in. */}
-      <path d="M80 50 L80 90" {...shutStyle} />
-      <path d="M139 50 L139 90" {...shutStyle} />
-      <path d="M197 50 L197 90" {...shutStyle} />
-      <path d="M171 60 L187 60" {...handleStyle} />
-      <rect x="141" y="93" width="54" height="6" rx="3" {...trimStyle} />
+      <path
+        d="M32 50 C34 39 40 30 49 25 C54 22 60 21 67 21 L78 21 L78 50 Z"
+        {...glassStyle}
+      />
+      <path
+        d="M88 21 L256 21 C266 21 273 27 275 36 L279 50 L88 50 Z"
+        {...glassStyle}
+      />
+      <path
+        d="M39 50 C41 40 47 31 55 26 L64 26 C54 32 48 40 46 50 Z"
+        {...glareStyle}
+      />
+      <path d="M140 21 L140 50" {...dividerStyle} />
+      <path d="M198 21 L198 50" {...dividerStyle} />
+      <path d="M252 21 L252 50" {...dividerStyle} />
+      <path d="M89 50 L278 50" {...chromeStyle} />
 
       <path
-        d="M90 50 L78 46 C75 45 73.5 47 75 49 L82 54 L91 54 Z"
-        fill="var(--brand)"
-        fillOpacity="0.55"
+        d="M32 62 C120 58 220 57 300 63"
+        {...creaseStyle}
+        strokeWidth={1.7}
       />
 
-      <path d="M15 70 L36 67 L38 76 L17 79 Z" {...lampStyle} />
-      <path d="M293 55 L304 57 L304 76 L294 74 Z" {...lampStyle} />
+      {/* The sliding door, which is how passengers actually get in. */}
+      <path d="M82 51 L82 91" {...shutStyle} />
+      <path d="M140 51 L140 91" {...shutStyle} />
+      <path d="M198 51 L198 91" {...shutStyle} />
+      <path d="M172 60 L188 60" {...handleStyle} />
+      <rect x="142" y="92" width="54" height="6" rx="3" {...blackTrim} />
 
-      <Wheel cx={60} r={23} />
-      <Wheel cx={236} r={23} />
+      <Mirror d="M92 51 L79 47 C76 46 74.5 48 76 50 L83 55 L93 55 Z" />
+
+      <path d="M23 76 L28 66 L48 65 L47 73 Z" {...darkLamp} />
+      <path d="M27 73 L30.5 67.5 L46 66.8 L45.5 70 Z" {...lensStyle} />
+      <path d="M292 58 L301 60 L301 76 L293 74 Z" {...tailLampStyle} />
+
+      <Wheel cx={62} r={23} spokes={6} />
+      <Wheel cx={236} r={23} spokes={6} />
     </g>
   );
 }
