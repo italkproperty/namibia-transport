@@ -17,6 +17,11 @@ export type SendMessageInput = {
   variables?: Record<string, string>;
   /** Plain-text body, used by email and as the WhatsApp fallback. */
   body: string;
+  /**
+   * Optional HTML for email. The text body stays the source of truth — a
+   * traveller reading this on a phone in an airport may never render it.
+   */
+  html?: string;
   subject?: string;
 };
 

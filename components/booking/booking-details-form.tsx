@@ -122,6 +122,19 @@ export function BookingDetailsForm({
     },
   });
 
+  /**
+   * A named hotel, guesthouse or landmark is something we can find without
+   * help; an area or "somewhere else" is not. It changes what the pin control
+   * asks for, and whether the notes field is the important one on this form.
+   */
+  const watchedDropoff = form.watch("dropoffLabel");
+  const watchedPickup = form.watch("pickupLabel");
+  const isKnownPlace = (places: Place[], name: string) => {
+    const kind = places.find((place) => place.name === name)?.kind;
+    return kind === "hotel" || kind === "guesthouse" || kind === "landmark";
+  };
+  const dropoffIsKnown = isKnownPlace(dropoffPlaces, watchedDropoff);
+
   // Keep the form in step with the URL if the visitor edits their trip and returns.
   React.useEffect(() => {
     form.setValue("routeSlug", trip.routeSlug);
@@ -261,7 +274,8 @@ export function BookingDetailsForm({
                     <FormControl>
                       <PinDrop
                         label="Pin the pickup point"
-                        placeLabel={form.watch("pickupLabel")}
+                        placeLabel={watchedPickup}
+                        known={isKnownPlace(pickupPlaces, watchedPickup)}
                         centre={originCentre}
                         value={field.value ?? null}
                         onChange={field.onChange}
@@ -300,7 +314,8 @@ export function BookingDetailsForm({
                   <FormControl>
                     <PinDrop
                       label="Pin the exact drop-off"
-                      placeLabel={form.watch("dropoffLabel")}
+                      placeLabel={watchedDropoff}
+                      known={dropoffIsKnown}
                       centre={destinationCentre}
                       value={field.value ?? null}
                       onChange={field.onChange}
@@ -433,17 +448,27 @@ export function BookingDetailsForm({
             name="notes"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>Landmark or notes (optional)</FormLabel>
+                <FormLabel>
+                  {dropoffIsKnown
+                    ? "Landmark or notes (optional)"
+                    : "Where exactly are you going?"}
+                </FormLabel>
                 <FormControl>
                   <textarea
                     rows={2}
-                    placeholder="Hotel name, a nearby landmark, a child seat."
+                    placeholder={
+                      dropoffIsKnown
+                        ? "A nearby landmark, a child seat, anything else."
+                        : "The name of your lodge or guesthouse, and a landmark if you have one."
+                    }
                     className="border-input focus-visible:border-ring focus-visible:ring-ring/50 w-full rounded-md border bg-transparent px-3 py-2 text-base shadow-xs outline-none focus-visible:ring-[3px] md:text-sm"
                     {...field}
                   />
                 </FormControl>
                 <FormDescription>
-                  A landmark helps your driver more than a street name.
+                  {dropoffIsKnown
+                    ? "A landmark helps your driver more than a street name."
+                    : "Name the property and we will find it. If you have never been, this is worth more than anything else on this form."}
                 </FormDescription>
                 <FormMessage />
               </FormItem>

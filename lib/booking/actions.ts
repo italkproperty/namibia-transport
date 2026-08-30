@@ -6,7 +6,14 @@ import { getDb, isDatabaseConfigured } from "@/db";
 import { bookings, customers, payments, vehicleClasses } from "@/db/schema";
 import { formatDateTime } from "@/lib/format";
 import { getRouteBySlug, listVehicleClasses } from "@/lib/maps";
-import { getMessenger } from "@/lib/messaging";
+import { getCompanyInfo } from "@/lib/company";
+import {
+  confirmationHtml,
+  confirmationSubject,
+  confirmationText,
+  getMessenger,
+  type ConfirmationDetails,
+} from "@/lib/messaging";
 import { formatNad } from "@/lib/money";
 import { roundCoord } from "@/lib/maps/bounds";
 import { getPaymentProvider } from "@/lib/payments";
@@ -15,7 +22,11 @@ import { defaultReturnUrl } from "@/lib/payments/paytoday/provider";
 import { computeFare } from "@/lib/pricing";
 
 import { generateBookingRef } from "./ref";
-import { bookingFormSchema, type BookingActionResult } from "./schema";
+import {
+  bookingFormSchema,
+  type BookingActionResult,
+  type BookingFormValues,
+} from "./schema";
 import { namibianLocalToInstant } from "./time";
 
 /**
@@ -210,27 +221,18 @@ export async function createBooking(
     }
 
     // Stubbed for now: logs the message it would send.
-    await getMessenger().send({
-      to: {
-        fullName: customer.fullName,
-        whatsapp: customer.whatsapp,
-        email: customer.email,
-      },
-      channel: "whatsapp",
-      template: "booking_received",
-      variables: {
-        ref: booking.ref,
-        route: `${route.originLabel} to ${route.destinationLabel}`,
-        when: formatDateTime(scheduledAt),
-        total: formatNad(fare.customerPrice),
-      },
-      body:
-        `Thanks ${customer.fullName} — we have your booking ${booking.ref}. ` +
-        `${route.originLabel} to ${route.destinationLabel} on ${formatDateTime(scheduledAt)}, ` +
-        `${formatNad(fare.customerPrice)} for a ${vehicleClass.name}. ` +
-        (checkoutUrl
-          ? `Once payment clears we will confirm your driver.`
-          : `We will send payment details and confirm your driver shortly.`),
+    // Comms are best-effort and deliberately outside the failure path. The
+    // booking is already saved; a dead SMTP host or a rate-limited WhatsApp
+    // API must not tell a traveller their booking failed when it did not.
+    await sendConfirmations({
+      customer,
+      booking,
+      route,
+      vehicleClass,
+      scheduledAt,
+      fare,
+      values,
+      checkoutUrl,
     });
 
     return { ok: true, ref: booking.ref, checkoutUrl };
@@ -269,4 +271,97 @@ async function insertBookingWithUniqueRef(
     }
   }
   throw new Error("Could not allocate a unique booking reference");
+}
+
+/**
+ * WhatsApp first, email second — and neither can throw.
+ *
+ * Every failure here is logged and swallowed. The booking exists, the
+ * traveller has a reference, and operations can chase a message that never
+ * went out; what they cannot recover from is a traveller who was told the
+ * booking failed and went somewhere else.
+ */
+async function sendConfirmations({
+  customer,
+  booking,
+  route,
+  vehicleClass,
+  scheduledAt,
+  fare,
+  values,
+  checkoutUrl,
+}: {
+  customer: { fullName: string; whatsapp: string | null; email: string | null };
+  booking: { ref: string };
+  route: { originLabel: string; destinationLabel: string };
+  vehicleClass: { name: string };
+  scheduledAt: Date;
+  fare: { customerPrice: string };
+  values: BookingFormValues;
+  checkoutUrl: string | null;
+}): Promise<void> {
+  const messenger = getMessenger();
+  const company = getCompanyInfo();
+  const routeLabel = `${route.originLabel} to ${route.destinationLabel}`;
+
+  const details: ConfirmationDetails = {
+    ref: booking.ref,
+    fullName: customer.fullName,
+    routeLabel,
+    scheduledAt,
+    vehicleClassName: vehicleClass.name,
+    passengers: values.passengers,
+    total: fare.customerPrice,
+    pickupLabel: values.pickupLabel,
+    dropoffLabel: values.dropoffLabel,
+    pickupPin: values.pickupPin ?? null,
+    dropoffPin: values.dropoffPin ?? null,
+    flightNumber: emptyToNull(values.flightNumber),
+    notes: emptyToNull(values.notes),
+    checkoutUrl,
+    supportWhatsapp: company.whatsapp,
+  };
+
+  const to = {
+    fullName: customer.fullName,
+    whatsapp: customer.whatsapp,
+    email: customer.email,
+  };
+
+  try {
+    await messenger.send({
+      to,
+      channel: "whatsapp",
+      template: "booking_received",
+      variables: {
+        ref: booking.ref,
+        route: routeLabel,
+        when: formatDateTime(scheduledAt),
+        total: formatNad(fare.customerPrice),
+      },
+      body:
+        `Thanks ${customer.fullName} — we have your booking ${booking.ref}. ` +
+        `${routeLabel} on ${formatDateTime(scheduledAt)}, ` +
+        `${formatNad(fare.customerPrice)} for a ${vehicleClass.name}. ` +
+        (checkoutUrl
+          ? `Once payment clears we will confirm your driver.`
+          : `We will send payment details and confirm your driver shortly.`),
+    });
+  } catch (error) {
+    console.error("[booking] WhatsApp confirmation failed", error);
+  }
+
+  if (!customer.email) return;
+
+  try {
+    await messenger.send({
+      to,
+      channel: "email",
+      subject: confirmationSubject(details),
+      body: confirmationText(details),
+      html: confirmationHtml(details),
+    });
+  } catch (error) {
+    console.error("[booking] email confirmation failed", error);
+  }
 }

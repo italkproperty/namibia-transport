@@ -24,6 +24,15 @@ import type { LatLng } from "@/lib/maps/types";
  * Deliberately collapsed until asked for. mapbox-gl is ~230KB — more than the
  * rest of the booking form put together — so it loads when someone opens this,
  * and never for the majority who pick a hotel off the list and move on.
+ *
+ * The thing to be careful about: most people booking an airport transfer are
+ * flying into Namibia for the first time and have no idea where anything is.
+ * Ask them to drop a pin and they will guess, and a confidently wrong pin is
+ * worse than none — a driver trusts a coordinate over a place name. So the
+ * copy below never asks anyone to place a pin they cannot place. When we
+ * already know the property (`known`), it says so and offers the pin only for
+ * a specific gate. Otherwise it says out loud that naming the lodge in the
+ * notes beats a guess, because for a first-time visitor it does.
  */
 
 type Props = {
@@ -34,9 +43,22 @@ type Props = {
   label: string;
   /** Names the place the pin refines, so the prompt is about their trip. */
   placeLabel?: string;
+  /**
+   * True when the chosen place is one we can already find — a named hotel or
+   * a landmark. Changes the ask from "where is this?" to "any particular
+   * entrance?", which is the only question left worth asking.
+   */
+  known?: boolean;
 };
 
-export function PinDrop({ centre, value, onChange, label, placeLabel }: Props) {
+export function PinDrop({
+  centre,
+  value,
+  onChange,
+  label,
+  placeLabel,
+  known = false,
+}: Props) {
   const [open, setOpen] = React.useState(false);
   const token = publicMapboxToken();
 
@@ -53,11 +75,21 @@ export function PinDrop({ centre, value, onChange, label, placeLabel }: Props) {
             {label}
           </p>
           <p className="text-muted-foreground mt-0.5 text-sm leading-snug text-pretty">
-            {value
-              ? "Your driver will be given this exact spot."
-              : placeLabel
-                ? `Optional. Worth doing if a driver would need more than \u201c${placeLabel}\u201d to find you.`
-                : "Optional. Worth doing for a private address, a farm gate, or anywhere a street name will not help."}
+            {value ? (
+              "Your driver will be given this exact spot."
+            ) : known && placeLabel ? (
+              <>
+                Not needed &mdash; we know where {placeLabel} is. Drop a pin
+                only if you need a particular gate or entrance.
+              </>
+            ) : (
+              <>
+                Optional, and only if you know the spot. First time in Namibia?
+                Skip this and put the name of your lodge or guesthouse in the
+                notes below &mdash; a name we can look up beats a pin placed
+                from a guess.
+              </>
+            )}
           </p>
         </div>
 
