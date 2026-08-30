@@ -8,6 +8,7 @@ import { formatDateTime } from "@/lib/format";
 import { getRouteBySlug, listVehicleClasses } from "@/lib/maps";
 import { getMessenger } from "@/lib/messaging";
 import { formatNad } from "@/lib/money";
+import { roundCoord } from "@/lib/maps/bounds";
 import { getPaymentProvider } from "@/lib/payments";
 import { INTENT_TTL_MS } from "@/lib/payments/paytoday/config";
 import { defaultReturnUrl } from "@/lib/payments/paytoday/provider";
@@ -49,7 +50,7 @@ function emptyToNull(value: string | undefined): string | null {
  * later price change cannot rewrite what someone already agreed to.
  */
 export async function createBooking(
-  input: unknown
+  input: unknown,
 ): Promise<BookingActionResult> {
   const parsed = bookingFormSchema.safeParse(input);
   if (!parsed.success) {
@@ -158,6 +159,13 @@ export async function createBooking(
       isRepeatCustomer,
       status: "pending_payment",
       notes: emptyToNull(values.notes),
+      // Rounded to ~11cm, which is well past what a dropped pin means and
+      // past what any driver can act on. Storing more implies a precision the
+      // input does not have.
+      pickupLat: values.pickupPin ? roundCoord(values.pickupPin.lat) : null,
+      pickupLng: values.pickupPin ? roundCoord(values.pickupPin.lng) : null,
+      dropoffLat: values.dropoffPin ? roundCoord(values.dropoffPin.lat) : null,
+      dropoffLng: values.dropoffPin ? roundCoord(values.dropoffPin.lng) : null,
     });
 
     // The booking is already saved, so a gateway failure must not throw it
@@ -197,7 +205,7 @@ export async function createBooking(
     } catch (error) {
       console.error(
         `[booking] payment could not be started for ${booking.ref}`,
-        error
+        error,
       );
     }
 
@@ -245,7 +253,7 @@ type BookingInsert = typeof bookings.$inferInsert;
  */
 async function insertBookingWithUniqueRef(
   db: ReturnType<typeof getDb>,
-  values: Omit<BookingInsert, "ref">
+  values: Omit<BookingInsert, "ref">,
 ) {
   for (let attempt = 0; attempt < 5; attempt += 1) {
     try {

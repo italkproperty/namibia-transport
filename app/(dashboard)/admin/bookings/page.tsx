@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { ArrowDownIcon, ArrowUpIcon } from "lucide-react";
+import { ArrowDownIcon, ArrowUpIcon, MapPinIcon } from "lucide-react";
 
 import { AdminShell } from "@/components/admin/shell";
 import { Badge } from "@/components/ui/badge";
@@ -21,6 +21,7 @@ import {
 import { isDatabaseConfigured } from "@/db";
 import type { BookingStatus, RouteCategory } from "@/db/schema";
 import { formatDate, formatDateTime } from "@/lib/format";
+import { mapsLink } from "@/lib/maps/bounds";
 import { formatNad } from "@/lib/money";
 
 export const metadata: Metadata = {
@@ -214,7 +215,10 @@ export default async function AdminBookingsPage({ searchParams }: PageProps) {
           </h2>
 
           <FilterRow label="Status">
-            <FilterChip href={href({ status: undefined })} active={!filters.status}>
+            <FilterChip
+              href={href({ status: undefined })}
+              active={!filters.status}
+            >
               All
             </FilterChip>
             {STATUSES.map((status) => (
@@ -302,10 +306,44 @@ export default async function AdminBookingsPage({ searchParams }: PageProps) {
                 {rows.map((row) => (
                   <TableRow key={row.id}>
                     <TableCell className="font-medium">{row.ref}</TableCell>
-                    <TableCell className="max-w-56 truncate">
-                      {row.routeOrigin && row.routeDestination
-                        ? `${row.routeOrigin} to ${row.routeDestination}`
-                        : `${row.pickupLabel} to ${row.dropoffLabel}`}
+                    <TableCell className="max-w-56">
+                      <span className="block truncate">
+                        {row.routeOrigin && row.routeDestination
+                          ? `${row.routeOrigin} to ${row.routeDestination}`
+                          : `${row.pickupLabel} to ${row.dropoffLabel}`}
+                      </span>
+                      {/* The pin is the whole reason it was collected: this is
+                          the link dispatch sends the driver. */}
+                      <span className="mt-0.5 flex flex-wrap gap-x-2 gap-y-0.5">
+                        {row.pickupLat !== null && row.pickupLng !== null && (
+                          <a
+                            href={mapsLink({
+                              lat: row.pickupLat,
+                              lng: row.pickupLng,
+                            })}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="text-brand inline-flex items-center gap-0.5 text-xs underline underline-offset-2"
+                          >
+                            <MapPinIcon className="size-3" aria-hidden />
+                            pickup pin
+                          </a>
+                        )}
+                        {row.dropoffLat !== null && row.dropoffLng !== null && (
+                          <a
+                            href={mapsLink({
+                              lat: row.dropoffLat,
+                              lng: row.dropoffLng,
+                            })}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="text-brand inline-flex items-center gap-0.5 text-xs underline underline-offset-2"
+                          >
+                            <MapPinIcon className="size-3" aria-hidden />
+                            drop-off pin
+                          </a>
+                        )}
+                      </span>
                     </TableCell>
                     <TableCell>
                       {row.routeCategory ? (

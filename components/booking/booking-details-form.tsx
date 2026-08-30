@@ -25,10 +25,14 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { PinDrop } from "@/components/booking/pin-drop";
 import { PlacePicker } from "@/components/booking/place-picker";
 import { createBooking } from "@/lib/booking/actions";
 import type { Place } from "@/lib/places";
-import { bookingFormSchema, type BookingFormValues } from "@/lib/booking/schema";
+import {
+  bookingFormSchema,
+  type BookingFormValues,
+} from "@/lib/booking/schema";
 import type { TripParams } from "@/lib/booking/trip-params";
 import type { RouteView } from "@/lib/maps";
 
@@ -77,6 +81,20 @@ export function BookingDetailsForm({
   const defaultPickup = firstNeutral(pickupPlaces);
   const defaultDropoff = firstNeutral(dropoffPlaces);
 
+  /**
+   * Where the pin map opens before anything is dropped: the end of the route
+   * it refines. Opening on the middle of the country would make every pin a
+   * long drag, and a long drag is where mistakes come from.
+   */
+  const originCentre =
+    route.originLat !== null && route.originLng !== null
+      ? { lat: route.originLat, lng: route.originLng }
+      : null;
+  const destinationCentre =
+    route.destinationLat !== null && route.destinationLng !== null
+      ? { lat: route.destinationLat, lng: route.destinationLng }
+      : null;
+
   const form = useForm<BookingFormValues>({
     resolver: zodResolver(bookingFormSchema),
     mode: "onBlur",
@@ -97,6 +115,8 @@ export function BookingDetailsForm({
       email: "",
       customerType: "tourist",
       notes: "",
+      pickupPin: null,
+      dropoffPin: null,
       isReturn: false,
       acquisitionSource: "",
     },
@@ -127,7 +147,7 @@ export function BookingDetailsForm({
       const { host } = new URL(referrer);
       form.setValue(
         "acquisitionSource",
-        host === window.location.host ? "direct" : `referrer:${host}`
+        host === window.location.host ? "direct" : `referrer:${host}`,
       );
     } catch {
       form.setValue("acquisitionSource", "direct");
@@ -156,7 +176,11 @@ export function BookingDetailsForm({
 
   return (
     <Form {...form}>
-      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-5" noValidate>
+      <form
+        onSubmit={form.handleSubmit(onSubmit)}
+        className="space-y-5"
+        noValidate
+      >
         <fieldset className="space-y-4" disabled={isPending}>
           <legend className="sr-only">Your details</legend>
 
@@ -228,6 +252,27 @@ export function BookingDetailsForm({
               />
             )}
 
+            {pickupPlaces.length > 1 && (
+              <FormField
+                control={form.control}
+                name="pickupPin"
+                render={({ field }) => (
+                  <FormItem className="sm:col-span-2">
+                    <FormControl>
+                      <PinDrop
+                        label="Pin the pickup point"
+                        placeLabel={form.watch("pickupLabel")}
+                        centre={originCentre}
+                        value={field.value ?? null}
+                        onChange={field.onChange}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            )}
+
             <FormField
               control={form.control}
               name="dropoffLabel"
@@ -240,6 +285,25 @@ export function BookingDetailsForm({
                       value={field.value}
                       onChange={field.onChange}
                       placeholder="Search hotels and areas"
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name="dropoffPin"
+              render={({ field }) => (
+                <FormItem className="sm:col-span-2">
+                  <FormControl>
+                    <PinDrop
+                      label="Pin the exact drop-off"
+                      placeLabel={form.watch("dropoffLabel")}
+                      centre={destinationCentre}
+                      value={field.value ?? null}
+                      onChange={field.onChange}
                     />
                   </FormControl>
                   <FormMessage />
@@ -420,7 +484,9 @@ export function BookingDetailsForm({
           disabled={isPending}
           className="press bg-brand text-brand-foreground hover:bg-brand-hover h-12 w-full text-base"
         >
-          {isPending && <Loader2Icon className="size-4 animate-spin" aria-hidden />}
+          {isPending && (
+            <Loader2Icon className="size-4 animate-spin" aria-hidden />
+          )}
           {isPending ? "Confirming…" : "Confirm booking"}
         </Button>
 

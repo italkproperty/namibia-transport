@@ -17,6 +17,7 @@
     "test:maps": "tsx --conditions=react-server tests/maps.test.ts",
     "test:geometry": "tsx --conditions=react-server tests/geometry.test.ts",
     "test:polyline": "tsx --conditions=react-server tests/polyline.test.ts",
+    "test:pins": "tsx --conditions=react-server tests/pins.test.ts",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {

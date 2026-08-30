@@ -41,7 +41,7 @@ export class MapboxRouteProvider implements RouteProvider {
     if (!token) return null;
 
     const url = new URL(
-      `${DIRECTIONS_BASE}/${toPair(origin)};${toPair(destination)}`
+      `${DIRECTIONS_BASE}/${toPair(origin)};${toPair(destination)}`,
     );
     url.searchParams.set("access_token", token);
     // Polyline6 keeps six decimals of precision, which matters over the
@@ -58,7 +58,7 @@ export class MapboxRouteProvider implements RouteProvider {
       });
       if (!response.ok) {
         console.error(
-          `[mapbox] directions failed: ${response.status} ${response.statusText}`
+          `[mapbox] directions failed: ${response.status} ${response.statusText}`,
         );
         return null;
       }
@@ -114,9 +114,7 @@ export function staticRouteMapUrl({
   if (encodedGeometry) {
     // path-{width}+{colour}-{opacity}({polyline}) — brand amber, matching the
     // route stroke in the logo.
-    overlays.push(
-      `path-4+bc4b00-0.9(${encodeURIComponent(encodedGeometry)})`
-    );
+    overlays.push(`path-4+bc4b00-0.9(${encodeURIComponent(encodedGeometry)})`);
   }
 
   overlays.push(`pin-s+1a1614(${toPair(origin)})`);
@@ -124,10 +122,40 @@ export function staticRouteMapUrl({
 
   const size = `${Math.min(width, 1280)}x${Math.min(height, 1280)}${retina ? "@2x" : ""}`;
   const url = new URL(
-    `${STATIC_BASE}/streets-v12/static/${overlays.join(",")}/auto/${size}`
+    `${STATIC_BASE}/streets-v12/static/${overlays.join(",")}/auto/${size}`,
   );
   url.searchParams.set("access_token", token);
   url.searchParams.set("padding", "60");
+
+  return url.toString();
+}
+
+/**
+ * A static image of one dropped pin, for the confirmation page and the
+ * dispatch board. Same reasoning as the route map: these are looked at far
+ * more often than they are interacted with, so an <img> beats 230KB of canvas.
+ */
+export function staticPinMapUrl({
+  point,
+  zoom = 15,
+  width = 640,
+  height = 320,
+  retina = true,
+}: {
+  point: LatLng;
+  zoom?: number;
+  width?: number;
+  height?: number;
+  retina?: boolean;
+}): string | null {
+  const token = publicMapboxToken();
+  if (!token) return null;
+
+  const size = `${Math.min(width, 1280)}x${Math.min(height, 1280)}${retina ? "@2x" : ""}`;
+  const url = new URL(
+    `${STATIC_BASE}/streets-v12/static/pin-l+bc4b00(${toPair(point)})/${toPair(point)},${zoom},0/${size}`,
+  );
+  url.searchParams.set("access_token", token);
 
   return url.toString();
 }

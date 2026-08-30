@@ -1,5 +1,7 @@
 import { z } from "zod";
 
+import { NAMIBIA_BOUNDS } from "@/lib/maps/bounds";
+
 /**
  * One schema, used by the form and re-run inside the Server Action. The action
  * never trusts what arrives: it re-validates here, then re-derives the price
@@ -14,8 +16,22 @@ const whatsapp = z
   .max(24, "That number looks too long")
   .regex(
     /^\+?[\d\s()-]+$/,
-    "Use digits only, optionally starting with + and a country code"
+    "Use digits only, optionally starting with + and a country code",
   );
+
+/** One dropped pin, or nothing. Null and undefined both mean "no pin". */
+const pinPoint = z
+  .object({
+    lat: z.coerce
+      .number()
+      .min(NAMIBIA_BOUNDS.minLat)
+      .max(NAMIBIA_BOUNDS.maxLat),
+    lng: z.coerce
+      .number()
+      .min(NAMIBIA_BOUNDS.minLng)
+      .max(NAMIBIA_BOUNDS.maxLng),
+  })
+  .nullish();
 
 export const bookingFormSchema = z.object({
   routeSlug: z.string().min(1, "Choose a route"),
@@ -55,7 +71,23 @@ export const bookingFormSchema = z.object({
   pickupLabel: z.string().min(1, "Choose a pickup point"),
   dropoffLabel: z.string().min(1, "Choose a destination"),
 
-  notes: z.string().trim().max(600, "Please keep notes under 600 characters").optional().or(z.literal("")),
+  /**
+   * Optional dropped pins. Free-form input arrives wrong sooner or later — a
+   * mis-drag, a stale marker, or someone poking this endpoint directly — and a
+   * coordinate in the Atlantic is not a precision upgrade over the pick-list,
+   * it is a driver sent nowhere. Anything outside Namibia is refused here
+   * rather than stored, and `pinPoint` is reused so both ends get the same
+   * treatment.
+   */
+  pickupPin: pinPoint,
+  dropoffPin: pinPoint,
+
+  notes: z
+    .string()
+    .trim()
+    .max(600, "Please keep notes under 600 characters")
+    .optional()
+    .or(z.literal("")),
   isReturn: z.boolean(),
 
   /** Attribution, filled in by the browser. Sanitised server-side. */
@@ -75,4 +107,8 @@ export type BookingActionResult =
        */
       checkoutUrl?: string | null;
     }
-  | { ok: false; message: string; fieldErrors?: Partial<Record<keyof BookingFormValues, string>> };
+  | {
+      ok: false;
+      message: string;
+      fieldErrors?: Partial<Record<keyof BookingFormValues, string>>;
+    };

@@ -5,6 +5,7 @@ import {
   AlertTriangleIcon,
   CalendarPlusIcon,
   CheckIcon,
+  MapPinIcon,
   MessageCircleIcon,
   ShieldCheckIcon,
 } from "lucide-react";
@@ -16,6 +17,7 @@ import { Button } from "@/components/ui/button";
 import { getBookingByRef } from "@/lib/booking/queries";
 import { getCompanyInfo, whatsappLink } from "@/lib/company";
 import { formatDateTime } from "@/lib/format";
+import { mapsLink } from "@/lib/maps/bounds";
 import { formatNad } from "@/lib/money";
 import { isLiveGatewayConfigured } from "@/lib/payments";
 import {
@@ -116,8 +118,14 @@ export default async function BookingConfirmationPage({ params }: PageProps) {
             <dl className="mt-5 grid gap-x-6 gap-y-2.5 border-t pt-4 text-sm sm:grid-cols-2">
               <Row label="Route">{routeLabel}</Row>
               <Row label="Pickup">{formatDateTime(booking.scheduledAt)}</Row>
-              <Row label="From">{booking.pickupLabel}</Row>
-              <Row label="To">{booking.dropoffLabel}</Row>
+              <Row label="From">
+                {booking.pickupLabel}
+                <PinNote lat={booking.pickupLat} lng={booking.pickupLng} />
+              </Row>
+              <Row label="To">
+                {booking.dropoffLabel}
+                <PinNote lat={booking.dropoffLat} lng={booking.dropoffLng} />
+              </Row>
               <Row label="Vehicle">
                 {detail.vehicleClassName ?? "Private vehicle"}
               </Row>
@@ -186,8 +194,8 @@ export default async function BookingConfirmationPage({ params }: PageProps) {
                     : canPayNow
                       ? "Your booking is held. Pay now to have your driver assigned, or we will message you a link."
                       : "Nothing has been charged. We will message you payment details before your travel date."}{" "}
-                  Your fare is locked in at{" "}
-                  {formatNad(booking.customerPrice)} either way.
+                  Your fare is locked in at {formatNad(booking.customerPrice)}{" "}
+                  either way.
                 </p>
                 {canPayNow && (
                   <div className="mt-3">
@@ -239,7 +247,7 @@ export default async function BookingConfirmationPage({ params }: PageProps) {
                 <a
                   href={whatsappLink(
                     company.whatsapp,
-                    `Hi — my booking reference is ${booking.ref}.`
+                    `Hi — my booking reference is ${booking.ref}.`,
                   )}
                 >
                   <MessageCircleIcon className="size-4" aria-hidden />
@@ -298,5 +306,27 @@ function PaymentBadge({ status }: { status: string | null }) {
     <span className={`rounded-md px-2.5 py-1 text-xs font-medium ${tone}`}>
       {label}
     </span>
+  );
+}
+
+/**
+ * A pin, shown back to the person who dropped it.
+ *
+ * The point of confirming a pin is that it can be checked — a coordinate
+ * nobody ever sees again is worse than no pin at all, because the traveller
+ * assumes it is right. Renders nothing when no pin was dropped.
+ */
+function PinNote({ lat, lng }: { lat: number | null; lng: number | null }) {
+  if (lat === null || lng === null) return null;
+  return (
+    <a
+      href={mapsLink({ lat, lng })}
+      target="_blank"
+      rel="noreferrer"
+      className="text-muted-foreground mt-0.5 flex items-center gap-1 text-xs underline underline-offset-2"
+    >
+      <MapPinIcon className="size-3 shrink-0" aria-hidden />
+      Pinned — check the spot
+    </a>
   );
 }
