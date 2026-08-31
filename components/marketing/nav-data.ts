@@ -3,6 +3,7 @@ import { GUIDES } from "@/lib/guides";
 
 /** One place for what the header offers, so desktop and mobile cannot drift. */
 export const NAV_LINKS = [
+  { href: "/journey", label: "Any journey" },
   { href: "/corporate", label: "Corporate" },
   { href: "/about", label: "About" },
   { href: "/contact", label: "Contact" },

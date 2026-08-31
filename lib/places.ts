@@ -1,4 +1,5 @@
 import type { RouteView } from "@/lib/maps";
+import { PLACE_NODES } from "@/lib/network/nodes";
 
 /**
  * Where a traveller is actually going.
@@ -105,17 +106,40 @@ const BY_DESTINATION: Record<string, Place[]> = {
   Swakopmund: SWAKOPMUND,
   "Walvis Bay": WALVIS_BAY,
   Sossusvlei: SOSSUSVLEI,
+  "Sossusvlei (Sesriem)": SOSSUSVLEI,
   "Etosha National Park": ETOSHA,
+  "Etosha — Andersson Gate (Okaukuejo)": ETOSHA,
+  "Etosha — Von Lindequist Gate (Namutoni)": ETOSHA,
 };
 
 /** Always offered, so a missing entry never blocks a booking. */
 export const OTHER_PLACE = "Somewhere else — I'll describe it in the notes";
 
-function placesFor(label: string): Place[] {
+/**
+ * An airport is one building, so there is nothing to choose — but which end of
+ * it depends on which way you are going, and offering "hotel or guesthouse" at
+ * Walvis Bay Airport would be nonsense. Modelled journeys made this reachable:
+ * a route's category is "airport" when either end is one, so the category
+ * cannot answer the question and the place has to.
+ */
+function airportPlaces(label: string, direction: "pickup" | "dropoff"): Place[] {
+  return direction === "pickup"
+    ? [place(`${label} — arrivals hall`, "landmark")]
+    : [place(`${label} — departures`, "landmark")];
+}
+
+function isAirport(label: string): boolean {
+  return PLACE_NODES.some((node) => node.name === label && node.isAirport);
+}
+
+function placesFor(label: string, direction: "pickup" | "dropoff"): Place[] {
+  if (isAirport(label)) return airportPlaces(label, direction);
+
   const curated = BY_DESTINATION[label];
   if (curated) return [...curated, place(OTHER_PLACE, "area")];
 
-  // A route added straight to the database still gets a usable form.
+  // A route added straight to the database, or a journey to a town we have not
+  // listed properties for, still gets a usable form.
   return [
     place(`${label} — hotel or guesthouse`, "area"),
     place(`${label} — private address`, "area"),
@@ -123,19 +147,12 @@ function placesFor(label: string): Place[] {
   ];
 }
 
-/**
- * Airport pickups happen in one place, so there is nothing to choose. Every
- * other origin gets the same treatment as a destination.
- */
 export function pickupPlaces(route: RouteView): Place[] {
-  if (route.category === "airport") {
-    return [place(`${route.originLabel} — arrivals hall`, "landmark")];
-  }
-  return placesFor(route.originLabel);
+  return placesFor(route.originLabel, "pickup");
 }
 
 export function dropoffPlaces(route: RouteView): Place[] {
-  return placesFor(route.destinationLabel);
+  return placesFor(route.destinationLabel, "dropoff");
 }
 
 /** Names only, for anything that still wants a plain list. */

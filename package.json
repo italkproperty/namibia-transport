@@ -19,7 +19,8 @@
     "test:polyline": "tsx --conditions=react-server tests/polyline.test.ts",
     "test:pins": "tsx --conditions=react-server tests/pins.test.ts",
     "typecheck": "tsc --noEmit",
-    "test:confirmation": "tsx --conditions=react-server tests/confirmation.test.ts"
+    "test:confirmation": "tsx --conditions=react-server tests/confirmation.test.ts",
+    "test:network": "tsx --conditions=react-server tests/network.test.ts"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.9.1",

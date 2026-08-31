@@ -19,6 +19,7 @@ import { getCompanyInfo, whatsappLink } from "@/lib/company";
 import { formatDateTime } from "@/lib/format";
 import { mapsLink } from "@/lib/maps/bounds";
 import { formatNad } from "@/lib/money";
+import { journeyLabel } from "@/lib/network/journey";
 import { isLiveGatewayConfigured } from "@/lib/payments";
 import {
   getLatestPayment,
@@ -86,7 +87,10 @@ export default async function BookingConfirmationPage({ params }: PageProps) {
   const routeLabel =
     detail.routeOrigin && detail.routeDestination
       ? `${detail.routeOrigin} to ${detail.routeDestination}`
-      : `${booking.pickupLabel} to ${booking.dropoffLabel}`;
+      : // A journey priced from the road network has no routes row, so the
+        // leg is read back from the pair snapshotted onto the booking.
+        (journeyLabel(booking.journeySlug) ??
+        `${booking.pickupLabel} to ${booking.dropoffLabel}`);
 
   return (
     <div className="flex min-h-svh flex-col">

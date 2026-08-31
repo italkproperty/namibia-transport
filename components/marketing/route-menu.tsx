@@ -80,6 +80,18 @@ export function RouteMenu({ routes }: { routes: NavRoute[] }) {
           Every route and price
           <ArrowRightIcon className="size-3.5" aria-hidden />
         </Link>
+
+        {/* The eight routes above all begin at the airport or in Windhoek.
+            Most Namibian itineraries are loops, so the leg someone is actually
+            looking for is often not one of them. */}
+        <Link
+          href="/journey"
+          onClick={() => setOpen(false)}
+          className="text-muted-foreground hover:text-foreground flex items-center justify-between border-t px-4 py-2.5 text-xs transition-colors"
+        >
+          Price any other journey — coast to dunes, park to park
+          <ArrowRightIcon className="size-3.5" aria-hidden />
+        </Link>
       </PopoverContent>
     </Popover>
   );

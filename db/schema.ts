@@ -369,6 +369,18 @@ export const bookings = pgTable(
     routeId: uuid("route_id").references(() => routes.id, {
       onDelete: "set null",
     }),
+    /**
+     * The place pair, for a journey priced from the road network rather than
+     * from a curated route: "sossusvlei-to-swakopmund". Null whenever
+     * `route_id` is set, and the two are never both null on a booking that
+     * came through the form.
+     *
+     * Without it a modelled booking would be invisible to route reporting —
+     * the labels record where the traveller was collected, not which leg of
+     * the country they bought — and the whole point of recording economics per
+     * booking is that leg profitability is queryable.
+     */
+    journeySlug: text("journey_slug"),
     vehicleClassId: uuid("vehicle_class_id").references(
       () => vehicleClasses.id,
       { onDelete: "set null" }
@@ -422,6 +434,7 @@ export const bookings = pgTable(
   (t) => [
     uniqueIndex("bookings_ref_key").on(t.ref),
     index("bookings_route_idx").on(t.routeId),
+    index("bookings_journey_idx").on(t.journeySlug),
     index("bookings_customer_idx").on(t.customerId),
     index("bookings_status_idx").on(t.status),
     index("bookings_scheduled_at_idx").on(t.scheduledAt),

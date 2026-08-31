@@ -8,9 +8,14 @@ import { SiteHeader } from "@/components/marketing/site-header";
 import {
   buildTripQuery,
   parseTripParams,
+  TRIP_KEYS,
 } from "@/lib/booking/trip-params";
 import { formatDuration } from "@/lib/format";
 import { listRoutes, listVehicleClasses } from "@/lib/maps";
+import {
+  modelJourneyBySlug,
+  withCuratedCeiling,
+} from "@/lib/network/journey";
 import { formatNad } from "@/lib/money";
 import { computeFare, unitFare } from "@/lib/pricing";
 import { dropoffPlaces, pickupPlaces } from "@/lib/places";
@@ -56,8 +61,25 @@ export default async function BookPage({ searchParams }: PageProps) {
     );
   }
 
-  const trip = parseTripParams(params, routes, vehicleClasses);
-  const route = routes.find((r) => r.slug === trip.routeSlug) ?? routes[0];
+  /**
+   * A slug that is not a curated route may still be a journey between two
+   * places the road network knows, priced from it. Adding it to the list the
+   * trip is parsed against is all it takes: from here down a modelled journey
+   * and a curated route are the same thing, which is the point of giving them
+   * the same shape.
+   */
+  const requestedSlug = firstValue(params[TRIP_KEYS.route]);
+  const journey =
+    requestedSlug && !routes.some((r) => r.slug === requestedSlug)
+      ? modelJourneyBySlug(requestedSlug)
+      : null;
+  const modelled = journey
+    ? withCuratedCeiling(journey, routes).route
+    : undefined;
+  const bookable = modelled ? [modelled, ...routes] : routes;
+
+  const trip = parseTripParams(params, bookable, vehicleClasses);
+  const route = bookable.find((r) => r.slug === trip.routeSlug) ?? bookable[0];
   const vehicleClass =
     vehicleClasses.find((c) => c.id === trip.vehicleClassId) ?? vehicleClasses[0];
 
@@ -90,7 +112,11 @@ export default async function BookPage({ searchParams }: PageProps) {
               <div className="flex items-start justify-between gap-3">
                 <h2 className="text-sm font-semibold">{routeTitle(route)}</h2>
                 <Link
-                  href={`/?${buildTripQuery(trip)}#quote`}
+                  href={
+                    modelled
+                      ? `/journey?${buildTripQuery(trip)}`
+                      : `/?${buildTripQuery(trip)}#quote`
+                  }
                   className="text-muted-foreground hover:text-foreground press inline-flex shrink-0 items-center gap-1 text-xs underline underline-offset-2"
                 >
                   <PencilIcon className="size-3" aria-hidden />

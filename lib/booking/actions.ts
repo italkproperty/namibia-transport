@@ -5,7 +5,7 @@ import { eq } from "drizzle-orm";
 import { getDb, isDatabaseConfigured } from "@/db";
 import { bookings, customers, payments, vehicleClasses } from "@/db/schema";
 import { formatDateTime } from "@/lib/format";
-import { getRouteBySlug, listVehicleClasses } from "@/lib/maps";
+import { listVehicleClasses } from "@/lib/maps";
 import { getCompanyInfo } from "@/lib/company";
 import {
   confirmationHtml,
@@ -19,9 +19,11 @@ import { roundCoord } from "@/lib/maps/bounds";
 import { getPaymentProvider } from "@/lib/payments";
 import { INTENT_TTL_MS } from "@/lib/payments/paytoday/config";
 import { defaultReturnUrl } from "@/lib/payments/paytoday/provider";
+import { isModelledRoute } from "@/lib/network/journey";
 import { computeFare } from "@/lib/pricing";
 
 import { generateBookingRef } from "./ref";
+import { resolveBookableRoute } from "./routes";
 import {
   bookingFormSchema,
   type BookingActionResult,
@@ -82,7 +84,10 @@ export async function createBooking(
   }
 
   // Resolve the route and vehicle class server-side; both must be sellable.
-  const route = await getRouteBySlug(values.routeSlug);
+  // A modelled journey resolves the same way and is priced from the road
+  // network — the client still sends no price, and the fare is still derived
+  // here rather than read from the form.
+  const route = await resolveBookableRoute(values.routeSlug);
   if (!route || !route.isActive) {
     return { ok: false, message: "That route is not available to book." };
   }
@@ -150,7 +155,12 @@ export async function createBooking(
     }
 
     const booking = await insertBookingWithUniqueRef(db, {
-      routeId: route.id,
+      // A modelled journey has no routes row to point at. Everything the
+      // booking needs is already snapshotted onto it: both labels, the fare,
+      // the payout, the distance and the duration.
+      routeId: isModelledRoute(route) ? null : route.id,
+      // The pair, so a modelled booking is still countable by leg.
+      journeySlug: isModelledRoute(route) ? route.slug : null,
       vehicleClassId: vehicleClass.id,
       customerId: customer.id,
       pickupLabel: values.pickupLabel,

@@ -36,6 +36,13 @@
       "when": 1787820850237,
       "tag": "0004_reflective_unicorn",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1788150567605,
+      "tag": "0005_last_magik",
+      "breakpoints": true
     }
   ]
 }

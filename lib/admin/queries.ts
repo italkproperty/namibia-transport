@@ -73,6 +73,9 @@ export async function listBookings(filters: BookingFilters) {
         pickupLng: bookings.pickupLng,
         dropoffLat: bookings.dropoffLat,
         dropoffLng: bookings.dropoffLng,
+        // Null for a journey priced from the road network; `journeySlug`
+        // carries the leg in that case.
+        journeySlug: bookings.journeySlug,
         routeSlug: routes.slug,
         routeOrigin: routes.originLabel,
         routeDestination: routes.destinationLabel,

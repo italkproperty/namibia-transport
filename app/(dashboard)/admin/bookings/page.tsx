@@ -25,6 +25,7 @@ import { formatDate, formatDateTime } from "@/lib/format";
 import { mapsLink } from "@/lib/maps/bounds";
 import { assignmentsByBooking, listDrivers } from "@/lib/dispatch/queries";
 import { formatNad } from "@/lib/money";
+import { journeyLabel } from "@/lib/network/journey";
 
 export const metadata: Metadata = {
   title: "Bookings",
@@ -328,7 +329,8 @@ export default async function AdminBookingsPage({ searchParams }: PageProps) {
                       <span className="block truncate">
                         {row.routeOrigin && row.routeDestination
                           ? `${row.routeOrigin} to ${row.routeDestination}`
-                          : `${row.pickupLabel} to ${row.dropoffLabel}`}
+                          : (journeyLabel(row.journeySlug) ??
+                            `${row.pickupLabel} to ${row.dropoffLabel}`)}
                       </span>
                       {/* The pin is the whole reason it was collected: this is
                           the link dispatch sends the driver. */}

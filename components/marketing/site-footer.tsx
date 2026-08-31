@@ -45,6 +45,14 @@ export function SiteFooter({ routes = [] }: { routes?: RouteView[] }) {
                 ))}
                 <li>
                   <Link
+                    href="/journey"
+                    className="text-muted-foreground hover:text-foreground transition"
+                  >
+                    Price any other journey
+                  </Link>
+                </li>
+                <li>
+                  <Link
                     href="/book"
                     className="text-muted-foreground hover:text-foreground transition"
                   >
