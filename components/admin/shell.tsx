@@ -10,6 +10,7 @@ import { getAdminGateState } from "@/lib/admin/auth";
 const TABS = [
   { href: "/admin/bookings", label: "Bookings" },
   { href: "/admin/drivers", label: "Drivers" },
+  { href: "/admin/calendar", label: "Calendar" },
   { href: "/admin/quotes", label: "Quotes" },
   { href: "/admin/enquiries", label: "Enquiries" },
   { href: "/admin/reviews", label: "Reviews" },

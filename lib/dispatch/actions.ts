@@ -14,6 +14,7 @@ import {
 } from "@/db/schema";
 import { getAdminGateState } from "@/lib/admin/auth";
 import { getCompanyInfo } from "@/lib/company";
+import { findNode } from "@/lib/network/nodes";
 import {
   assignmentHtml,
   assignmentSubject,
@@ -59,6 +60,21 @@ const driverSchema = z.object({
   phone: z.string().trim().max(24).optional().or(z.literal("")),
   licenseNumber: z.string().trim().max(60).optional().or(z.literal("")),
   notes: z.string().trim().max(400).optional().or(z.literal("")),
+  /**
+   * Where the driver lives, as a road-network slug. Checked against the
+   * network rather than stored as typed — this is a Server Action, so the
+   * value can be anything, and an unknown base would silently mis-place every
+   * idle window on the calendar.
+   */
+  baseNode: z
+    .string()
+    .trim()
+    .max(40)
+    .refine((slug) => slug === "" || findNode(slug) !== null, {
+      message: "That is not a place the road network knows.",
+    })
+    .optional()
+    .or(z.literal("")),
   /** Optional, because a driver can be recorded before their car is. */
   vehicleClassId: z.string().uuid().optional().or(z.literal("")),
   make: z.string().trim().max(40).optional().or(z.literal("")),
@@ -95,6 +111,7 @@ export async function addDriver(
         phone: empty(values.phone),
         licenseNumber: empty(values.licenseNumber),
         notes: empty(values.notes),
+        baseNode: empty(values.baseNode),
         // "pending" until someone has actually checked them. Nothing on the
         // site claims a driver is vetted, and this default is why.
         status: "pending",

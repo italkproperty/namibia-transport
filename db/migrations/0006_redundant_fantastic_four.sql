@@ -1,0 +1,1 @@
+ALTER TABLE "drivers" ADD COLUMN "base_node" text;

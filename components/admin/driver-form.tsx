@@ -4,6 +4,11 @@ import * as React from "react";
 
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
+import {
+  nodeLabel,
+  nodesByRegion,
+  REGION_LABELS,
+} from "@/lib/network/nodes";
 import { addDriver, type DispatchResult } from "@/lib/dispatch/actions";
 import type { VehicleClassView } from "@/lib/maps";
 
@@ -49,6 +54,33 @@ export function DriverForm({
         <Field name="whatsapp" label="WhatsApp" placeholder="+264 81 123 4567" required />
         <Field name="phone" label="Phone (optional)" />
         <Field name="licenseNumber" label="Licence / PDP number (optional)" />
+
+        <div className="grid gap-1.5">
+          <Label htmlFor="baseNode" className="text-xs font-medium">
+            Based in
+          </Label>
+          <select
+            id="baseNode"
+            name="baseNode"
+            defaultValue="windhoek"
+            className="border-input h-10 rounded-md border bg-transparent px-3 text-sm"
+          >
+            {nodesByRegion().map((group) => (
+              <optgroup key={group.region} label={REGION_LABELS[group.region]}>
+                {group.nodes.map((node) => (
+                  <option key={node.slug} value={node.slug}>
+                    {nodeLabel(node)}
+                  </option>
+                ))}
+              </optgroup>
+            ))}
+          </select>
+          {/* Where they start a day and go back to, which is what decides
+              whether a gap in their week is sellable or the drive home. */}
+          <p className="text-muted-foreground text-xs leading-snug">
+            Sets which gaps in their week the calendar counts as idle.
+          </p>
+        </div>
       </div>
 
       <fieldset className="mt-5 rounded-lg border border-dashed p-4">

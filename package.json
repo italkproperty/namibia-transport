@@ -20,7 +20,8 @@
     "test:pins": "tsx --conditions=react-server tests/pins.test.ts",
     "typecheck": "tsc --noEmit",
     "test:confirmation": "tsx --conditions=react-server tests/confirmation.test.ts",
-    "test:network": "tsx --conditions=react-server tests/network.test.ts"
+    "test:network": "tsx --conditions=react-server tests/network.test.ts",
+    "test:fleet": "tsx --conditions=react-server tests/fleet.test.ts"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.9.1",

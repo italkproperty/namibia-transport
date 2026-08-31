@@ -321,6 +321,14 @@ export const drivers = pgTable(
     licenseNumber: text("license_number"),
     licenseExpiresAt: timestamp("license_expires_at", { withTimezone: true }),
     status: driverStatusEnum("status").notNull().default("pending"),
+    /**
+     * Where this driver lives, as a slug from the road network — "windhoek",
+     * "swakopmund". It is where they start a day and where they go back to,
+     * so it decides which of their gaps are idle time we can sell and which
+     * are the drive home. Null means Windhoek, which is where the market is
+     * and where a driver added before this column existed was assumed to be.
+     */
+    baseNode: text("base_node"),
     rating: numeric("rating", { precision: 2, scale: 1 }),
     notes: text("notes"),
     ...timestamps,

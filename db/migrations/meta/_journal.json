@@ -43,6 +43,13 @@
       "when": 1788150567605,
       "tag": "0005_last_magik",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1788212940927,
+      "tag": "0006_redundant_fantastic_four",
+      "breakpoints": true
     }
   ]
 }
