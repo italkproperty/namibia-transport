@@ -260,7 +260,24 @@ export type Road = {
  * luggage. Returns null when either end is unknown, and — because the graph is
  * one connected network — never for two known places.
  */
+/**
+ * The graph never changes at runtime, so a shortest path computed once is
+ * correct forever. The fleet calendar asks for hundreds of these per render
+ * while it works out what each standing car could be sold.
+ */
+const roadCache = new Map<string, Road | null>();
+
 export function findRoad(originSlug: string, destinationSlug: string): Road | null {
+  const key = `${originSlug}>${destinationSlug}`;
+  const cached = roadCache.get(key);
+  if (cached !== undefined) return cached;
+
+  const road = computeRoad(originSlug, destinationSlug);
+  roadCache.set(key, road);
+  return road;
+}
+
+function computeRoad(originSlug: string, destinationSlug: string): Road | null {
   const origin = findNode(originSlug);
   const destination = findNode(destinationSlug);
   if (!origin || !destination || origin.slug === destination.slug) return null;

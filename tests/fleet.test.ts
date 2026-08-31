@@ -11,11 +11,14 @@
 import {
   baseNodeFor,
   buildTimeline,
+  deadheadWindows,
   idleByPlace,
   idleWindows,
   type CommittedLeg,
   type Window,
 } from "@/lib/fleet/timeline";
+import { marginalOffer, sellableLegs } from "@/lib/fleet/marginal";
+import type { IdleWindow } from "@/lib/fleet/timeline";
 import { findNode } from "@/lib/network/nodes";
 import { findRoad } from "@/lib/network/roads";
 
@@ -357,6 +360,143 @@ check(
   "the road supplies one",
   hours(trip.startsAt, trip.endsAt) * 60 === findRoad("windhoek", "swakopmund")!.minutes,
   `${hours(trip.startsAt, trip.endsAt) * 60} min`,
+);
+
+/* -------------------------------------------------- the empty drives home */
+
+console.log("\nthe empty drives are the best inventory");
+
+const empties = deadheadWindows([oneTrip]);
+check(
+  "a drive home with nobody in it is offered as a window",
+  empties.length === 1 && empties[0].at.slug === "swakopmund" &&
+    empties[0].nextAt.slug === "windhoek",
+  empties.map((w) => `${w.at.slug}->${w.nextAt.slug}`).join(", "),
+);
+check(
+  "and the window is exactly the drive, so only that drive fits",
+  Math.abs(
+    empties[0].hours - findRoad("swakopmund", "windhoek")!.minutes / 60,
+  ) < 0.01,
+);
+
+const fromEmpty = sellableLegs(empties);
+check(
+  "which makes the leg it was already driving sellable",
+  fromEmpty.some((o) => o.to.slug === "windhoek" && o.onTheWay),
+  fromEmpty.map((o) => o.to.slug).join(", "),
+);
+
+// A drive we have already said cannot happen is not a seat anyone can buy.
+check(
+  "a reposition on an impossible schedule is not offered",
+  deadheadWindows([unreachable]).every((w) => w.at.slug !== "windhoek"),
+  deadheadWindows([unreachable]).map((w) => `${w.at.slug}->${w.nextAt.slug}`).join(", "),
+);
+
+/* ------------------------------------------- pricing against a moving car */
+
+console.log("\nwhat a standing car can be sold");
+
+const stand = (
+  atSlug: string,
+  nextSlug: string,
+  hoursFree: number,
+): IdleWindow => {
+  const startsAt = at("2026-09-03T06:00:00Z");
+  return {
+    driverId: DRIVER.id,
+    driverName: DRIVER.fullName,
+    at: findNode(atSlug)!,
+    nextAt: findNode(nextSlug)!,
+    startsAt,
+    endsAt: new Date(startsAt.getTime() + hoursFree * 3_600_000),
+    hours: hoursFree,
+    dueBy: new Date(startsAt.getTime() + hoursFree * 3_600_000),
+  };
+};
+
+// The pure case: the car is driving Swakopmund to Windhoek empty regardless.
+const goingHome = stand("swakopmund", "windhoek", 48);
+const alongIt = marginalOffer(goingHome, findNode("windhoek")!)!;
+check("a leg the car is already driving is recognised", alongIt.onTheWay);
+check("it adds no kilometres at all", Math.round(alongIt.extraKm) === 0, `${alongIt.extraKm} km`);
+check(
+  "and it is priced well under the standalone fare",
+  alongIt.price < alongIt.standalone,
+  `N$${alongIt.price} vs N$${alongIt.standalone}`,
+);
+
+// The commercial floor. The maths says nearly nothing; the business says half.
+check(
+  "but never below half the standalone fare",
+  alongIt.price >= alongIt.standalone * 0.5,
+  `N$${alongIt.price} is ${((alongIt.price / alongIt.standalone) * 100).toFixed(0)}% of N$${alongIt.standalone}`,
+);
+
+// A place on the road to where the car is going is nearly as good.
+const enRoute = marginalOffer(goingHome, findNode("okahandja")!)!;
+check(
+  "somewhere further along the same road adds nothing either",
+  Math.round(enRoute.extraKm) === 0,
+  `${Math.round(enRoute.extraKm)} km`,
+);
+
+// And a car that has to come back where it started saves nothing, which is
+// why "there is an idle car" is not by itself a discount.
+const roundTrip = stand("swakopmund", "swakopmund", 48);
+const noSaving = marginalOffer(roundTrip, findNode("windhoek")!)!;
+check(
+  "a car that must return where it started offers no saving",
+  noSaving.saving <= 0,
+  `saving N$${noSaving.saving}`,
+);
+check(
+  "and it is not offered at all",
+  !sellableLegs([roundTrip]).some((o) => o.to.slug === "windhoek"),
+);
+
+// Sleep. 28 hours of driving does not fit in two days however it is arranged.
+const twoDays = stand("swakopmund", "windhoek", 48);
+check(
+  "a job needing 28 hours of driving is refused in a 48-hour window",
+  marginalOffer(twoDays, findNode("katima-mulilo")!) === null,
+);
+check(
+  "the same job fits when there is a week",
+  marginalOffer(stand("swakopmund", "windhoek", 24 * 7), findNode("katima-mulilo")!) !== null,
+);
+const long = marginalOffer(stand("swakopmund", "windhoek", 24 * 7), findNode("katima-mulilo")!)!;
+check(
+  "and it pays for the nights the driver spends away",
+  long.nights >= 2 && long.hoursAway > long.minutes / 60,
+  `${long.nights} nights, ${long.hoursAway.toFixed(0)}h away vs ${(long.minutes / 60).toFixed(0)}h driving`,
+);
+
+check(
+  "a five-hour window cannot take a five-hour drive plus the return",
+  marginalOffer(stand("swakopmund", "windhoek", 5), findNode("sossusvlei")!) === null,
+);
+
+// The split has to hold here as it does everywhere else money is quoted.
+const offers = sellableLegs([goingHome]);
+check("offers are produced", offers.length > 0);
+check(
+  "payout and contribution always reconcile to the price",
+  offers.every((o) => Math.abs(o.price - o.payout - o.contribution) < 0.005),
+);
+check(
+  "the leg the car is already driving is offered first",
+  offers[0]?.onTheWay === true,
+  offers.map((o) => `${o.to.slug}${o.onTheWay ? "*" : ""}`).join(", "),
+);
+check(
+  "and nothing offered takes the driver past their next commitment",
+  offers.every(
+    (o) =>
+      o.hoursAway <=
+      (o.window.dueBy.getTime() - o.window.startsAt.getTime()) / 3_600_000,
+  ),
 );
 
 console.log(`\n${passed} passed, ${failed} failed`);

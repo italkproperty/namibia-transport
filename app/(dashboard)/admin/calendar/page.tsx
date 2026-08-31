@@ -5,8 +5,15 @@ import { AlertTriangleIcon, InfoIcon } from "lucide-react";
 import { PositionBoard } from "@/components/admin/position-board";
 import { AdminShell } from "@/components/admin/shell";
 import { fleetTimelines, unassignedCount } from "@/lib/fleet/queries";
-import { idleByPlace, idleWindows } from "@/lib/fleet/timeline";
+import { sellableLegs } from "@/lib/fleet/marginal";
+import {
+  deadheadWindows,
+  idleByPlace,
+  idleWindows,
+} from "@/lib/fleet/timeline";
 import { namibianToday } from "@/lib/booking/time";
+import { formatDuration } from "@/lib/format";
+import { formatNad } from "@/lib/money";
 import { nodeLabel } from "@/lib/network/nodes";
 
 export const metadata: Metadata = {
@@ -56,6 +63,11 @@ export default async function CalendarPage({ searchParams }: PageProps) {
   // ahead are inventory.
   const sellable = idleWindows(timelines, 4, new Date());
   const places = idleByPlace(sellable);
+  // Two kinds of inventory: cars standing somewhere, and cars already driving
+  // somewhere empty. The second is worth far more and is not idle time at all.
+  const now = new Date();
+  const empties = deadheadWindows(timelines).filter((w) => w.endsAt > now);
+  const offers = sellableLegs([...empties, ...sellable]).slice(0, 8);
   const conflicts = timelines
     .flatMap((t) => t.conflicts.map((c) => ({ ...c, driver: t.driverName })))
     .sort((a, b) => {
@@ -168,6 +180,61 @@ export default async function CalendarPage({ searchParams }: PageProps) {
             )}
 
             <PositionBoard timelines={timelines} from={from} days={days} />
+
+            {offers.length > 0 && (
+              <div className="bg-card overflow-hidden rounded-xl border">
+                <div className="border-b px-4 py-2.5">
+                  <h2 className="text-sm font-semibold">
+                    What these cars could take
+                  </h2>
+                  <p className="text-muted-foreground mt-0.5 text-xs leading-relaxed">
+                    Priced on the extra driving only, because the rest is
+                    already being paid for. These are for quoting by hand — the
+                    site sells the standard fare, and it should, or nobody
+                    would ever pay it.
+                  </p>
+                </div>
+                <ul className="divide-y">
+                  {offers.map((offer, index) => (
+                    <li
+                      key={`${offer.window.driverId}-${offer.slug}-${index}`}
+                      className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1 px-4 py-3"
+                    >
+                      <div className="min-w-0">
+                        <p className="text-sm font-medium">
+                          {nodeLabel(offer.window.at)} → {nodeLabel(offer.to)}
+                          {offer.onTheWay && (
+                            <span className="bg-success-subtle text-success ml-2 rounded px-1.5 py-0.5 align-middle text-[0.65rem] font-semibold">
+                              already driving this empty
+                            </span>
+                          )}
+                        </p>
+                        <p className="text-muted-foreground mt-0.5 text-xs">
+                          {offer.window.driverName} · from{" "}
+                          {WHEN.format(offer.window.startsAt)} ·{" "}
+                          {formatDuration(offer.outbound.minutes)} drive
+                          {offer.nights > 0 &&
+                            `, ${offer.nights} ${offer.nights === 1 ? "night" : "nights"} away`}
+                          {offer.extraKm > 1 &&
+                            ` · ${Math.round(offer.extraKm)} km more than the car was driving anyway`}
+                        </p>
+                      </div>
+                      <div className="text-right">
+                        <p className="tabular text-sm font-semibold">
+                          {formatNad(offer.price)}{" "}
+                          <span className="text-muted-foreground font-normal line-through">
+                            {formatNad(offer.standalone)}
+                          </span>
+                        </p>
+                        <p className="text-muted-foreground tabular mt-0.5 text-xs">
+                          {formatNad(offer.contribution)} to us
+                        </p>
+                      </div>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
 
             {places.length > 0 && (
               <div className="bg-card overflow-hidden rounded-xl border">

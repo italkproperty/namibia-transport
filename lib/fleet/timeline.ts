@@ -82,6 +82,17 @@ export type IdleWindow = {
   startsAt: Date;
   endsAt: Date;
   hours: number;
+  /**
+   * Where the car has to be when the waiting ends, and by when.
+   *
+   * This is what makes an idle window worth different amounts. A car standing
+   * at Swakopmund that must be back at Swakopmund has to drive any job there
+   * and back, and saves nothing. A car standing at Swakopmund that has to be
+   * in Windhoek on Thursday is already going to drive those 356 km empty —
+   * and anyone travelling that way rides for almost nothing.
+   */
+  nextAt: PlaceNode;
+  dueBy: Date;
 };
 
 export type DriverTimeline = {
@@ -278,17 +289,33 @@ export function buildTimeline(
     )
     .sort((a, b) => a.startsAt.getTime() - b.startsAt.getTime());
 
-  const idle: IdleWindow[] = clipped
-    .filter((s): s is Extract<Segment, { kind: "idle" }> => s.kind === "idle")
-    .filter((s) => s.at !== null)
-    .map((s) => ({
+  const idle: IdleWindow[] = [];
+  clipped.forEach((segment, index) => {
+    if (segment.kind !== "idle" || segment.at === null) return;
+
+    // What the waiting ends in decides what it is worth.
+    const next = clipped[index + 1];
+    let nextAt = base;
+    let dueBy = window.to;
+    if (next?.kind === "reposition") {
+      nextAt = next.to;
+      dueBy = next.endsAt;
+    } else if (next?.kind === "trip" && next.from) {
+      nextAt = next.from;
+      dueBy = next.startsAt;
+    }
+
+    idle.push({
       driverId: driver.id,
       driverName: driver.fullName,
-      at: s.at!,
-      startsAt: s.startsAt,
-      endsAt: s.endsAt,
-      hours: hoursBetween(s.startsAt, s.endsAt),
-    }));
+      at: segment.at,
+      startsAt: segment.startsAt,
+      endsAt: segment.endsAt,
+      hours: hoursBetween(segment.startsAt, segment.endsAt),
+      nextAt,
+      dueBy,
+    });
+  });
 
   const busyHours = clipped
     .filter((s) => s.kind !== "idle")
@@ -334,6 +361,48 @@ export function idleWindows(
           },
     )
     .filter((w) => w.hours >= minHours)
+    .sort((a, b) => a.startsAt.getTime() - b.startsAt.getTime());
+}
+
+/**
+ * The empty drives, dressed as windows so they can be priced the same way.
+ *
+ * These are the best inventory in the operation and they are not idle time at
+ * all — a car driving 356 km from Swakopmund back to Windhoek with nobody in
+ * it is already costing what it costs. Anyone travelling that way, or to
+ * anywhere along that road, can be carried for the price of nothing extra.
+ *
+ * The window is exactly the drive: the car leaves when it leaves and has to
+ * be where it is going when it gets there, so the only journeys that fit are
+ * the ones that were happening anyway.
+ */
+export function deadheadWindows(timelines: DriverTimeline[]): IdleWindow[] {
+  return timelines
+    .flatMap((timeline) => {
+      // A drive the board has already said cannot happen is not inventory.
+      // Selling a seat on it would be selling a trip nobody is making.
+      const broken = new Set(
+        timeline.conflicts
+          .filter((c) => c.severity === "impossible")
+          .map((c) => c.ref),
+      );
+
+      return timeline.segments
+        .filter(
+          (segment): segment is Extract<Segment, { kind: "reposition" }> =>
+            segment.kind === "reposition" && !broken.has(segment.ref),
+        )
+        .map((segment) => ({
+          driverId: timeline.driverId,
+          driverName: timeline.driverName,
+          at: segment.from,
+          nextAt: segment.to,
+          startsAt: segment.startsAt,
+          endsAt: segment.endsAt,
+          hours: hoursBetween(segment.startsAt, segment.endsAt),
+          dueBy: segment.endsAt,
+        }));
+    })
     .sort((a, b) => a.startsAt.getTime() - b.startsAt.getTime());
 }
 
