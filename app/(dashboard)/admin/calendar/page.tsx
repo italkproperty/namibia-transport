@@ -1,10 +1,14 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { AlertTriangleIcon, InfoIcon } from "lucide-react";
+import { AlertTriangleIcon, ArrowRightIcon, InfoIcon } from "lucide-react";
 
 import { PositionBoard } from "@/components/admin/position-board";
 import { AdminShell } from "@/components/admin/shell";
-import { fleetTimelines, unassignedCount } from "@/lib/fleet/queries";
+import {
+  fleetTimelines,
+  suggestedPlan,
+  unassignedCount,
+} from "@/lib/fleet/queries";
 import { sellableLegs } from "@/lib/fleet/marginal";
 import {
   deadheadWindows,
@@ -58,6 +62,10 @@ export default async function CalendarPage({ searchParams }: PageProps) {
     fleetTimelines(window),
     unassignedCount(window),
   ]);
+
+  // Who should drive what. Suggested only — a dispatcher knows things this
+  // does not, and the assignment itself stays a human action.
+  const plan = await suggestedPlan(window, timelines);
 
   // Today is shown from midnight for context, but only the hours still
   // ahead are inventory.
@@ -171,6 +179,99 @@ export default async function CalendarPage({ searchParams }: PageProps) {
                         <p className="text-sm leading-snug">{conflict.message}</p>
                         <p className="text-muted-foreground mt-0.5 text-xs">
                           {conflict.driver} · {WHEN.format(conflict.at)}
+                        </p>
+                      </div>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+
+            {(plan.chains.length > 0 || plan.unplaced.length > 0) && (
+              <div className="bg-card overflow-hidden rounded-xl border">
+                <div className="border-b px-4 py-2.5">
+                  <h2 className="text-sm font-semibold">
+                    Suggested assignment
+                  </h2>
+                  <p className="text-muted-foreground mt-0.5 text-xs leading-relaxed">
+                    {plan.placed} unassigned{" "}
+                    {plan.placed === 1 ? "booking" : "bookings"}, worked out
+                    together rather than one at a time
+                    {plan.savedKm > 1 && (
+                      <>
+                        {" — "}
+                        <span className="text-success font-semibold">
+                          {Math.round(plan.savedKm)} km less empty driving
+                        </span>{" "}
+                        than giving each one to the nearest free driver.
+                      </>
+                    )}
+                    {plan.savedKm <= 1 && "."} Assign them on the{" "}
+                    <Link
+                      href="/admin/bookings"
+                      className="underline underline-offset-4"
+                    >
+                      bookings page
+                    </Link>
+                    .
+                  </p>
+                </div>
+
+                <ul className="divide-y">
+                  {plan.chains.map((chain) => (
+                    <li key={chain.driver.id} className="px-4 py-3">
+                      <div className="flex flex-wrap items-baseline justify-between gap-x-3">
+                        <p className="text-sm font-medium">
+                          {chain.driver.fullName}
+                        </p>
+                        <p className="text-muted-foreground tabular text-xs">
+                          {Math.round(chain.emptyKm)} km empty over{" "}
+                          {chain.jobs.length}{" "}
+                          {chain.jobs.length === 1 ? "trip" : "trips"}
+                        </p>
+                      </div>
+                      <ol className="mt-1.5 space-y-1">
+                        {chain.jobs.map((job) => (
+                          <li
+                            key={job.bookingId}
+                            className="text-muted-foreground flex items-baseline gap-2 text-xs"
+                          >
+                            <span className="text-foreground font-medium">
+                              {job.ref}
+                            </span>
+                            <span className="truncate">
+                              {nodeLabel(job.from)}
+                              <ArrowRightIcon
+                                className="mx-1 inline size-3 align-[-1px]"
+                                aria-hidden
+                              />
+                              {nodeLabel(job.to)}
+                            </span>
+                            <span className="ml-auto shrink-0 tabular">
+                              {WHEN.format(job.startsAt)}
+                            </span>
+                          </li>
+                        ))}
+                      </ol>
+                    </li>
+                  ))}
+
+                  {plan.unplaced.map(({ job, reason }) => (
+                    <li key={job.bookingId} className="flex gap-3 px-4 py-3">
+                      <AlertTriangleIcon
+                        className="text-brand mt-0.5 size-4 shrink-0"
+                        aria-hidden
+                      />
+                      <div className="min-w-0">
+                        <p className="text-sm">
+                          <span className="font-medium">{job.ref}</span>{" "}
+                          <span className="text-muted-foreground">
+                            {nodeLabel(job.from)} → {nodeLabel(job.to)},{" "}
+                            {WHEN.format(job.startsAt)}
+                          </span>
+                        </p>
+                        <p className="text-muted-foreground mt-0.5 text-xs">
+                          {reason}
                         </p>
                       </div>
                     </li>
