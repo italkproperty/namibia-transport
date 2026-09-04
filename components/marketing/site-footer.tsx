@@ -53,6 +53,14 @@ export function SiteFooter({ routes = [] }: { routes?: RouteView[] }) {
                 </li>
                 <li>
                   <Link
+                    href="/self-drive"
+                    className="text-muted-foreground hover:text-foreground transition"
+                  >
+                    Should you drive it yourself?
+                  </Link>
+                </li>
+                <li>
+                  <Link
                     href="/book"
                     className="text-muted-foreground hover:text-foreground transition"
                   >
