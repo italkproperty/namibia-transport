@@ -1,20 +1,49 @@
 /**
- * Arrival-logistics guides.
+ * Guides: arrival logistics and self-drive decisions.
  *
- * Not a blog. A blog would compete for "things to do in Namibia" against
- * guidebooks and every tour operator in the country, and that traffic does not
- * convert. These answer the narrow, boring, high-intent questions someone asks
- * once their flight is already booked — and each one ends at a route they can
- * price and book.
+ * Still not a blog. Destination content — "things to do in Namibia" — would
+ * compete against guidebooks and every tour operator in the country, and that
+ * traffic does not convert; the ban on it stands. What earns a place here is
+ * a narrow, high-intent question with a checkable answer: arrival guides for
+ * someone whose flight is booked, and decision guides for someone months
+ * earlier choosing between a hire car and being driven. The test for any new
+ * guide: does it contain at least one number only our road model can produce?
+ * If not, it is a page that could be copied, and it does not get written.
  *
  * Every factual claim here must be one we can stand behind. No invented
  * opening hours, no promised capabilities, no numbers we have not checked.
+ * Route figures are never typed into guides — sections carry journey slugs
+ * and the page computes distance, surface and time from the network model.
  */
 
-export type GuideSection = { heading: string; body: string[] };
+/**
+ * A table of journeys whose figures are computed from the road network at
+ * render time. The spec carries only slugs — distance, surface split and
+ * driving time cannot be typed here, so they cannot drift from the model.
+ */
+export type RouteTableSpec = {
+  caption: string;
+  /** `a-to-b` journey slugs; each becomes one computed row. */
+  journeys: string[];
+  /** Where the numbers come from, shown under the table. */
+  note?: string;
+};
+
+export type GuideSection = {
+  heading: string;
+  body: string[];
+  routeTable?: RouteTableSpec;
+};
 
 export type Guide = {
   slug: string;
+  /**
+   * Arrival guides answer "how do I get from A to B once I've landed".
+   * Decision guides answer the questions someone asks months earlier, while
+   * choosing between a hire car and being driven. Both end at something
+   * bookable; they differ in framing and in schema.
+   */
+  kind: "arrival" | "decision";
   /** The question as someone would actually type it. */
   title: string;
   metaTitle: string;
@@ -22,14 +51,31 @@ export type Guide = {
   /** One-line answer, shown first — most readers need only this. */
   answer: string;
   sections: GuideSection[];
+  /**
+   * The honest segmentation for decision guides: who should self-drive and
+   * who should not. Advisory, not sales — the reader self-selects, and the
+   * trust that tone earns is the conversion mechanism.
+   */
+  decision?: {
+    selfDriveIf: string[];
+    drivenIf: string[];
+  };
   /** Route slugs this guide should send the reader to. */
   routes: string[];
+  /** `a-to-b` journey slugs to price on /journey, for pairs with no curated page. */
+  journeys?: string[];
+  /**
+   * External figures quoted in the guide, each dated — rental excesses and
+   * fuel prices move, and an undated number is a future lie.
+   */
+  sources?: { label: string; detail: string }[];
   updated: string;
 };
 
 export const GUIDES: Guide[] = [
   {
     slug: "getting-from-hosea-kutako-airport-to-windhoek",
+    kind: "arrival",
     title: "Getting from Hosea Kutako Airport to Windhoek",
     metaTitle:
       "How to Get from Hosea Kutako Airport to Windhoek — Options and Costs",
@@ -71,6 +117,7 @@ export const GUIDES: Guide[] = [
   },
   {
     slug: "windhoek-to-swakopmund-by-road",
+    kind: "arrival",
     title: "Windhoek to Swakopmund by road",
     metaTitle:
       "Windhoek to Swakopmund by Road — Distance, Drive Time and Options",
@@ -105,6 +152,7 @@ export const GUIDES: Guide[] = [
   },
   {
     slug: "getting-to-sossusvlei",
+    kind: "arrival",
     title: "Getting to Sossusvlei from Windhoek or the airport",
     metaTitle: "How to Get to Sossusvlei — Drive Time, Roads and Transfers",
     metaDescription:
@@ -138,6 +186,7 @@ export const GUIDES: Guide[] = [
   },
   {
     slug: "getting-to-etosha",
+    kind: "arrival",
     title: "Getting to Etosha: which gate you need",
     metaTitle:
       "How to Get to Etosha National Park — Gates, Drive Time, Transfers",
@@ -169,6 +218,101 @@ export const GUIDES: Guide[] = [
     ],
     routes: ["hosea-kutako-to-etosha"],
     updated: "2026-08-27",
+  },
+  {
+    slug: "do-you-need-a-4x4-in-namibia",
+    kind: "decision",
+    title: "Do you need a 4x4 in Namibia?",
+    metaTitle: "Do You Need a 4x4 in Namibia? A Route-by-Route Answer",
+    metaDescription:
+      "Not on the tar between the main towns — but the classic circuit runs mostly on gravel, where clearance and tyres matter more than four-wheel drive. The tar/gravel split of every major route, computed from the real road network.",
+    answer:
+      "On the tar between the main towns, no — an ordinary car is fine. But the classic circuit through Sossusvlei and Damaraland runs mostly on gravel, where ground clearance and tyre strength matter far more than four-wheel drive. The honest answer depends on which roads your own itinerary uses, so here it is route by route.",
+    sections: [
+      {
+        heading: "The question underneath the question",
+        body: [
+          "When people ask whether they need a 4x4, they are usually asking three different questions at once. Do I need four driven wheels? Almost never in the dry season — the gravel C-roads are graded and a two-wheel-drive car does not lack grip on them. Do I need ground clearance? On any serious gravel, yes: the crown of the road, the drainage dips and the loose stone shoulders punish a low sill long before traction becomes a problem. Do I need stronger tyres? This is the question that actually decides trips, because sharp stone works on sidewalls all day, and a low-profile road tyre is the most likely thing on the whole vehicle to fail.",
+          "Genuine four-wheel drive earns its keep in three places: deep sand (the final stretch into Sossusvlei itself, or the Sandwich Harbour dunes), unbridged riverbeds in Damaraland and Kaokoland, and mud in the January-to-March rains. If your itinerary avoids those, what you are really shopping for is clearance and tyres, whatever the badge on the tailgate says.",
+        ],
+      },
+      {
+        heading: "What the classic circuit actually drives on",
+        body: [
+          "Namibia's main B-roads are tarred and genuinely good. Nearly everything else is gravel. That single fact splits the country's routes into two different kinds of driving, and the table below shows which kind each leg of a typical trip is. The pattern surprises people: the run to Etosha is tar the whole way, while the legs everyone pictures — the dunes, the coast road north, Damaraland — are two-thirds gravel or more.",
+        ],
+        routeTable: {
+          caption: "The tar/gravel split, leg by leg",
+          journeys: [
+            "hosea-kutako-to-windhoek",
+            "windhoek-to-swakopmund",
+            "windhoek-to-etosha-okaukuejo",
+            "windhoek-to-sossusvlei",
+            "sossusvlei-to-swakopmund",
+            "swakopmund-to-spitzkoppe",
+            "swakopmund-to-twyfelfontein",
+            "twyfelfontein-to-etosha-okaukuejo",
+          ],
+        },
+      },
+      {
+        heading: "What gravel does to a car — and to you",
+        body: [
+          "Corrugation is the surface's signature: ripples that hammer the suspension and shake trim loose at the wrong speed. Loose stone cuts tyres — slow punctures from a single sharp rock are the standard failure, and they land on the traveller's bill under most hire agreements. The German Federal Foreign Office's own driving guidance for Namibia advises carrying two spare wheels on gravel because tyre damage is that common, and warns that 90 km/h on gravel is already too fast.",
+          "The driver wears too. Gravel demands constant small corrections and full attention; there is no cruise-control daydreaming. One gravel day is an adventure. By the third in a row, most people are tired in a way tar never makes them, and tiredness on a remote road is its own risk.",
+        ],
+      },
+      {
+        heading: "Where an ordinary car genuinely is enough",
+        body: [
+          "If your trip is Windhoek, the coast at Swakopmund and Etosha through its southern gate, you can do the whole thing on tar, and a normal sedan is a perfectly rational choice — cheaper to hire, cheaper on fuel, and nothing in the itinerary needs more. The moment Sossusvlei or Damaraland joins the plan, the arithmetic changes, because the gravel kilometres arrive in blocks of two and three hundred at a time.",
+          "Be honest about the worst leg, not the average one. A vehicle choice that is right for nine-tenths of the trip and wrong for one long gravel day is wrong.",
+        ],
+      },
+      {
+        heading: "Why our driving times are slower than the map app's",
+        body: [
+          "The times in the table come from our own road network model, which plans tar at 100 km/h and gravel at 65 km/h and includes a rest stop — speeds a careful driver actually sustains, checked against published driving times for these routes. Consumer map apps routinely assume gravel speeds nobody should attempt, which is how travellers end up finishing a 'four-hour' drive at dusk with wildlife on the verges. How we compute every figure on this site is written up on our methodology page.",
+        ],
+      },
+      {
+        heading: "The option the rental counter never mentions",
+        body: [
+          "There is a third answer to the 4x4 question: do not drive the hard legs at all. Every route in the table can be driven for you in a vehicle that suits its surface, by a driver who does this road for a living — priced as a fixed fare for the whole car before you commit to anything. For some trips that costs more than a hire car, for some less; our self-drive comparison page puts the two side by side with real numbers rather than a sales pitch.",
+        ],
+      },
+    ],
+    decision: {
+      selfDriveIf: [
+        "You are comfortable driving long, empty gravel roads and the idea excites rather than worries you.",
+        "There are two drivers to share the wheel, and your itinerary keeps most days under about four hours of driving.",
+        "You have ten days or more, so the distances spread out and no single day is brutal.",
+        "You have read your hire agreement's tyre, windscreen and underbody clauses and are comfortable with what they leave on your side.",
+      ],
+      drivenIf: [
+        "This is your first time on gravel and the forums have you nervous — that instinct is information.",
+        "Your trip is short. On six to eight days, the driving fatigue eats a real share of the holiday you flew here for.",
+        "You are travelling with young children, or anyone for whom a roadside wheel change in the heat is not a reasonable plan.",
+        "You would rather spend the drive looking at the country than at the next corrugation.",
+        "You land after a long-haul flight and the first drive would otherwise happen jet-lagged, on the left, on an unfamiliar surface.",
+      ],
+    },
+    routes: [],
+    journeys: [
+      "windhoek-to-sossusvlei",
+      "sossusvlei-to-swakopmund",
+      "swakopmund-to-twyfelfontein",
+      "twyfelfontein-to-etosha-okaukuejo",
+      "etosha-okaukuejo-to-windhoek",
+    ],
+    sources: [
+      {
+        label: "German Federal Foreign Office, Namibia driving guidance",
+        detail:
+          "Advises carrying two spare wheels on gravel because tyre damage is frequent, and warns that 90 km/h on gravel is already too fast. Checked September 2026.",
+      },
+    ],
+    updated: "2026-09-06",
   },
 ];
 
