@@ -6,7 +6,11 @@ import * as React from "react";
 // to await a stylesheet. The 230KB of JavaScript is what actually needed to
 // be deferred, and still is.
 import "mapbox-gl/dist/mapbox-gl.css";
-import type { GeoJSONSource, Map as MapboxMap } from "mapbox-gl";
+import type {
+  GeoJSONSource,
+  Map as MapboxMap,
+  Marker as MapboxMarker,
+} from "mapbox-gl";
 
 import { boundsOf, decodePolyline } from "@/lib/maps/polyline";
 import { publicMapboxToken } from "@/lib/maps/mapbox";
@@ -32,6 +36,8 @@ type Props = {
   destination: [number, number];
   originLabel: string;
   destinationLabel: string;
+  /** Fired once the interactive map covers the static image beneath it. */
+  onReady?: () => void;
 };
 
 export function InteractiveRouteMap({
@@ -40,16 +46,31 @@ export function InteractiveRouteMap({
   destination,
   originLabel,
   destinationLabel,
+  onReady,
 }: Props) {
   const container = React.useRef<HTMLDivElement | null>(null);
   // Typed from the library rather than `any`: `import type` is erased at
   // compile time, so this costs nothing in the bundle while still catching a
   // misspelled method.
   const map = React.useRef<MapboxMap | null>(null);
+  // Held so the route-change effect can move them. They were once created and
+  // forgotten, which left the destination pin on whichever route happened to
+  // load first while the line redrew correctly underneath it.
+  const markers = React.useRef<{
+    origin: MapboxMarker;
+    destination: MapboxMarker;
+  } | null>(null);
   const [ready, setReady] = React.useState(false);
   const [inView, setInView] = React.useState(false);
 
   const token = publicMapboxToken();
+
+  // Through a ref so a caller passing an inline arrow does not re-run the
+  // create-once effect and build a second map.
+  const onReadyRef = React.useRef(onReady);
+  React.useEffect(() => {
+    onReadyRef.current = onReady;
+  }, [onReady]);
 
   const path = React.useMemo(
     () => (geometry ? decodePolyline(geometry, 6) : []),
@@ -149,8 +170,10 @@ export function InteractiveRouteMap({
             });
           }
 
-          marker("#1a1614", origin, originLabel);
-          marker("#bc4b00", destination, destinationLabel);
+          markers.current = {
+            origin: marker("#1a1614", origin, originLabel),
+            destination: marker("#bc4b00", destination, destinationLabel),
+          };
 
           const bounds = boundsOf(
             path.length > 1 ? path : [origin, destination]
@@ -160,6 +183,7 @@ export function InteractiveRouteMap({
           }
 
           setReady(true);
+          onReadyRef.current?.();
         });
 
         map.current = instance;
@@ -191,16 +215,27 @@ export function InteractiveRouteMap({
       });
     }
 
+    // Move the pins with the route. getPopup().setText avoids needing the
+    // dynamically imported module again just to rebuild a popup.
+    const pins = markers.current;
+    if (pins) {
+      pins.origin.setLngLat(origin);
+      pins.origin.getPopup()?.setText(originLabel);
+      pins.destination.setLngLat(destination);
+      pins.destination.getPopup()?.setText(destinationLabel);
+    }
+
     const bounds = boundsOf(path.length > 1 ? path : [origin, destination]);
     if (bounds) {
       instance.fitBounds(bounds, { padding: 56, duration: 600 });
     }
-  }, [ready, path, origin, destination]);
+  }, [ready, path, origin, destination, originLabel, destinationLabel]);
 
   React.useEffect(() => {
     return () => {
       map.current?.remove();
       map.current = null;
+      markers.current = null;
     };
   }, []);
 

@@ -53,6 +53,19 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
+      <head>
+        {/* Every map on the site — the static image and the tiles behind the
+            interactive one — comes from these two hosts. Opening the
+            connections early saves the DNS and TLS round trips from the
+            critical path, which on a Namibian mobile connection is most of
+            the wait before a map appears. */}
+        <link rel="preconnect" href="https://api.mapbox.com" />
+        <link
+          rel="preconnect"
+          href="https://events.mapbox.com"
+          crossOrigin=""
+        />
+      </head>
       <body
         className={`${geistSans.variable} ${archivo.variable} font-sans antialiased`}
       >

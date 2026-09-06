@@ -1,4 +1,4 @@
-import { InteractiveRouteMap } from "@/components/maps/interactive-route-map";
+import { RouteMapCanvas } from "@/components/maps/route-map-canvas";
 import { staticRouteMapUrl } from "@/lib/maps/mapbox";
 import type { RouteView } from "@/lib/maps/types";
 import { formatDuration, shortPlace } from "@/lib/format";
@@ -54,28 +54,32 @@ export function RouteMapFigure({
       {/* The aspect ratio is fixed on the container rather than left to the
           image, so swapping routes never shifts the page. */}
       <div className="bg-muted relative aspect-[12/5] w-full">
-        {/* eslint-disable-next-line @next/next/no-img-element -- Mapbox signs
-            its own URLs; next/image would strip the token and re-host a tile
-            we are licensed to hot-link. */}
-        <img
-          src={src}
-          alt={`Map of the route from ${from} to ${to}`}
-          width={1200}
-          height={500}
-          loading={priority ? "eager" : "lazy"}
-          decoding="async"
-          className="absolute inset-0 size-full object-cover"
-        />
-
-        {/* Fades in over the image once mapbox-gl has loaded. Until then, and
-            if it never does, the picture underneath is the whole feature. */}
-        {interactive && (
-          <InteractiveRouteMap
+        {/* The interactive map fades in over the image once mapbox-gl has
+            loaded. Until then, and if it never does, the picture underneath
+            is the whole feature. */}
+        {interactive ? (
+          <RouteMapCanvas
+            src={src}
+            alt={`Map of the route from ${from} to ${to}`}
+            priority={priority}
             geometry={route.routeGeometry}
             origin={[originLng, originLat]}
             destination={[destinationLng, destinationLat]}
             originLabel={from}
             destinationLabel={to}
+          />
+        ) : (
+          /* eslint-disable-next-line @next/next/no-img-element -- Mapbox
+             signs its own URLs; next/image would strip the token and re-host
+             a tile we are licensed to hot-link. */
+          <img
+            src={src}
+            alt={`Map of the route from ${from} to ${to}`}
+            width={1200}
+            height={500}
+            loading={priority ? "eager" : "lazy"}
+            decoding="async"
+            className="absolute inset-0 size-full object-cover"
           />
         )}
       </div>

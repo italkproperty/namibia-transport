@@ -33,9 +33,15 @@ function check(name: string, condition: boolean, detail = "") {
 
 /* ----------------------------------------------------------- the fixtures */
 
-const sedan = CATALOG_VEHICLE_CLASSES.find((c) => c.slug === "private-sedan")!;
-const suv = CATALOG_VEHICLE_CLASSES.find((c) => c.slug === "suv-4x4")!;
-const classes = [sedan, suv] as unknown as VehicleClassView[];
+// The catalogue rows are inserts (id optional until seeded); the app reads
+// them back as views. Cast once, here, rather than at every call site.
+const sedan = CATALOG_VEHICLE_CLASSES.find(
+  (c) => c.slug === "private-sedan",
+)! as unknown as VehicleClassView;
+const suv = CATALOG_VEHICLE_CLASSES.find(
+  (c) => c.slug === "suv-4x4",
+)! as unknown as VehicleClassView;
+const classes: VehicleClassView[] = [sedan, suv];
 
 const airport = CATALOG_ROUTES.find(
   (r) => r.slug === "hosea-kutako-to-windhoek",
@@ -44,7 +50,7 @@ const swakop = CATALOG_ROUTES.find(
   (r) => r.slug === "hosea-kutako-to-swakopmund",
 )! as unknown as RouteView;
 
-const price = (route: RouteView, cls: (typeof classes)[number]) =>
+const price = (route: RouteView, cls: VehicleClassView) =>
   Number(computeFare(route, cls).customerPrice);
 
 /* -------------------------------------------------- no per-person anywhere */
