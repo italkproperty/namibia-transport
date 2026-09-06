@@ -105,6 +105,14 @@ export function SiteFooter({ routes = [] }: { routes?: RouteView[] }) {
               </li>
               <li>
                 <Link
+                  href="/methodology"
+                  className="text-muted-foreground hover:text-foreground transition"
+                >
+                  How we compute our numbers
+                </Link>
+              </li>
+              <li>
+                <Link
                   href="/terms"
                   className="text-muted-foreground hover:text-foreground transition"
                 >

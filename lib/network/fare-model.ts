@@ -69,7 +69,7 @@ export const CONTRIBUTION_RATE = 0.3;
  * costs the driver, and a fare that does not cover its own fuel is the one
  * error here that compounds.
  */
-const PRICE_STEP = 50;
+export const PRICE_STEP = 50;
 
 /* -------------------------------------------------------------- the model */
 
