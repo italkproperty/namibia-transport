@@ -27,6 +27,13 @@ export type RoadEdge = {
   surface: Surface;
   /** The road as a Namibian would name it. Shown to the traveller. */
   road: string;
+  /**
+   * What the January-to-March rains can do to this segment, where they can
+   * do something a traveller must plan around: a pass that closes, a river
+   * crossing that floods. Structural knowledge, not a live condition feed —
+   * journeys over a flagged segment carry the note in the rainy months.
+   */
+  rain?: string;
 };
 
 /**
@@ -147,14 +154,23 @@ export const ROAD_EDGES: RoadEdge[] = [
     km: 260,
     surface: "gravel",
     road: "C24 / C19",
+    rain: "the Remshoogte Pass on this road can close in heavy rain",
   },
-  { from: "sossusvlei", to: "solitaire", km: 80, surface: "gravel", road: "C19" },
+  {
+    from: "sossusvlei",
+    to: "solitaire",
+    km: 80,
+    surface: "gravel",
+    road: "C19",
+    rain: "the Tsondab River crossing on the C19 can flood after rain",
+  },
   {
     from: "solitaire",
     to: "walvis-bay",
     km: 260,
     surface: "gravel",
     road: "C14",
+    rain: "the Gaub Pass closes when the Gaub River runs",
   },
   {
     from: "solitaire",
@@ -162,8 +178,16 @@ export const ROAD_EDGES: RoadEdge[] = [
     km: 280,
     surface: "gravel",
     road: "C26 Spreetshoogte",
+    rain: "the escarpment passes on this road can close after heavy rain",
   },
-  { from: "sossusvlei", to: "maltahohe", km: 105, surface: "gravel", road: "C19" },
+  {
+    from: "sossusvlei",
+    to: "maltahohe",
+    km: 105,
+    surface: "gravel",
+    road: "C19",
+    rain: "the Tsaris Pass deteriorates badly in the rains",
+  },
   { from: "maltahohe", to: "mariental", km: 110, surface: "gravel", road: "C19" },
   {
     from: "sossusvlei",
@@ -234,7 +258,14 @@ export const ROAD_EDGES: RoadEdge[] = [
     surface: "tar",
     road: "C35 / C41",
   },
-  { from: "opuwo", to: "epupa", km: 175, surface: "gravel", road: "C43" },
+  {
+    from: "opuwo",
+    to: "epupa",
+    km: 175,
+    surface: "gravel",
+    road: "C43",
+    rain: "sections of the C43 can become impassable after heavy rain",
+  },
   { from: "opuwo", to: "ruacana", km: 135, surface: "tar", road: "C35" },
   { from: "ruacana", to: "oshakati", km: 160, surface: "tar", road: "C46" },
   { from: "oshakati", to: "ondangwa", km: 30, surface: "tar", road: "B1" },
@@ -253,7 +284,13 @@ export const ROAD_EDGES: RoadEdge[] = [
 
 /* -------------------------------------------------------------- the graph */
 
-type Link = { to: string; km: number; surface: Surface; road: string };
+type Link = {
+  to: string;
+  km: number;
+  surface: Surface;
+  road: string;
+  rain?: string;
+};
 
 /** Roads run both ways; the table lists each once. */
 const ADJACENCY: Map<string, Link[]> = (() => {
@@ -266,6 +303,7 @@ const ADJACENCY: Map<string, Link[]> = (() => {
 
   for (const edge of ROAD_EDGES) {
     add(edge.from, {
+      rain: edge.rain,
       to: edge.to,
       km: edge.km,
       surface: edge.surface,
@@ -276,6 +314,7 @@ const ADJACENCY: Map<string, Link[]> = (() => {
       km: edge.km,
       surface: edge.surface,
       road: edge.road,
+      rain: edge.rain,
     });
   }
   return map;
@@ -287,6 +326,7 @@ export type RoadSegment = {
   km: number;
   surface: Surface;
   road: string;
+  rain?: string;
 };
 
 export type Road = {
@@ -302,6 +342,8 @@ export type Road = {
   via: PlaceNode[];
   /** The roads driven, in order, deduplicated: ["B1", "C24 / C19"]. */
   roads: string[];
+  /** What the rains can close along the way, in driving order, deduplicated. */
+  rainNotes: string[];
 };
 
 /**
@@ -381,6 +423,7 @@ function computeRoad(originSlug: string, destinationSlug: string): Road | null {
       km: step.link.km,
       surface: step.link.surface,
       road: step.link.road,
+      rain: step.link.rain,
     });
     cursor = step.from;
   }
@@ -399,6 +442,13 @@ function computeRoad(originSlug: string, destinationSlug: string): Road | null {
     if (roads[roads.length - 1] !== segment.road) roads.push(segment.road);
   }
 
+  const rainNotes: string[] = [];
+  for (const segment of segments) {
+    if (segment.rain && !rainNotes.includes(segment.rain)) {
+      rainNotes.push(segment.rain);
+    }
+  }
+
   return {
     origin,
     destination,
@@ -409,6 +459,7 @@ function computeRoad(originSlug: string, destinationSlug: string): Road | null {
     minutes: Math.round(drivingMin + FIXED_STOP_MIN),
     via: segments.slice(0, -1).map((segment) => segment.to),
     roads,
+    rainNotes,
   };
 }
 

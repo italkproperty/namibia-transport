@@ -43,10 +43,18 @@ type Props = {
   route: RouteView;
   /** The network node this route ends at, resolved server-side. */
   destinationNodeSlug: string | null;
+  /** What the rains can close along this route, from the road model. */
+  rainNotes: string[];
   pickupPlaces: Place[];
   dropoffPlaces: Place[];
   utm: string;
 };
+
+/** "x", "x; and y" — the road model's rain notes read as one sentence. */
+function joinNotes(notes: string[]): string {
+  if (notes.length === 1) return notes[0];
+  return `${notes.slice(0, -1).join("; ")}; and ${notes[notes.length - 1]}`;
+}
 
 /**
  * The single details step.
@@ -60,6 +68,7 @@ export function BookingDetailsForm({
   trip,
   route,
   destinationNodeSlug,
+  rainNotes,
   pickupPlaces,
   dropoffPlaces,
   utm,
@@ -150,6 +159,13 @@ export function BookingDetailsForm({
       route.durationMin,
     );
   }, [destinationNodeSlug, route.durationMin, watchedDate, watchedTime]);
+
+  // The January-to-March rains can close specific passes and river crossings.
+  // The road model knows which of them this route drives over; the date says
+  // whether the rains are a live concern. Advisory, never blocking — in the
+  // dry months the note would only be noise, so it stays silent.
+  const rainMonth = Number(watchedDate?.split("-")[1]);
+  const showRain = rainNotes.length > 0 && rainMonth >= 1 && rainMonth <= 3;
   const isKnownPlace = (places: Place[], name: string) => {
     const kind = places.find((place) => place.name === name)?.kind;
     return kind === "hotel" || kind === "guesthouse" || kind === "landmark";
@@ -300,6 +316,22 @@ export function BookingDetailsForm({
                   is the comfortable plan.
                 </>
               )}
+            </div>
+          )}
+
+          {showRain && (
+            <div
+              role="status"
+              className="border-muted-foreground/25 bg-muted/40 rounded-xl border p-4 text-sm leading-relaxed text-pretty"
+            >
+              <span className="font-semibold">
+                Your date falls in the rainy season.
+              </span>{" "}
+              On this route, {joinNotes(rainNotes)}. Most days it is simply
+              a slower drive; after a storm the driver may need to route
+              around a closure, so build slack into the day. If heavy rain
+              makes a section doubtful, we talk the plan through with you
+              before the trip rather than on the day.
             </div>
           )}
 

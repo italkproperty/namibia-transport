@@ -198,6 +198,35 @@ for (const [origin, destination, publishedKm] of EXTENSION_PUBLISHED) {
   );
 }
 
+/* ----------------------------------------- what the rains can close, where */
+
+console.log("\nrain notes follow the passes, not the destination");
+
+{
+  const dunes = findRoad("windhoek", "sossusvlei");
+  check(
+    "windhoek -> sossusvlei carries the Remshoogte note",
+    dunes !== null && dunes.rainNotes.some((n) => n.includes("Remshoogte")),
+    dunes ? dunes.rainNotes.join(" | ") : "no road",
+  );
+
+  const crossing = findRoad("sossusvlei", "swakopmund");
+  check(
+    "sossusvlei -> swakopmund carries the Tsondab and Gaub notes",
+    crossing !== null &&
+      crossing.rainNotes.some((n) => n.includes("Tsondab")) &&
+      crossing.rainNotes.some((n) => n.includes("Gaub")),
+    crossing ? crossing.rainNotes.join(" | ") : "no road",
+  );
+
+  const tar = findRoad("windhoek", "swakopmund");
+  check(
+    "the all-tar B2 carries no rain notes",
+    tar !== null && tar.rainNotes.length === 0,
+    tar ? tar.rainNotes.join(" | ") : "no road",
+  );
+}
+
 /* ------------------------------- the model agrees with what the site charges */
 
 console.log("\nthe model against the seven published fares");

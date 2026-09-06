@@ -130,10 +130,14 @@ export default async function MethodologyPage() {
               It has no live feed of road conditions. Gravel varies with
               grading cycles and rain, and a leg that is comfortable in the
               dry season can be slow or impassable after a storm — our times
-              assume dry-season conditions. It also does not model the
-              January-to-March rains, roadworks, or border queues. Where any
-              of that matters to a specific booking, a person checks, and we
-              say so rather than let a model answer a question it cannot.
+              assume dry-season conditions. The model does know which passes
+              and river crossings the January-to-March rains can close, and a
+              booking over one of them in those months carries a note saying
+              so — but that is structural knowledge, not today&apos;s state of
+              the road. Roadworks, border queues and the actual weather stay
+              outside it. Where any of that matters to a specific booking, a
+              person checks, and we say so rather than let a model answer a
+              question it cannot.
             </p>
           </section>
 

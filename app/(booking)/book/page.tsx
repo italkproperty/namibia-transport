@@ -11,6 +11,7 @@ import {
   TRIP_KEYS,
 } from "@/lib/booking/trip-params";
 import { nodePairForRoute } from "@/lib/network/journey";
+import { findRoad } from "@/lib/network/roads";
 import { formatDuration } from "@/lib/format";
 import { listRoutes, listVehicleClasses } from "@/lib/maps";
 import {
@@ -87,6 +88,7 @@ export default async function BookPage({ searchParams }: PageProps) {
   // Display only. The Server Action recomputes this before writing anything.
   const fare = computeFare(route, vehicleClass, trip.passengers);
   const duration = formatDuration(route.durationMin);
+  const pair = nodePairForRoute(route);
 
   const utm = ["utm_source", "utm_medium", "utm_campaign"]
     .map((key) => {
@@ -155,8 +157,14 @@ export default async function BookPage({ searchParams }: PageProps) {
                 trip={trip}
                 route={route}
                 // Resolved here so the client bundle carries the gate maths
-                // without the whole road graph.
-                destinationNodeSlug={nodePairForRoute(route)?.destination.slug ?? null}
+                // and the rain notes without the whole road graph.
+                destinationNodeSlug={pair?.destination.slug ?? null}
+                rainNotes={
+                  pair
+                    ? (findRoad(pair.origin.slug, pair.destination.slug)
+                        ?.rainNotes ?? [])
+                    : []
+                }
                 pickupPlaces={pickupPlaces(route)}
                 dropoffPlaces={dropoffPlaces(route)}
                 utm={utm}
