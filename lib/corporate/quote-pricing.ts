@@ -90,17 +90,14 @@ export function computeQuote(
     ) * legsPerTrip;
 
   if (route && vehicleClass) {
+    // Per vehicle, like every private transfer — a corporate account is the
+    // last customer who should pay per seat.
     const unit = unitFare(route, vehicleClass);
-    const perPerson = route.pricingUnit === "per_person";
-    const quantity = perPerson
-      ? Math.max(1, requirement.passengers) * trips
-      : Math.max(1, requirement.vehicles) * trips;
+    const quantity = Math.max(1, requirement.vehicles) * trips;
 
     const legLabel = requirement.includeReturn ? " (incl. return legs)" : "";
     lines.push({
-      description: perPerson
-        ? `${route.originLabel} → ${route.destinationLabel} · ${vehicleClass.name}, ${pricingUnitLabel(route)}${legLabel}`
-        : `${route.originLabel} → ${route.destinationLabel} · ${vehicleClass.name}, ${pricingUnitLabel(route)} × ${requirement.vehicles} vehicle${requirement.vehicles === 1 ? "" : "s"}${legLabel}`,
+      description: `${route.originLabel} → ${route.destinationLabel} · ${vehicleClass.name}, ${pricingUnitLabel(route)} × ${requirement.vehicles} vehicle${requirement.vehicles === 1 ? "" : "s"}${legLabel}`,
       quantity,
       unitPrice: unit,
       lineTotal: unit * quantity,

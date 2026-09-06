@@ -113,12 +113,12 @@ export const GUIDES: Guide[] = [
       {
         heading: "What it costs",
         body: [
-          "Our fixed price for the airport to Windhoek CBD is quoted per person and shown in full before you book — no meter, no surge and no airport surcharge. A larger SUV or 4x4 is available at a higher fixed rate.",
+          "Our fixed price for the airport to Windhoek CBD buys the whole vehicle — the same fare for one traveller or three — and is shown in full before you book, with no meter, no surge and no airport surcharge. A larger SUV or 4x4 is available at a higher fixed rate.",
         ],
       },
     ],
     routes: ["hosea-kutako-to-windhoek"],
-    updated: "2026-08-27",
+    updated: "2026-09-06",
   },
   {
     slug: "windhoek-to-swakopmund-by-road",

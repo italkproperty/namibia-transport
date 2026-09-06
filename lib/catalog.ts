@@ -36,8 +36,11 @@ export const CATALOG_VEHICLE_CLASSES: NewVehicleClass[] = [
     name: "Private Car",
     description:
       "Air-conditioned hatchback or sedan for up to 3 passengers. The standard choice for couples, solo travellers and business trips.",
+    // Honest, not optimistic: three people off a long-haul flight bring
+    // three large cases, and they need the SUV. Advertising a third case
+    // here would be discovered at the kerb.
     capacity: 3,
-    luggageCapacity: 3,
+    luggageCapacity: 2,
     priceMultiplier: "1.00",
     sortOrder: 10,
   },
@@ -48,7 +51,7 @@ export const CATALOG_VEHICLE_CLASSES: NewVehicleClass[] = [
     description:
       "Higher-clearance 4x4 for up to 5 passengers, with room for oversized luggage and camera gear.",
     capacity: 5,
-    luggageCapacity: 5,
+    luggageCapacity: 4,
     priceMultiplier: "1.40",
     sortOrder: 20,
   },
@@ -81,11 +84,14 @@ export const CATALOG_ROUTES: NewRoute[] = [
     destinationLabel: "Windhoek CBD",
     category: "airport",
     /**
-     * The airport shuttle sells per seat (N$650/person). Long-distance
-     * routes below keep per-vehicle pricing — their fares were set as
-     * whole-car prices, and per-person would silently multiply them.
+     * Per vehicle, like every other private transfer. This fare was born
+     * per-person and corrected in September 2026: nothing in the cost base
+     * scales with the party size, our own fare model derives exactly N$650
+     * per vehicle for this leg from the minimum call-out, and N$1,950 for a
+     * 45-minute drive was a price that prevented the booking. per_person
+     * returns only with a genuine scheduled shared shuttle.
      */
-    pricingUnit: "per_person",
+    pricingUnit: "per_vehicle",
     fixedPrice: "650.00",
     defaultDriverPayout: "455.00",
     isActive: true,

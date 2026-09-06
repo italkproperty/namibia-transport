@@ -98,10 +98,19 @@ export async function createBooking(
     return { ok: false, message: "That vehicle is not available." };
   }
 
+  // A booking must never complete for a party the vehicle cannot carry —
+  // people or luggage. The widget enforces this too, but a Server Action is
+  // a public endpoint and re-checks everything itself.
   if (values.passengers > vehicleClass.capacity) {
     return {
       ok: false,
       message: `A ${vehicleClass.name} seats ${vehicleClass.capacity}. Choose a larger vehicle or reduce the passenger count.`,
+    };
+  }
+  if (values.luggageCount > vehicleClass.luggageCapacity) {
+    return {
+      ok: false,
+      message: `A ${vehicleClass.name} takes ${vehicleClass.luggageCapacity} large cases. Choose a larger vehicle, or contact us about a bigger party.`,
     };
   }
 
@@ -110,7 +119,8 @@ export async function createBooking(
     return { ok: false, message: "Choose a pickup time in the future." };
   }
 
-  const fare = computeFare(route, vehicleClass, values.passengers);
+  // Per vehicle: passenger count is not an input to the fare.
+  const fare = computeFare(route, vehicleClass);
   const db = getDb();
 
   try {

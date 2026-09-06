@@ -101,8 +101,8 @@ export function HomeQuote({
         </ul>
 
         <p className="text-foreground/80 mt-2 text-xs">
-          Airport transfers are priced per person; long-distance transfers per
-          vehicle.{" "}
+          Every fare buys the whole vehicle — the price is the same for one
+          traveller or a full car.{" "}
           <Link
             href={`/transfers/${trip.route.slug}`}
             className="underline underline-offset-2"

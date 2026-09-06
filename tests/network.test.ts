@@ -410,8 +410,8 @@ const sedan = {
 };
 const suv = { id: "class-suv", slug: "suv-4x4", priceMultiplier: "1.40" };
 
-const sedanFare = computeFare(journey.route, sedan, 2);
-const suvFare = computeFare(journey.route, suv, 2);
+const sedanFare = computeFare(journey.route, sedan);
+const suvFare = computeFare(journey.route, suv);
 
 check(
   "computeFare prices it per vehicle, not per head",

@@ -146,7 +146,6 @@ export function CorporateQuoteForm({ routes, vehicleClasses, vatRate }: Props) {
 
   const selectedRoute = routes.find((r) => r.slug === watched.routeSlug);
   const selectedClass = vehicleClasses.find((c) => c.id === watched.vehicleClassId);
-  const perPerson = selectedRoute?.pricingUnit === "per_person";
 
   async function advance(from: Step) {
     const fields = from === 1 ? STEP_ONE_FIELDS : STEP_TWO_FIELDS;
@@ -347,9 +346,7 @@ export function CorporateQuoteForm({ routes, vehicleClasses, vatRate }: Props) {
 
             <div className="grid gap-4 sm:grid-cols-2">
               <NumberField form={form} name="passengers" label="Passengers" min={1} />
-              {!perPerson && (
-                <NumberField form={form} name="vehicles" label="Vehicles" min={1} />
-              )}
+              <NumberField form={form} name="vehicles" label="Vehicles" min={1} />
 
               <FormField
                 control={form.control}

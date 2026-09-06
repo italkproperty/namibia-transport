@@ -80,7 +80,7 @@ export default async function AboutPage() {
           <ul className="text-muted-foreground mt-3 list-disc space-y-1.5 pl-5 text-sm leading-relaxed">
             <li>
               Fixed-price airport transfers from Hosea Kutako International
-              Airport, priced per person.
+              Airport, priced per vehicle.
             </li>
             <li>
               Long-distance private transfers between Windhoek and the coast,

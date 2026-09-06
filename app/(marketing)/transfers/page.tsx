@@ -38,9 +38,9 @@ export default async function TransfersIndexPage() {
             Every route we run, with the price on it.
           </h1>
           <p className="text-muted-foreground mt-3 max-w-2xl text-sm text-pretty sm:text-base">
-            One fixed price per route, quoted in full before you book. Airport
-            transfers are priced per person; long-distance routes are priced for
-            the whole vehicle, so the fare is the same for one traveller or four.
+            One fixed price per route, quoted in full before you book. Every
+            fare buys the whole vehicle, so the price is the same for one
+            traveller or a full car.
           </p>
 
           <RouteGroup

@@ -52,9 +52,7 @@ export function RouteCard({ route }: { route: RouteView }) {
             {formatNad(route.fixedPrice)}
           </p>
           <p className="text-muted-foreground mt-0.5 text-xs">
-            {route.pricingUnit === "per_person"
-              ? "per person, fixed"
-              : "per vehicle, fixed"}
+            per vehicle, fixed
           </p>
         </div>
         <ArrowRightIcon

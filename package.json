@@ -24,7 +24,8 @@
     "test:fleet": "tsx --conditions=react-server tests/fleet.test.ts",
     "test:plan": "tsx --conditions=react-server tests/plan.test.ts",
     "test:itinerary": "tsx --conditions=react-server tests/itinerary.test.ts",
-    "test:gates": "tsx --conditions=react-server tests/gates.test.ts"
+    "test:gates": "tsx --conditions=react-server tests/gates.test.ts",
+    "test:pricing": "tsx --conditions=react-server tests/pricing.test.ts"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.9.1",

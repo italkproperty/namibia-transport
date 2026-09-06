@@ -8,6 +8,7 @@ import { SiteHeader } from "@/components/marketing/site-header";
 import {
   buildTripQuery,
   parseTripParams,
+  partyTooLarge,
   TRIP_KEYS,
 } from "@/lib/booking/trip-params";
 import { nodePairForRoute } from "@/lib/network/journey";
@@ -19,7 +20,7 @@ import {
   withCuratedCeiling,
 } from "@/lib/network/journey";
 import { formatNad } from "@/lib/money";
-import { computeFare, unitFare } from "@/lib/pricing";
+import { computeFare } from "@/lib/pricing";
 import { dropoffPlaces, pickupPlaces } from "@/lib/places";
 import { routeTitle } from "@/lib/route-content";
 import { SITE } from "@/lib/site";
@@ -85,8 +86,33 @@ export default async function BookPage({ searchParams }: PageProps) {
   const vehicleClass =
     vehicleClasses.find((c) => c.id === trip.vehicleClassId) ?? vehicleClasses[0];
 
+  // A party no vehicle can carry gets an enquiry, never a price — a deep
+  // link must not be able to render a fare for a trip we cannot fulfil.
+  if (partyTooLarge(trip, vehicleClasses)) {
+    return (
+      <div className="flex min-h-svh flex-col">
+        <SiteHeader />
+        <main className="mx-auto flex max-w-md flex-1 flex-col justify-center px-4 py-16 text-center">
+          <h1 className="text-xl">That party needs more than one vehicle</h1>
+          <p className="text-muted-foreground mt-2 text-sm text-pretty">
+            Our largest vehicle seats {Math.max(...vehicleClasses.map((c) => c.capacity))}. For a bigger group — or more
+            luggage than one car can take — tell us the trip and we will quote
+            it properly, usually with two vehicles or a minibus partner.
+          </p>
+          <Link
+            href="/contact"
+            className="text-brand mt-5 text-sm font-medium underline underline-offset-4"
+          >
+            Get a group quote
+          </Link>
+        </main>
+        <SiteFooter />
+      </div>
+    );
+  }
+
   // Display only. The Server Action recomputes this before writing anything.
-  const fare = computeFare(route, vehicleClass, trip.passengers);
+  const fare = computeFare(route, vehicleClass);
   const duration = formatDuration(route.durationMin);
   const pair = nodePairForRoute(route);
 
@@ -133,6 +159,7 @@ export default async function BookPage({ searchParams }: PageProps) {
                 </Row>
                 <Row label="Vehicle">{vehicleClass.name}</Row>
                 <Row label="Passengers">{trip.passengers}</Row>
+                <Row label="Large cases">{trip.luggage}</Row>
                 {duration && <Row label="Journey">about {duration}</Row>}
               </dl>
 
@@ -144,9 +171,7 @@ export default async function BookPage({ searchParams }: PageProps) {
                   {formatNad(fare.customerPrice)}
                 </p>
                 <p className="text-muted-foreground mt-1 text-xs">
-                  {route.pricingUnit === "per_person"
-                    ? `${formatNad(unitFare(route, vehicleClass))} per person × ${trip.passengers}`
-                    : `per vehicle, up to ${vehicleClass.capacity} passengers`}
+                  per vehicle, up to {vehicleClass.capacity} passengers
                 </p>
               </div>
             </aside>

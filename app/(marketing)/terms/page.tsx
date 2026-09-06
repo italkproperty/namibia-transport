@@ -42,9 +42,10 @@ export default async function TermsPage() {
             <Section title="Your price">
               <p>
                 The price shown when you book is the full and final price for
-                the trip described in your confirmation. Airport transfers are
-                priced per person; long-distance transfers are priced per
-                vehicle — the unit is always shown next to the price. There is
+                the trip described in your confirmation. Every private
+                transfer is priced per vehicle — the fare buys the whole car,
+                whatever the party size, and the unit is always shown next to
+                the price. There is
                 no meter, no surge pricing, no airport surcharge and no
                 night-time supplement.
               </p>

@@ -73,7 +73,9 @@ export function QuoteWidget({
 
         {/* Date and time are asked for on the booking screen, not here. They
             do not move the price by a cent, so collecting them before showing
-            one is the form's convenience rather than the visitor's. */}
+            one is the form's convenience rather than the visitor's. Large
+            cases ARE asked here: they can force the bigger vehicle and change
+            the price, and a price must never change after commitment. */}
         <Field label="Passengers" htmlFor="q-pax">
           <Select
             value={String(trip.passengers)}
@@ -90,13 +92,60 @@ export function QuoteWidget({
                   </SelectItem>
                 ),
               )}
+              <SelectItem value={String(trip.maxPassengers + 1)}>
+                {trip.maxPassengers + 1}+
+              </SelectItem>
             </SelectContent>
           </Select>
         </Field>
 
-        <VehicleToggle trip={trip} />
+        <Field label="Large cases" htmlFor="q-bags">
+          <Select
+            value={String(Math.min(trip.luggage, 5))}
+            onValueChange={(v) => trip.setLuggage(Number(v))}
+          >
+            <SelectTrigger id="q-bags" className="h-11 w-full">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {[0, 1, 2, 3, 4].map((n) => (
+                <SelectItem key={n} value={String(n)}>
+                  {n}
+                </SelectItem>
+              ))}
+              <SelectItem value="5">5+</SelectItem>
+            </SelectContent>
+          </Select>
+        </Field>
+
+        <div className="sm:col-span-2">
+          <VehicleToggle trip={trip} />
+        </div>
       </div>
 
+      {trip.overCapacity ? (
+        <div className="mt-4 border-t pt-4">
+          <p className="text-sm leading-relaxed text-pretty">
+            <span className="font-semibold">
+              That party needs more than one vehicle.
+            </span>{" "}
+            Our largest seats {trip.maxPassengers} with{" "}
+            {Math.max(...trip.vehicleClasses.map((c) => c.luggageCapacity))}{" "}
+            large cases — tell us the trip and we will quote it properly,
+            usually with two vehicles or a minibus partner.
+          </p>
+          <Button
+            asChild
+            size="lg"
+            className="press bg-brand text-brand-foreground hover:bg-brand-hover mt-3 h-12 w-full text-base sm:w-auto"
+          >
+            <Link href="/contact">
+              Get a group quote
+              <ArrowRightIcon className="size-4" aria-hidden />
+            </Link>
+          </Button>
+        </div>
+      ) : (
       <div className="mt-4 flex flex-wrap items-end justify-between gap-3 border-t pt-4">
         <div>
           <p className="text-muted-foreground text-xs font-medium">
@@ -110,9 +159,7 @@ export function QuoteWidget({
             {formatNad(animatedPrice)}
           </p>
           <p className="text-muted-foreground mt-1 text-xs">
-            {trip.route.pricingUnit === "per_person"
-              ? `${formatNad(trip.unitFares.get(trip.vehicleClass.id) ?? 0)} per person × ${trip.passengers}`
-              : `per vehicle, up to ${trip.vehicleClass.capacity} passengers`}
+            {`per vehicle, up to ${trip.vehicleClass.capacity} passengers`}
             {duration ? ` · about ${duration}` : ""}
           </p>
         </div>
@@ -128,6 +175,7 @@ export function QuoteWidget({
           </Link>
         </Button>
       </div>
+      )}
     </div>
   );
 }
@@ -153,7 +201,12 @@ export function VehicleToggle({ trip }: { trip: TripState }) {
           const { id, name, capacity } = vehicleClass;
           const isSelected = id === trip.vehicleClass.id;
           const fare = trip.fares.get(id) ?? 0;
-          const tooSmall = capacity < trip.passengers;
+          // Disabled when it cannot carry the party — people or luggage.
+          // The seats/cases line below stays visible, so the card itself
+          // says why it is greyed out.
+          const tooSmall =
+            capacity < trip.passengers ||
+            vehicleClass.luggageCapacity < trip.luggage;
           const spec = specFor(vehicleClass.slug);
 
           return (
@@ -162,7 +215,7 @@ export function VehicleToggle({ trip }: { trip: TripState }) {
               type="button"
               role="radio"
               aria-checked={isSelected}
-              aria-label={`${name}, ${formatNad(fare)}, up to ${capacity} passengers`}
+              aria-label={`${name}, ${formatNad(fare)} per vehicle, seats ${capacity}, ${vehicleClass.luggageCapacity} large cases`}
               disabled={tooSmall}
               onClick={() => trip.setVehicleClassId(id)}
               className={[
@@ -193,7 +246,7 @@ export function VehicleToggle({ trip }: { trip: TripState }) {
                 </span>
               </span>
               <span className="text-muted-foreground mt-0.5 block text-[0.68rem] leading-tight">
-                {capacity} pax · {vehicleClass.luggageCapacity} bags
+                Seats {capacity} · {vehicleClass.luggageCapacity} large cases
               </span>
             </button>
           );

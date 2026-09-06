@@ -6,12 +6,19 @@ import type { FareQuote, RouteView, VehicleClassView } from "@/lib/maps/types";
  * price preview and the server action call the exact same function. If these
  * ever disagreed, a customer would be shown one price and charged another.
  *
- * Two pricing units exist:
- *   per_person  — airport transfers: fixed_price buys one seat, so the fare
- *                 scales with the party size (N$650/person into Windhoek).
- *   per_vehicle — long-distance private transfers: fixed_price buys the whole
- *                 car, whatever the party size.
- * The vehicle-class multiplier applies to the unit price in both cases.
+ * Every private transfer prices per vehicle: fixed_price buys the whole car
+ * for the base class, and the vehicle-class multiplier scales it. Passenger
+ * count is not an input to the fare — nothing in the cost base scales with
+ * it (not fuel, not driver hours, not the empty return), and our own fare
+ * model derives the airport run's N$650 per vehicle from the minimum
+ * call-out. Party size matters only to which vehicle class is eligible,
+ * which is `lib/booking/eligibility.ts`'s job.
+ *
+ * The per_person pricing unit survives in the type for one future product —
+ * a scheduled shared shuttle, where unrelated travellers pool a vehicle.
+ * Until that product exists, no route may carry it: the seed and the tests
+ * reject it, and at runtime it prices as per-vehicle rather than collapsing
+ * a render.
  *
  * The server still recomputes from the database on submit — this module makes
  * the two agree, it does not make the client's number trustworthy.
@@ -34,8 +41,7 @@ export function computeFare(
     | "distanceKm"
     | "durationMin"
   >,
-  vehicleClass: Pick<VehicleClassView, "id" | "slug" | "priceMultiplier">,
-  passengers = 1
+  vehicleClass: Pick<VehicleClassView, "id" | "slug" | "priceMultiplier">
 ): FareQuote {
   const multiplier = Number(vehicleClass.priceMultiplier);
   if (!Number.isFinite(multiplier) || multiplier <= 0) {
@@ -44,16 +50,10 @@ export function computeFare(
     );
   }
 
-  const seats =
-    route.pricingUnit === "per_person" ? Math.max(1, Math.floor(passengers)) : 1;
-
-  const unitPrice = roundToRand(Number(route.fixedPrice) * multiplier);
-  const unitPayout = roundToRand(
+  const customerPrice = roundToRand(Number(route.fixedPrice) * multiplier);
+  const driverPayout = roundToRand(
     Number(route.defaultDriverPayout) * multiplier
   );
-
-  const customerPrice = unitPrice * seats;
-  const driverPayout = unitPayout * seats;
 
   return {
     routeId: route.id,
@@ -67,7 +67,7 @@ export function computeFare(
   };
 }
 
-/** The per-unit price shown next to a class, before party size is applied. */
+/** The price shown next to a class — same as the total, since a fare buys the vehicle. */
 export function unitFare(
   route: Pick<RouteView, "fixedPrice">,
   vehicleClass: Pick<VehicleClassView, "priceMultiplier">
@@ -77,7 +77,14 @@ export function unitFare(
   );
 }
 
-/** "per person" | "per vehicle" — the label that must accompany every price. */
-export function pricingUnitLabel(route: Pick<RouteView, "pricingUnit">): string {
-  return route.pricingUnit === "per_person" ? "per person" : "per vehicle";
+/**
+ * The label that must accompany every price. Always "per vehicle" — the one
+ * legitimate per-person product (a scheduled shared shuttle) does not exist
+ * yet, and until it does no surface may say "per person" next to a fare.
+ */
+// The route stays in the signature so the shared-shuttle future is a
+// one-line change at every call site rather than a refactor.
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+export function pricingUnitLabel(_route: Pick<RouteView, "pricingUnit">): string {
+  return "per vehicle";
 }

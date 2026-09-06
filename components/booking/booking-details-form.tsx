@@ -119,10 +119,12 @@ export function BookingDetailsForm({
       date: trip.date,
       time: trip.time,
       passengers: trip.passengers,
+      // Chosen in the quote widget: cases can change the required class and
+      // therefore the price, and a price must never change after commitment.
+      luggageCount: trip.luggage,
       // Asked for here.
       pickupLabel: defaultPickup,
       dropoffLabel: defaultDropoff,
-      luggageCount: 1,
       flightNumber: "",
       fullName: "",
       whatsapp: "",
@@ -179,6 +181,7 @@ export function BookingDetailsForm({
     form.setValue("date", trip.date);
     form.setValue("time", trip.time);
     form.setValue("passengers", trip.passengers);
+    form.setValue("luggageCount", trip.luggage);
     form.setValue("pickupLabel", defaultPickup);
   }, [form, trip, defaultPickup]);
 
@@ -459,34 +462,6 @@ export function BookingDetailsForm({
                       onChange={field.onChange}
                     />
                   </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            <FormField
-              control={form.control}
-              name="luggageCount"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Bags</FormLabel>
-                  <Select
-                    onValueChange={(v) => field.onChange(Number(v))}
-                    value={String(field.value)}
-                  >
-                    <FormControl>
-                      <SelectTrigger className="h-11 w-full">
-                        <SelectValue />
-                      </SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
-                      {Array.from({ length: 9 }, (_, i) => i).map((n) => (
-                        <SelectItem key={n} value={String(n)}>
-                          {n}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
                   <FormMessage />
                 </FormItem>
               )}

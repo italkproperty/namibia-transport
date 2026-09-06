@@ -11,8 +11,10 @@ the country: the operator a traveller trusts before they land, the one a Windhoe
 gives its account to, and the only one that knows what Namibian ground transport actually
 costs and where it moves. Judge work against that, not against "does it ship".
 
-Live at namibiatransport.com. Airport transfers are priced per person (WDH→Windhoek is
-N$650); long-distance and intercity are priced per vehicle.
+Live at namibiatransport.com. Every private transfer is priced per vehicle (WDH→Windhoek
+is N$650 for the whole car); passenger count and luggage select the vehicle class, never
+multiply the fare. Per-person pricing returns only with a genuine scheduled shared
+shuttle, which does not exist yet.
 
 ## The bar
 - **Finish what you start.** A feature that is half-built is worse than one not started —
