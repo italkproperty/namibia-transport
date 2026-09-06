@@ -465,7 +465,7 @@ export const GUIDES: Guide[] = [
         heading: "The five-hour rule",
         body: [
           "Five hours of Namibian driving is not five hours of motorway. Gravel demands constant small corrections; there is no cruise control and no daydreaming, and the concentration is what tires you rather than the distance. A five-hour day leaves you arriving with enough left to enjoy where you are. Back-to-back six-and-seven-hour days are how a driving holiday quietly becomes a driving job.",
-          "Sunset is the hard deadline. Kudu and warthog move at dawn and dusk, and a large animal through a windscreen at speed is the accident Namibians actually fear — it is why locals plan to be parked by nightfall, and in winter the sun is down before six. Whatever the map says, a leg that cannot finish in daylight is a leg that needs an overnight stop added.",
+          "Sunset is the hard deadline. Kudu and warthog move at dawn and dusk, and a large animal through a windscreen at speed is the accident Namibians actually fear — it is why locals plan to be parked by nightfall, and in midwinter the sun is down not long after six. Whatever the map says, a leg that cannot finish in daylight is a leg that needs an overnight stop added.",
         ],
       },
       {

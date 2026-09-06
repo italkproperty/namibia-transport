@@ -10,6 +10,7 @@ import {
   parseTripParams,
   TRIP_KEYS,
 } from "@/lib/booking/trip-params";
+import { nodePairForRoute } from "@/lib/network/journey";
 import { formatDuration } from "@/lib/format";
 import { listRoutes, listVehicleClasses } from "@/lib/maps";
 import {
@@ -153,6 +154,9 @@ export default async function BookPage({ searchParams }: PageProps) {
               <BookingDetailsForm
                 trip={trip}
                 route={route}
+                // Resolved here so the client bundle carries the gate maths
+                // without the whole road graph.
+                destinationNodeSlug={nodePairForRoute(route)?.destination.slug ?? null}
                 pickupPlaces={pickupPlaces(route)}
                 dropoffPlaces={dropoffPlaces(route)}
                 utm={utm}

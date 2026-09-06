@@ -36,10 +36,13 @@ import {
 import { TIME_SLOTS, type TripParams } from "@/lib/booking/trip-params";
 import { namibianToday } from "@/lib/booking/time";
 import type { RouteView } from "@/lib/maps";
+import { gateCheck } from "@/lib/parks/gates";
 
 type Props = {
   trip: TripParams;
   route: RouteView;
+  /** The network node this route ends at, resolved server-side. */
+  destinationNodeSlug: string | null;
   pickupPlaces: Place[];
   dropoffPlaces: Place[];
   utm: string;
@@ -56,6 +59,7 @@ type Props = {
 export function BookingDetailsForm({
   trip,
   route,
+  destinationNodeSlug,
   pickupPlaces,
   dropoffPlaces,
   utm,
@@ -130,6 +134,22 @@ export function BookingDetailsForm({
    */
   const watchedDropoff = form.watch("dropoffLabel");
   const watchedPickup = form.watch("pickupLabel");
+
+  // Park gates close at sunset, strictly, and this is the moment to say so —
+  // while the traveller is choosing a time, not standing at a shut gate. The
+  // sun is computed locally (it has no outages) and the check never blocks:
+  // it warns, and a human confirms the plan either way.
+  const watchedDate = form.watch("date");
+  const watchedTime = form.watch("time");
+  const gate = React.useMemo(() => {
+    if (!destinationNodeSlug) return null;
+    return gateCheck(
+      destinationNodeSlug,
+      watchedDate,
+      watchedTime,
+      route.durationMin,
+    );
+  }, [destinationNodeSlug, route.durationMin, watchedDate, watchedTime]);
   const isKnownPlace = (places: Place[], name: string) => {
     const kind = places.find((place) => place.name === name)?.kind;
     return kind === "hotel" || kind === "guesthouse" || kind === "landmark";
@@ -251,6 +271,37 @@ export function BookingDetailsForm({
               )}
             />
           </div>
+
+          {gate && (gate.late || gate.tight) && (
+            <div
+              role="status"
+              className="rounded-xl border border-amber-600/40 bg-amber-500/10 p-4 text-sm leading-relaxed text-pretty"
+            >
+              {gate.late ? (
+                <>
+                  <span className="font-semibold">
+                    This pickup arrives after the park gate has closed.
+                  </span>{" "}
+                  {gate.gate} closes at sunset — about {gate.closesAt} on your
+                  date — and this drive would arrive around {gate.arrivesAt}.
+                  Park gates are strict about it. A pickup by {gate.leaveBy}{" "}
+                  makes it comfortably; otherwise plan an overnight en route.
+                  You can still book this time and we will contact you about
+                  the plan before confirming.
+                </>
+              ) : (
+                <>
+                  <span className="font-semibold">
+                    This arrival is tight against gate closing.
+                  </span>{" "}
+                  {gate.gate} closes at sunset, about {gate.closesAt} on your
+                  date, and this drive arrives around {gate.arrivesAt} — little
+                  room for a slow stretch of road. A pickup by {gate.leaveBy}{" "}
+                  is the comfortable plan.
+                </>
+              )}
+            </div>
+          )}
 
           <div className="grid gap-4 sm:grid-cols-2">
             <FormField
