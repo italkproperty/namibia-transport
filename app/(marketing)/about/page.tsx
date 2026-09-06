@@ -3,7 +3,11 @@ import Link from "next/link";
 
 import { SiteFooter } from "@/components/marketing/site-footer";
 import { SiteHeader } from "@/components/marketing/site-header";
-import { SupportStrip } from "@/components/marketing/trust";
+import {
+  Contingencies,
+  OperationsSection,
+  SupportStrip,
+} from "@/components/marketing/trust";
 import { Button } from "@/components/ui/button";
 import { getCompanyInfo, SUPPORT } from "@/lib/company";
 import { listRoutes } from "@/lib/maps";
@@ -102,6 +106,16 @@ export default async function AboutPage() {
         </div>
 
         <div className="mx-auto max-w-5xl px-4 pb-12 sm:px-6">
+          {/* Moved off the home page, where they were 1,431 px of argument
+              nobody had asked for yet. Somebody reading about us has asked. */}
+          <div className="mt-12 border-t pt-10">
+            <OperationsSection />
+          </div>
+
+          <div className="mt-12 border-t pt-10">
+            <Contingencies />
+          </div>
+
           <SupportStrip />
         </div>
       </main>

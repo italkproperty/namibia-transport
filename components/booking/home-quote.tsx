@@ -123,6 +123,7 @@ export function HomeQuote({
         price={trip.price}
         href={trip.href}
         label={`${shortPlace(trip.route.originLabel)} → ${trip.route.destinationLabel}`}
+        watch="quote"
       />
     </>
   );

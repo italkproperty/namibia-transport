@@ -61,6 +61,14 @@ export function SiteFooter({ routes = [] }: { routes?: RouteView[] }) {
                 </li>
                 <li>
                   <Link
+                    href="/vehicles"
+                    className="text-muted-foreground hover:text-foreground transition"
+                  >
+                    The vehicles
+                  </Link>
+                </li>
+                <li>
+                  <Link
                     href="/book"
                     className="text-muted-foreground hover:text-foreground transition"
                   >

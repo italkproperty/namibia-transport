@@ -5,6 +5,7 @@ import { GUIDES } from "@/lib/guides";
 export const NAV_LINKS = [
   { href: "/journey", label: "Any journey" },
   { href: "/self-drive", label: "Self-drive?" },
+  { href: "/vehicles", label: "Vehicles" },
   { href: "/corporate", label: "Corporate" },
   { href: "/about", label: "About" },
   { href: "/contact", label: "Contact" },

@@ -16,7 +16,6 @@ import {
 import { useCountUp } from "@/components/booking/use-count-up";
 import { VehicleImage } from "@/components/vehicles/vehicle-image";
 import type { TripState } from "@/components/booking/use-trip";
-import { defaultTripDate, TIME_SLOTS } from "@/lib/booking/trip-params";
 import { formatDuration } from "@/lib/format";
 import { formatNad } from "@/lib/money";
 import { routeTitle } from "@/lib/route-content";
@@ -72,32 +71,9 @@ export function QuoteWidget({
           </Field>
         )}
 
-        <Field label="Date" htmlFor="q-date">
-          <input
-            id="q-date"
-            type="date"
-            value={trip.date}
-            min={defaultTripDate()}
-            onChange={(e) => trip.setDate(e.target.value)}
-            className="border-input focus-visible:border-ring focus-visible:ring-ring/50 press h-11 w-full rounded-md border bg-transparent px-3 text-sm shadow-xs outline-none focus-visible:ring-[3px]"
-          />
-        </Field>
-
-        <Field label="Time" htmlFor="q-time">
-          <Select value={trip.time} onValueChange={trip.setTime}>
-            <SelectTrigger id="q-time" className="h-11 w-full">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              {TIME_SLOTS.map((slot) => (
-                <SelectItem key={slot} value={slot}>
-                  {slot}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </Field>
-
+        {/* Date and time are asked for on the booking screen, not here. They
+            do not move the price by a cent, so collecting them before showing
+            one is the form's convenience rather than the visitor's. */}
         <Field label="Passengers" htmlFor="q-pax">
           <Select
             value={String(trip.passengers)}

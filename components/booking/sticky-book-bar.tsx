@@ -1,5 +1,6 @@
 "use client";
 
+import * as React from "react";
 import Link from "next/link";
 
 import { Button } from "@/components/ui/button";
@@ -13,19 +14,44 @@ import { formatNad } from "@/lib/money";
  * you have to hunt for. This keeps the current quote and the way forward on
  * screen at all times. It is hidden on desktop, where the widget or the route
  * card is already sticky.
+ *
+ * `watch` is the id of the element it stands in for. While that element is on
+ * screen the bar stays out of the way — otherwise the home page renders the
+ * same price twice, ninety pixels apart, which is what it did.
  */
 export function StickyBookBar({
   price,
   href,
   label,
   cta = "Book now",
+  watch,
 }: {
   price: number;
   href: string;
   label?: string;
   cta?: string;
+  /** Element id this bar substitutes for; hidden while it is in view. */
+  watch?: string;
 }) {
   const animated = useCountUp(price);
+  const [standingIn, setStandingIn] = React.useState(!watch);
+
+  React.useEffect(() => {
+    if (!watch) return;
+    const target = document.getElementById(watch);
+    if (!target || typeof IntersectionObserver === "undefined") {
+      setStandingIn(true);
+      return;
+    }
+    const observer = new IntersectionObserver(
+      ([entry]) => setStandingIn(!entry.isIntersecting),
+      { rootMargin: "-72px 0px 0px 0px" },
+    );
+    observer.observe(target);
+    return () => observer.disconnect();
+  }, [watch]);
+
+  if (!standingIn) return null;
 
   return (
     <>

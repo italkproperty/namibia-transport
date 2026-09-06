@@ -33,7 +33,8 @@ import {
   bookingFormSchema,
   type BookingFormValues,
 } from "@/lib/booking/schema";
-import type { TripParams } from "@/lib/booking/trip-params";
+import { TIME_SLOTS, type TripParams } from "@/lib/booking/trip-params";
+import { namibianToday } from "@/lib/booking/time";
 import type { RouteView } from "@/lib/maps";
 
 type Props = {
@@ -196,6 +197,60 @@ export function BookingDetailsForm({
       >
         <fieldset className="space-y-4" disabled={isPending}>
           <legend className="sr-only">Your details</legend>
+
+          {/* When the trip is. These left the home page, where they never
+              moved the price by a cent — but they have to be asked somewhere,
+              and this is the screen where the traveller is committing. */}
+          <div className="grid gap-4 sm:grid-cols-2">
+            <FormField
+              control={form.control}
+              name="date"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Pickup date</FormLabel>
+                  <FormControl>
+                    <Input
+                      className="h-11"
+                      type="date"
+                      min={namibianToday()}
+                      enterKeyHint="next"
+                      {...field}
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name="time"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Pickup time</FormLabel>
+                  <Select value={field.value} onValueChange={field.onChange}>
+                    <FormControl>
+                      <SelectTrigger className="h-11 w-full">
+                        <SelectValue />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      {TIME_SLOTS.map((slot) => (
+                        <SelectItem key={slot} value={slot}>
+                          {slot}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <FormDescription>
+                    Namibian time. Flying in? Give us the flight number below
+                    and we move the pickup to match the landing.
+                  </FormDescription>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+          </div>
 
           <div className="grid gap-4 sm:grid-cols-2">
             <FormField

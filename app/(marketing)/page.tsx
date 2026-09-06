@@ -3,19 +3,12 @@ import { ArrowRightIcon, BuildingIcon } from "lucide-react";
 
 import { HomeQuote } from "@/components/booking/home-quote";
 import { DuneScene } from "@/components/marketing/dune-scene";
-import { FleetSection } from "@/components/marketing/fleet";
-import { HowToBook } from "@/components/marketing/how-to-book";
-import { JourneyTimeline } from "@/components/marketing/journey";
 import { SiteFooter } from "@/components/marketing/site-footer";
 import { SiteHeader } from "@/components/marketing/site-header";
 import {
-  Contingencies,
-  MeetingPoint,
-  OperationsSection,
   ReviewBadge,
   ReviewsSection,
   SupportStrip,
-  WhyTrustUs,
 } from "@/components/marketing/trust";
 import { Button } from "@/components/ui/button";
 import { parseTripParams } from "@/lib/booking/trip-params";
@@ -57,13 +50,19 @@ export default async function HomePage({ searchParams }: PageProps) {
           <DuneScene className="pointer-events-none absolute inset-x-0 bottom-0 -z-10 h-28 w-full sm:h-40" />
 
           <div className="mx-auto max-w-5xl px-4 pt-8 pb-10 sm:px-6 sm:pt-12 sm:pb-16">
+            {/* The old headline named the category — which the visitor already
+                knew, having searched for it — and spent the most valuable line
+                on the site saying nothing. This names the thing they are
+                actually anxious about, and the line under it carries the two
+                concrete promises that the deleted sections used to make
+                eleven times between them. */}
             <h1 className="max-w-2xl text-2xl leading-tight sm:text-4xl">
-              Reliable private transfers across Namibia.
+              Know who is meeting you before you land.
             </h1>
             <p className="text-muted-foreground mt-2 max-w-xl text-sm text-pretty sm:text-base">
-              From the airport to your hotel, from Windhoek to the coast — fixed
-              prices, flight monitoring and one operations team behind every
-              trip.
+              Fixed prices across Namibia. Your driver waits inside arrivals
+              with your name on a board, and we watch your flight — so a delay
+              costs you nothing.
             </p>
 
             {/* Renders only once real published reviews exist. */}
@@ -88,51 +87,55 @@ export default async function HomePage({ searchParams }: PageProps) {
           </div>
         </section>
 
-        {/* ------------------------------------------------ why travellers */}
-        <div className="border-y">
-          <div className="mx-auto max-w-5xl px-4 py-10 sm:px-6 sm:py-12">
-            <WhyTrustUs />
-          </div>
-        </div>
-
-        {/* ------------------------------------------------ what you get in */}
-        <div className="mx-auto max-w-5xl px-4 py-10 sm:px-6 sm:py-12">
-          <FleetSection vehicleClasses={vehicleClasses} />
-        </div>
-
-        {/* ------------------------------------------- how the booking goes */}
-        {routes.length > 0 && (
-          <div className="border-y">
-            <div className="mx-auto max-w-5xl px-4 py-10 sm:px-6 sm:py-12">
-              <HowToBook route={routes[0]} />
-            </div>
-          </div>
-        )}
-
-        {/* --------------------------------------------------- the journey */}
-        <div className="mx-auto max-w-5xl px-4 py-10 sm:px-6 sm:py-12">
-          <JourneyTimeline />
-        </div>
-
-        {/* ------------------------------------------------- meeting point */}
-        <div className="mx-auto max-w-5xl px-4 pb-12 sm:px-6">
-          <MeetingPoint />
-        </div>
-
-        {/* ------------------------------------------------- contingencies */}
-        <div className="border-y">
-          <div className="mx-auto max-w-5xl px-4 py-10 sm:px-6 sm:py-12">
-            <Contingencies />
-          </div>
-        </div>
-
-        {/* ---------------------------------------------------- operations */}
-        <div className="mx-auto max-w-5xl px-4 py-10 sm:px-6 sm:py-12">
-          <OperationsSection />
-        </div>
-
         {/* ------------------------------------------------------- reviews */}
         <ReviewsWrapper />
+
+        {/* ----------------------------------------------------- where next */}
+        <section
+          aria-labelledby="elsewhere-heading"
+          className="mx-auto max-w-5xl px-4 pb-10 sm:px-6"
+        >
+          <h2
+            id="elsewhere-heading"
+            className="text-muted-foreground mb-2 text-xs font-medium"
+          >
+            Not an airport transfer?
+          </h2>
+          <ul className="grid gap-2 sm:grid-cols-3">
+            {[
+              {
+                href: "/journey",
+                title: "Any two places in Namibia",
+                blurb: "Coast to dunes, park to park — priced from the road.",
+              },
+              {
+                href: "/self-drive",
+                title: "Should you drive it yourself?",
+                blurb: "The real cost of a hire car against a driven trip.",
+              },
+              {
+                href: "/vehicles",
+                title: "The vehicles",
+                blurb: "What each class seats, and which routes it suits.",
+              },
+            ].map((card) => (
+              <li key={card.href}>
+                <Link
+                  href={card.href}
+                  className="bg-card hover:border-brand/40 press block h-full rounded-xl border p-4 transition"
+                >
+                  <span className="flex items-center gap-1.5 text-sm font-medium">
+                    {card.title}
+                    <ArrowRightIcon className="size-3.5 shrink-0" aria-hidden />
+                  </span>
+                  <span className="text-muted-foreground mt-1 block text-xs leading-snug">
+                    {card.blurb}
+                  </span>
+                </Link>
+              </li>
+            ))}
+          </ul>
+        </section>
 
         {/* ----------------------------------------------------- corporate */}
         <section
