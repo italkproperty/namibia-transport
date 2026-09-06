@@ -128,10 +128,28 @@ local Postgres is not to hand.
 - Comments explain reasoning and non-obvious constraints, not mechanics.
 
 ## Where we are
-Live and working: the booking flow end to end on Supabase, server-computed fares, the
-corporate quotation engine, the reviews admin, static route maps, the custom domain and
-Spacemail.
+*Updated 6 September 2026. Keep this honest — it is the first thing a new session reads.*
 
-In flight: PayToday returns 403 until the domain is registered with them. Next up: the
-map-pin drop on the booking form, then WhatsApp via the Meta Cloud API — the messaging
-adapter is stubbed and waiting.
+Live and working: the booking flow end to end on Supabase, server-computed per-vehicle
+fares, the map-pin drop, the corporate quotation engine, the reviews admin, route maps,
+the custom domain and Spacemail.
+
+The road model is the moat, and most of the platform now derives from it: 49 places and
+62 road segments, so any of 2,352 ordered pairs can be priced from cost rather than a
+price list (`/journey`). On top of it sit the dispatch calendar (`/admin/calendar`) with
+the fleet timeline and marginal-offer engine, the self-drive cost planner
+(`/self-drive`), park-gate feasibility warnings computed from sunrise/sunset, and
+rain-season notes on the passes that close. Twelve test suites, ~374 checks, including
+the model against published distances, times and fares.
+
+Content: four arrival guides and four self-drive decision guides, each carrying at least
+one number only the road model can produce, plus `/methodology`, which stands behind
+every figure and is our substitute for the reviews and photography we do not have.
+
+In flight: PayToday returns 403 until the domain is registered with them. Next up:
+WhatsApp via the Meta Cloud API — the messaging adapter is stubbed and waiting — then a
+German translation of `/self-drive`, which is the highest-return content follow-up.
+Guides 5 and 6 are deliberately gated on 60/90-day measurement of the first four.
+
+Outstanding and human-only: the PayToday domain registration, and rotating the database
+password and PayToday keys that were exposed in chat in an earlier session.
