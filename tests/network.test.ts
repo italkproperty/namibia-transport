@@ -159,6 +159,45 @@ for (const [slug, origin, destination] of PUBLISHED) {
   );
 }
 
+/* --------------------- the September 2026 extension against published maps */
+
+console.log("\nthe Kaokoland/Owambo extension against published distances");
+
+// Published figures gathered September 2026 from road-atlas and operator
+// sources, independent of our edge data: Windhoek–Opuwo ≈ 715 km via the
+// C40/C41 tar, Windhoek–Oshakati ≈ 709 km on the B1, Opuwo–Epupa ≈ 178 km
+// on the C43, Grünau–Ai-Ais ≈ 80 km.
+const EXTENSION_PUBLISHED: [string, string, number][] = [
+  ["windhoek", "opuwo", 715],
+  ["windhoek", "oshakati", 709],
+  ["opuwo", "epupa", 178],
+  ["grunau", "ai-ais", 80],
+];
+
+for (const [origin, destination, publishedKm] of EXTENSION_PUBLISHED) {
+  const road = findRoad(origin, destination);
+  if (!road) {
+    check(`${origin} -> ${destination} has a road`, false);
+    continue;
+  }
+  check(
+    `${origin} -> ${destination}: distance within 8% of published`,
+    within(road.km, publishedKm, 0.08),
+    `${road.km} km vs ${publishedKm} km (${drift(road.km, publishedKm)})`,
+  );
+}
+
+// The tar way to Opuwo must beat the C43 gravel through Sesfontein on time,
+// because that is the road a transfer actually takes.
+{
+  const road = findRoad("windhoek", "opuwo");
+  check(
+    "windhoek -> opuwo routes over the C40/C41 tar, not the C43 gravel",
+    road !== null && road.gravelKm === 0,
+    road ? `gravel ${road.gravelKm} km via ${road.roads.join(" ")}` : "no road",
+  );
+}
+
 /* ------------------------------- the model agrees with what the site charges */
 
 console.log("\nthe model against the seven published fares");

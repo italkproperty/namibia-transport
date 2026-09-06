@@ -220,9 +220,22 @@ export const GUIDES: Guide[] = [
           "The B1 through Okahandja and Otjiwarongo is tarred and straightforward. Fuel and food are available at both. It is a long sit, so comfort stops are built in.",
         ],
       },
+      {
+        heading: "Park fees at the gate",
+        body: [
+          "Namibia raised its national park fees sharply on 1 April 2026: a foreign adult now pays N$280 per person per day at Etosha, with lower rates for SADC nationals and children, and children of eight and under free. Fees are paid at the gate and card machines there are not always reliable, so carry enough cash. These are the park's fees, not ours — they are the same however you arrive — but budget for them, because older guidebooks and blogs still quote roughly half these amounts.",
+        ],
+      },
     ],
     routes: ["hosea-kutako-to-etosha"],
-    updated: "2026-08-27",
+    sources: [
+      {
+        label: "Namibia national park fee increase, 1 April 2026",
+        detail:
+          "Foreign adult N$280 per person per day at Etosha, up from N$150, per the gazetted schedule as reported by namibian.org, New Era and EtoshaNationalPark.com.na. Sub-rates for vehicles and other categories vary by source — confirm at the gate. Checked September 2026.",
+      },
+    ],
+    updated: "2026-09-06",
   },
   {
     slug: "do-you-need-a-4x4-in-namibia",

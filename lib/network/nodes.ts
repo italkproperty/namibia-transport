@@ -430,6 +430,94 @@ export const PLACE_NODES: PlaceNode[] = [
     lng: 17.6167,
     backhaul: BACKHAUL.terminus,
   },
+
+  /* ------------------- Kaokoland, the Owambo north, Erongo and Ai-Ais
+   * Added September 2026, closing the genuine gaps in the graph. Purros
+   * and the Marienfluss stay out on purpose: reaching them means convoy
+   * 4x4 driving on tracks where hire insurance is void, and that is an
+   * expedition product, not a transfer.
+   */
+  {
+    slug: "kamanjab",
+    name: "Kamanjab",
+    region: "damaraland",
+    lat: -19.6258,
+    lng: 14.8446,
+    backhaul: BACKHAUL.town,
+  },
+  {
+    slug: "palmwag",
+    name: "Palmwag",
+    region: "damaraland",
+    lat: -19.8833,
+    lng: 13.9333,
+    backhaul: BACKHAUL.terminus,
+  },
+  {
+    slug: "sesfontein",
+    name: "Sesfontein",
+    region: "damaraland",
+    lat: -19.1333,
+    lng: 13.6167,
+    backhaul: BACKHAUL.terminus,
+  },
+  {
+    slug: "opuwo",
+    name: "Opuwo",
+    region: "north",
+    lat: -18.0607,
+    lng: 13.8401,
+    backhaul: BACKHAUL.town,
+  },
+  {
+    slug: "epupa",
+    name: "Epupa Falls",
+    region: "north",
+    lat: -17.0,
+    lng: 13.2333,
+    backhaul: BACKHAUL.terminus,
+  },
+  {
+    slug: "ruacana",
+    name: "Ruacana",
+    region: "north",
+    lat: -17.4167,
+    lng: 14.2167,
+    backhaul: BACKHAUL.terminus,
+  },
+  {
+    slug: "oshakati",
+    name: "Oshakati",
+    region: "north",
+    lat: -17.7883,
+    lng: 15.6983,
+    backhaul: BACKHAUL.town,
+  },
+  {
+    slug: "ondangwa",
+    name: "Ondangwa",
+    region: "north",
+    lat: -17.9167,
+    lng: 15.95,
+    backhaul: BACKHAUL.town,
+  },
+  {
+    slug: "omaruru",
+    name: "Omaruru",
+    region: "damaraland",
+    lat: -21.4333,
+    lng: 15.9333,
+    backhaul: BACKHAUL.town,
+  },
+  {
+    slug: "ai-ais",
+    name: "Ai-Ais Hot Springs",
+    shortName: "Ai-Ais",
+    region: "south",
+    lat: -27.9167,
+    lng: 17.4833,
+    backhaul: BACKHAUL.terminus,
+  },
 ];
 
 export const NODES_BY_SLUG = new Map(

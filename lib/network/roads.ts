@@ -191,9 +191,63 @@ export const ROAD_EDGES: RoadEdge[] = [
   {
     from: "grunau",
     to: "fish-river-canyon",
-    km: 145,
+    // The C12 from Grunau to Hobas is about 90 km, plus the last stretch to
+    // the camp — corrected from 145 in September 2026 after two independent
+    // sources agreed; the original figure was never load-bearing because
+    // Windhoek routes to the canyon via Keetmanshoop on time.
+    km: 95,
     surface: "gravel",
     road: "C12",
+  },
+
+  /* -------------------- Kaokoland, the Owambo north, Erongo and Ai-Ais
+   * Added September 2026. Distances checked against the Wikipedia C-road
+   * articles and operator direction pages. Purros, Marienfluss and Van
+   * Zyl's Pass are deliberately absent: convoy-only 4x4 country where hire
+   * insurance is void — not roads we send a transfer vehicle down.
+   */
+  { from: "outjo", to: "kamanjab", km: 144, surface: "tar", road: "C40" },
+  { from: "khorixas", to: "kamanjab", km: 108, surface: "gravel", road: "C35" },
+  {
+    from: "kamanjab",
+    to: "palmwag",
+    // Over the Grootberg Pass — the C40's gravel half.
+    km: 115,
+    surface: "gravel",
+    road: "C40",
+  },
+  { from: "palmwag", to: "sesfontein", km: 112, surface: "gravel", road: "C43" },
+  {
+    from: "sesfontein",
+    to: "opuwo",
+    // Via the Joubert Pass; short paved pass sections, gravel in character.
+    km: 140,
+    surface: "gravel",
+    road: "C43",
+  },
+  {
+    from: "kamanjab",
+    to: "opuwo",
+    // The tar way north — longer than the C43 through Sesfontein but the
+    // road a transfer actually uses.
+    km: 236,
+    surface: "tar",
+    road: "C35 / C41",
+  },
+  { from: "opuwo", to: "epupa", km: 175, surface: "gravel", road: "C43" },
+  { from: "opuwo", to: "ruacana", km: 135, surface: "tar", road: "C35" },
+  { from: "ruacana", to: "oshakati", km: 160, surface: "tar", road: "C46" },
+  { from: "oshakati", to: "ondangwa", km: 30, surface: "tar", road: "B1" },
+  { from: "tsumeb", to: "ondangwa", km: 249, surface: "tar", road: "B1" },
+  { from: "karibib", to: "omaruru", km: 66, surface: "tar", road: "C33" },
+  { from: "omaruru", to: "uis", km: 118, surface: "gravel", road: "C36" },
+  { from: "grunau", to: "ai-ais", km: 80, surface: "gravel", road: "C10" },
+  {
+    from: "fish-river-canyon",
+    to: "ai-ais",
+    km: 70,
+    surface: "gravel",
+    road: "C37 / C13",
   },
 ];
 
