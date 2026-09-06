@@ -33,6 +33,11 @@ export type GuideSection = {
   heading: string;
   body: string[];
   routeTable?: RouteTableSpec;
+  /**
+   * Renders the driven-vs-self-drive cost table for a preset itinerary,
+   * computed from the same model as the /self-drive planner.
+   */
+  circuitCompare?: { presetId: string };
 };
 
 export type Guide = {
@@ -310,6 +315,229 @@ export const GUIDES: Guide[] = [
         label: "German Federal Foreign Office, Namibia driving guidance",
         detail:
           "Advises carrying two spare wheels on gravel because tyre damage is frequent, and warns that 90 km/h on gravel is already too fast. Checked September 2026.",
+      },
+    ],
+    updated: "2026-09-06",
+  },
+  {
+    slug: "namibia-car-hire-excess-and-gravel-damage",
+    kind: "decision",
+    title: "What does gravel damage really cost on a Namibian hire car?",
+    metaTitle:
+      "Namibia Car Hire Excess: What Gravel Damage Actually Costs You",
+    metaDescription:
+      "Standard excess with a major Namibian operator is N$40,000, and even reduced-excess cover commonly excludes tyres, windows, the underbody and single-vehicle accidents — the classic gravel failures. What the contracts say, and how to measure your real exposure in gravel kilometres.",
+    answer:
+      "More than the day rate suggests. The standard excess with a major Windhoek operator is N$40,000, and even paid reduced-excess options commonly leave tyres, windows, the underbody and single-vehicle accidents — which is to say, the classic gravel failures — on your side of the contract. Your real exposure is not a percentage on a brochure; it is the number of gravel kilometres your route drives.",
+    sections: [
+      {
+        heading: "What an excess actually is",
+        body: [
+          "The excess is the amount of any damage you pay before insurance pays anything — and in Namibia it is not a token figure. Asco Car Hire's published 2026 rates put the standard excess at N$40,000 across all vehicle groups; other operators are in the same territory. Reducing it costs a daily fee, in tiers, and taking it to zero costs a further daily fee on top of the hire.",
+          "Multiply any of those daily fees by a two-week trip before deciding they are small. Cover that looks cheap per day is a meaningful share of the whole hire by the time you hand the keys back.",
+        ],
+      },
+      {
+        heading: "The exclusions that survive even reduced excess",
+        body: [
+          "This is the part most travellers discover at the counter, or after the trip. Across the Namibian hire agreements we checked, the reduced-excess tiers commonly exclude damage to tyres, windows, rims and the underbody — and damage from single-vehicle accidents, defined as any incident with no other party involved: rolling the car, sliding off a corrugated bend, reversing into a rock. Some operators sell a separate tyre-and-glass waiver on top; without it, a gravel puncture is billed whole.",
+          "Read that list against what gravel actually does to a car. Sharp stone cuts sidewalls. Corrugation shakes trim and hammers the suspension. Loose surfaces cause single-vehicle slides. The exclusions are not arbitrary — they are a precise map of gravel's failure modes, priced onto your side of the contract because they are the damage most likely to happen.",
+        ],
+      },
+      {
+        heading: "Your exposure is measured in gravel kilometres",
+        body: [
+          "Two itineraries of the same length can carry wildly different risk. Windhoek, the coast and Etosha's southern gate is tar the whole way — the exclusions above barely touch it. Add Sossusvlei and Damaraland and you take on hundreds of gravel kilometres at a stretch, every one of them working on your tyres. The table shows the exposure leg by leg; sum the legs your own route uses.",
+        ],
+        routeTable: {
+          caption: "Gravel exposure of the common legs",
+          journeys: [
+            "windhoek-to-swakopmund",
+            "windhoek-to-etosha-okaukuejo",
+            "windhoek-to-sossusvlei",
+            "sossusvlei-to-swakopmund",
+            "swakopmund-to-twyfelfontein",
+            "twyfelfontein-to-etosha-okaukuejo",
+            "windhoek-to-fish-river-canyon",
+          ],
+        },
+      },
+      {
+        heading: "How to read a hire agreement in five minutes",
+        body: [
+          "Ask four questions before you sign anything. What is my excess with the cover I have actually chosen — not the best tier on the brochure? Are tyres, glass, rims and the underbody covered, and by which add-on? What happens in a single-vehicle accident — is a rollover on gravel covered at all, at any tier? And how many spare wheels does the car carry — the German Federal Foreign Office's driving guidance for Namibia advises two on gravel, because tyre damage is that common.",
+          "Get the answers in writing, in the quote. An operator with clear answers to these four questions is telling you something good about itself; one that waves them off is telling you something too.",
+        ],
+      },
+      {
+        heading: "What changes when someone else drives",
+        body: [
+          "A driven transfer inverts the whole structure. The vehicle, its tyres, and whatever the road does to them are the operator's concern, not yours — your price is the fixed fare you agreed before the trip, and there is no excess because there is nothing of ours you are liable for. Whether that trade is worth it depends on your route's gravel, your appetite for roadside wheel changes, and the arithmetic — our self-drive comparison page computes both columns for your actual itinerary.",
+        ],
+      },
+    ],
+    decision: {
+      selfDriveIf: [
+        "Your route is mostly tar — check the table — and your exposure is a fraction of the headline gravel horror stories.",
+        "You have priced the cover honestly: reduced excess plus tyre-and-glass waiver for every day of the trip, not the bare day rate.",
+        "You are comfortable that a rollover on gravel may not be covered at any tier, and have read your agreement's answer.",
+      ],
+      drivenIf: [
+        "Your itinerary is gravel-heavy and the excess you would carry is money you cannot comfortably lose.",
+        "You do not want to spend a holiday supervising a contract — one fixed fare, no excess, no exclusions to memorise.",
+        "The quotes you are comparing get within a few thousand rand of each other once real cover is included — at that point you are paying almost the same money to carry the risk yourself.",
+      ],
+    },
+    routes: [],
+    journeys: [
+      "windhoek-to-sossusvlei",
+      "sossusvlei-to-swakopmund",
+      "swakopmund-to-twyfelfontein",
+    ],
+    sources: [
+      {
+        label: "Asco Car Hire, published 2026 rates and insurance terms",
+        detail:
+          "Standard excess N$40,000 for all vehicle groups; reduced and zero-excess cover sold per day. Checked September 2026.",
+      },
+      {
+        label: "Savanna Car Hire, rental conditions",
+        detail:
+          "Reduced-excess options exclude damage to tyres and windows and damage from single-vehicle accidents, including overturning, defined as incidents with no other party involved. The same pattern appears across the Windhoek operators we checked. Checked September 2026.",
+      },
+      {
+        label: "German Federal Foreign Office, Namibia driving guidance",
+        detail:
+          "Advises carrying two spare wheels on gravel because tyre damage is frequent. Checked September 2026.",
+      },
+    ],
+    updated: "2026-09-06",
+  },
+  {
+    slug: "how-far-can-you-drive-in-a-day-in-namibia",
+    kind: "decision",
+    title: "How far can you really drive in a day in Namibia?",
+    metaTitle:
+      "How Far Can You Drive in a Day in Namibia? Honest Times, Not Map-App Times",
+    metaDescription:
+      "Plan moving days around five hours of driving and be off the road before dark. Honest driving times for Namibia's long legs, computed at speeds a careful driver actually sustains — not the times a map app promises.",
+    answer:
+      "Plan your moving days around five hours behind the wheel, and treat anything over six as the whole day. On tar that is a long way; on gravel it is much less than the map suggests — and the one rule that outranks distance entirely is to be off the road before dark.",
+    sections: [
+      {
+        heading: "Why the map app is wrong here",
+        body: [
+          "Consumer map apps estimate Namibian gravel at speeds nobody should attempt — which is how travellers end up finishing a supposedly four-hour drive at dusk, tired, with wildlife moving onto the verges. Our times are computed differently: tar at 100 km/h and gravel at 65 km/h, with a rest stop included. Those are the averages a careful driver actually sustains over a whole leg, and before settling on them we tested faster gravel assumptions against published driving times and rejected them — they predict arrivals that do not happen. The full working is on our methodology page.",
+        ],
+      },
+      {
+        heading: "The long legs, honestly timed",
+        body: [
+          "These are the legs that decide itineraries. Some read as plausible day drives on a map and are not; one is two honest days however you cut it. Every figure is computed from our road network at the speeds above.",
+        ],
+        routeTable: {
+          caption: "Honest driving times for the long legs",
+          journeys: [
+            "windhoek-to-sossusvlei",
+            "sossusvlei-to-swakopmund",
+            "windhoek-to-etosha-namutoni",
+            "swakopmund-to-etosha-okaukuejo",
+            "windhoek-to-fish-river-canyon",
+            "windhoek-to-luderitz",
+            "windhoek-to-katima-mulilo",
+          ],
+        },
+      },
+      {
+        heading: "The five-hour rule",
+        body: [
+          "Five hours of Namibian driving is not five hours of motorway. Gravel demands constant small corrections; there is no cruise control and no daydreaming, and the concentration is what tires you rather than the distance. A five-hour day leaves you arriving with enough left to enjoy where you are. Back-to-back six-and-seven-hour days are how a driving holiday quietly becomes a driving job.",
+          "Sunset is the hard deadline. Kudu and warthog move at dawn and dusk, and a large animal through a windscreen at speed is the accident Namibians actually fear — it is why locals plan to be parked by nightfall, and in winter the sun is down before six. Whatever the map says, a leg that cannot finish in daylight is a leg that needs an overnight stop added.",
+        ],
+      },
+      {
+        heading: "Plan nights, not distances",
+        body: [
+          "The good itinerary question is not how far can we drive each day but where do we sleep, and does each hop between beds fit inside the five-hour rule with daylight to spare. Namibia's classic trips are loops of five to seven sleeps with one moving morning between each — the distances then take care of themselves. Our self-drive planner builds an itinerary this way, computes every leg at honest speeds, and prices what the same loop costs driven for you.",
+          "And if one leg of an otherwise comfortable loop breaks the rule — the long haul south, or a repositioning day you dread — that single leg is exactly the kind of thing you can hand to a driver who does it for a living, and fly or rest instead.",
+        ],
+      },
+    ],
+    routes: [],
+    journeys: [
+      "windhoek-to-luderitz",
+      "windhoek-to-fish-river-canyon",
+      "swakopmund-to-etosha-okaukuejo",
+    ],
+    updated: "2026-09-06",
+  },
+  {
+    slug: "self-drive-namibia-or-be-driven",
+    kind: "decision",
+    title: "Should you self-drive Namibia, or be driven?",
+    metaTitle:
+      "Self-Drive Namibia or Hire a Driver? The Honest Cost Comparison",
+    metaDescription:
+      "For the classic nine-day circuit, a driven trip costs less than a high-season 4x4 camper and more than a budget hire car — computed leg by leg from a real road model, with fuel, waivers and the excess you carry included. Who should choose which, honestly.",
+    answer:
+      "Neither is simply cheaper. Priced honestly — vehicle, fuel, tyre-and-glass waiver, and the excess you carry — a driven nine-day circuit lands below a high-season 4x4 camper and above a budget hire car, and the table below computes it. So the money rarely decides. What decides is risk, fatigue, and what you want the holiday to actually be.",
+    sections: [
+      {
+        heading: "What the usual comparison misses",
+        body: [
+          "The comparison most people make is the hire car's day rate against a driven fare, and it is wrong on both sides. The hire car also needs fuel over the whole distance — transfer legs plus all the local running at each stop — insurance cover priced per day, and your acceptance of the excess that survives that cover. The driven fare, meanwhile, contains things no brochure itemises: the driver's nights away, and the cost of bringing the car home when no return fare exists — part of every transport price in a country this empty, whether it appears on the invoice or not.",
+          "So the honest comparison is total against total, for one specific itinerary, with the risk column shown. That is what the table below does.",
+        ],
+      },
+      {
+        heading: "The classic circuit, both ways, in real money",
+        body: [
+          "Nine days: the airport, two nights at Sossusvlei, two in Swakopmund, one in Damaraland, three in Etosha, and back. Every figure is computed from our road and fare model for this exact loop — change the loop on our planner and every number recomputes.",
+        ],
+        circuitCompare: { presetId: "classic" },
+      },
+      {
+        heading: "The costs that are not money",
+        body: [
+          "Self-driving buys independence: leave when you like, stop where you like, change the plan over breakfast. It costs concentration — the classic circuit is the better part of a working week behind the wheel, half of it on gravel that allows no daydreaming — and it costs the risk you carry, which our guides to daily driving distances and hire-car excess spell out in detail.",
+          "Being driven buys the window seat: the Namib going past while someone who drives this road for a living deals with the corrugation, and nobody in your party arrives tired or spends an afternoon changing a wheel in the sun. It costs some spontaneity — the day's shape is agreed rather than improvised.",
+          "Neither of those trades is wrong. They are different holidays, and the mistake is only pretending one of them is free.",
+        ],
+      },
+      {
+        heading: "What being driven actually gets you",
+        body: [
+          "So that you are comparing real things rather than a brochure word: a driven trip with us means a fixed fare for the whole vehicle, agreed before you commit; a driver we selected and briefed, in a vehicle matched to the route's surface; your flight watched on airport pickups, so a delay costs you nothing; and no excess, because nothing of ours is your liability. What it does not mean: we are not a guiding company — your driver drives, well, and knows the road rather than the birdlife.",
+        ],
+      },
+    ],
+    decision: {
+      selfDriveIf: [
+        "The independence is the holiday — you want to change plans over breakfast, and a fixed day shape would chafe.",
+        "You have ten days or more, two drivers to share the wheel, and the five-hour daily rule fits your loop comfortably.",
+        "Your route lets a cheaper vehicle work — mostly tar, or gravel you have honestly matched the car to.",
+        "You have priced the full column: fuel, cover for every day, and an excess you could pay without wrecking the budget.",
+      ],
+      drivenIf: [
+        "Your trip is six to nine days — on short trips the driving fatigue eats the largest share of the holiday you flew here for.",
+        "You are travelling with young children or anyone for whom a breakdown two hours from help is not an acceptable plan.",
+        "This is your first time on gravel and you would spend the drive tense — the window seat is what you are actually buying.",
+        "You are a photographer: the person driving sees the least of Namibia.",
+        "The totals above land close together for your dates — at that point self-driving means paying nearly the same money to carry the risk and do the work yourself.",
+      ],
+    },
+    routes: [],
+    journeys: [
+      "windhoek-to-sossusvlei",
+      "sossusvlei-to-swakopmund",
+      "twyfelfontein-to-etosha-okaukuejo",
+      "etosha-okaukuejo-to-windhoek",
+    ],
+    sources: [
+      {
+        label: "Hire rates in the comparison",
+        detail:
+          "Day rates, the tyre-and-glass waiver and the carried excess are from our survey of published Windhoek operator rates, September 2026, converted where quoted in foreign currency. They are defaults — the planner accepts the quote you were actually given.",
       },
     ],
     updated: "2026-09-06",

@@ -3,6 +3,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ArrowRightIcon } from "lucide-react";
 
+import { CircuitCompare } from "@/components/marketing/circuit-compare";
 import { JourneyTable } from "@/components/marketing/journey-table";
 import { RouteMap } from "@/components/marketing/route-map";
 import { SiteFooter } from "@/components/marketing/site-footer";
@@ -159,6 +160,9 @@ export default async function GuidePage({ params }: PageProps) {
                 </p>
               ))}
               {section.routeTable && <JourneyTable spec={section.routeTable} />}
+              {section.circuitCompare && (
+                <CircuitCompare presetId={section.circuitCompare.presetId} />
+              )}
             </section>
           ))}
 
