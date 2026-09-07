@@ -50,7 +50,22 @@ type SdkConstructor = new (options: {
  */
 const SESSION_TTL_MS = 20 * 60 * 1000;
 
+/**
+ * The last failing response from PayToday, kept so the admin diagnostic can
+ * show it. The SDK reports an initialisation failure as a bare `false`, so
+ * without this the only record of what actually went wrong is a log line —
+ * and on our hosting plan those are gone within the hour.
+ */
+export type PayTodayFailure = {
+  status: number;
+  statusText: string;
+  url: string;
+  body: string;
+  at: string;
+};
+
 const globalForSdk = globalThis as unknown as {
+  __payTodayLastFailure?: PayTodayFailure;
   __payTodaySource?: Promise<string>;
   __payTodayCtor?: Promise<SdkConstructor>;
   __payTodaySession?: { instance: SdkInstance; createdAt: number };
@@ -129,6 +144,13 @@ function instrumentedFetch(): typeof fetch {
           : input instanceof URL
             ? input.toString()
             : input.url;
+      globalForSdk.__payTodayLastFailure = {
+        status: response.status,
+        statusText: response.statusText,
+        url,
+        body: detail,
+        at: new Date().toISOString(),
+      };
       console.error(
         `[paytoday] ${response.status} ${response.statusText} from ${url} — ${detail || "(no body)"}`
       );
@@ -363,6 +385,11 @@ export async function getPayTodaySdk(): Promise<SdkInstance> {
 
   globalForSdk.__payTodaySession = { instance, createdAt: Date.now() };
   return instance;
+}
+
+/** What PayToday last refused, if anything, for the admin diagnostic. */
+export function lastPayTodayFailure(): PayTodayFailure | null {
+  return globalForSdk.__payTodayLastFailure ?? null;
 }
 
 /** Drops the cached session and source; the next call reloads from scratch. */

@@ -3,6 +3,7 @@ import type { Metadata } from "next";
 import { AdminShell } from "@/components/admin/shell";
 import { Badge } from "@/components/ui/badge";
 import { diagnosePayToday } from "@/lib/payments/paytoday/diagnose";
+import { decodeJwtPayload } from "@/lib/payments/paytoday/jwt";
 
 export const metadata: Metadata = {
   title: "PayToday",
@@ -62,6 +63,38 @@ export default async function AdminPayTodayPage() {
             {d.detail}
           </p>
         </section>
+
+        {d.failure && (
+          <section className="bg-card rounded-xl border p-4">
+            <h2 className="text-sm font-semibold">
+              What PayToday actually returned
+            </h2>
+            <p className="text-muted-foreground mt-1 text-xs text-pretty">
+              Copy this into a support ticket. It is their endpoint and their
+              own response — not our description of it.
+            </p>
+            <dl className="mt-3 grid gap-2 text-sm">
+              <Row label="Status">
+                {d.failure.status} {d.failure.statusText}
+              </Row>
+              <Row label="Endpoint">{d.failure.url}</Row>
+              <Row label="Seen at">{d.failure.at}</Row>
+            </dl>
+            {decodeJwtPayload(d.failure.body) && (
+              <pre className="bg-muted mt-3 overflow-x-auto rounded-lg p-3 font-mono text-xs">
+                {decodeJwtPayload(d.failure.body)}
+              </pre>
+            )}
+            <details className="mt-3">
+              <summary className="text-muted-foreground cursor-pointer text-xs">
+                Raw response body
+              </summary>
+              <pre className="bg-muted mt-2 overflow-x-auto rounded-lg p-3 font-mono text-[0.7rem] break-all whitespace-pre-wrap">
+                {d.failure.body || "(empty)"}
+              </pre>
+            </details>
+          </section>
+        )}
 
         <section className="bg-card rounded-xl border p-4">
           <h2 className="text-sm font-semibold">What this deployment sends</h2>

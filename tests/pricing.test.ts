@@ -16,6 +16,7 @@ import {
   CATALOG_VEHICLE_CLASSES,
 } from "@/lib/catalog";
 import type { RouteView, VehicleClassView } from "@/lib/maps/types";
+import { decodeJwtPayload } from "@/lib/payments/paytoday/jwt";
 import { computeFare, pricingUnitLabel, unitFare } from "@/lib/pricing";
 
 let passed = 0;
@@ -182,7 +183,36 @@ check(
   !partyTooLarge(kept, classes),
 );
 
-/* -------------------------------------------------------------- the tally */
+/* ------------------------------- what the gateway said, made readable */
+
+// PayToday refuses with a signed JWT, so the reason is base64 two layers in.
+// This is the exact 403 body production returned on 7 September 2026.
+const PAYTODAY_403 =
+  '{"token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJkYXRhIjp7ImhhbmRsZSI6IjU0NDA6OmI5Y2M2NDk0NzgzMSIsInYiOiIxMi4xMi4yMDI0Iiwic3RhdHVzIjoidW5hdXRob3JpemVkIiwiZXJyb3IiOiJBdXRob3JpemF0aW9uIGVycm9yOiJ9fQ.1OQuWgGbcYQtZwmmuU_5G01HVsUwvZ1zgM9fV_-kG8Q"}';
+
+console.log("\nPayToday's refusal is decoded, not shown as base64");
+
+{
+  const decoded = decodeJwtPayload(PAYTODAY_403);
+  check("the token is decoded at all", decoded !== null);
+  check(
+    "it surfaces the unauthorized status",
+    decoded !== null && decoded.includes('"status": "unauthorized"'),
+    decoded ?? "null",
+  );
+  check(
+    "and the error string, empty though they left it",
+    decoded !== null && decoded.includes("Authorization error:"),
+  );
+  check(
+    "a body with no token decodes to nothing rather than throwing",
+    decodeJwtPayload('{"message":"plain"}') === null,
+  );
+  check(
+    "so does a malformed token",
+    decodeJwtPayload('{"token":"aaa.!!!.bbb"}') === null,
+  );
+}
 
 console.log(`\n${passed} passed, ${failed} failed`);
 if (failed > 0) process.exit(1);

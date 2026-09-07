@@ -3,7 +3,12 @@ import "server-only";
 import { SITE } from "@/lib/site";
 
 import { getPayTodayConfig, selectedPaymentProvider } from "./config";
-import { getPayTodaySdk, resetPayTodaySdk } from "./sdk";
+import {
+  getPayTodaySdk,
+  lastPayTodayFailure,
+  resetPayTodaySdk,
+  type PayTodayFailure,
+} from "./sdk";
 
 /**
  * A read-only probe of the PayToday integration, for when their support desk
@@ -37,11 +42,21 @@ export type PayTodayDiagnosis = {
   /** What came back from the authenticated call. */
   outcome: "ok" | "failed" | "not-configured";
   detail: string;
+  /**
+   * The raw refusal, when there was one — the status, endpoint and body that
+   * a support conversation actually needs. The SDK reports a failed
+   * initialise() as a bare `false`, so this is the only place the real
+   * response survives.
+   */
+  failure: PayTodayFailure | null;
 };
 
 export async function diagnosePayToday(): Promise<PayTodayDiagnosis> {
   const config = getPayTodayConfig();
-  const base: Omit<PayTodayDiagnosis, "outcome" | "detail" | "sdkLoaded"> = {
+  const base: Omit<
+    PayTodayDiagnosis,
+    "outcome" | "detail" | "sdkLoaded" | "failure"
+  > = {
     provider: selectedPaymentProvider(),
     configured: config !== null,
     keys: {
@@ -57,6 +72,7 @@ export async function diagnosePayToday(): Promise<PayTodayDiagnosis> {
     return {
       ...base,
       sdkLoaded: false,
+      failure: null,
       outcome: "not-configured",
       detail:
         "PAYTODAY_SHOP_KEY, PAYTODAY_SHOP_HANDLE and PAYTODAY_PRIVATE_KEY must all be set on this deployment. The guide is explicit that the private key alone is not functional.",
@@ -78,6 +94,7 @@ export async function diagnosePayToday(): Promise<PayTodayDiagnosis> {
     return {
       ...base,
       sdkLoaded,
+      failure: null,
       outcome: "ok",
       detail:
         "Authenticated successfully and the query was answered. The 403 is not reproducing: payments should work.",
@@ -95,6 +112,7 @@ export async function diagnosePayToday(): Promise<PayTodayDiagnosis> {
     return {
       ...base,
       sdkLoaded,
+      failure: looksLikeNotFound ? null : lastPayTodayFailure(),
       outcome: looksLikeNotFound ? "ok" : "failed",
       detail: looksLikeNotFound
         ? `Authenticated. PayToday rejected the deliberately invalid probe token, which is the correct answer: "${message}"`
