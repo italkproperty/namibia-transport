@@ -171,6 +171,19 @@
   }
 
   /* Prices, counts and table figures must not jitter as they change. */
+  /**
+   * One focus treatment for the whole site. There were five — a 3px ring, a
+   * 50%-alpha ring at 2.15:1, a ring-offset variant, a background tint at
+   * 1.11:1, and four link groups with nothing at all. A keyboard user could
+   * watch the indicator change strength while tabbing one header.
+   */
+  .focus-ring {
+    &:focus-visible {
+      outline: none;
+      box-shadow: 0 0 0 3px var(--ring);
+    }
+  }
+
   .tabular {
     font-variant-numeric: tabular-nums;
     font-feature-settings: "tnum";

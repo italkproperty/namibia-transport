@@ -4,8 +4,10 @@ import { Logo } from "@/components/brand/logo";
 import { MobileMenu } from "@/components/marketing/mobile-menu";
 import { NAV_LINKS, type NavRoute } from "@/components/marketing/nav-data";
 import { NavLink } from "@/components/marketing/nav-link";
+import { PlanMenu } from "@/components/marketing/plan-menu";
 import { RouteMenu } from "@/components/marketing/route-menu";
 import { Button } from "@/components/ui/button";
+import { MessageCircleIcon } from "lucide-react";
 import { getCompanyInfo, whatsappLink } from "@/lib/company";
 import { formatDuration, shortPlace } from "@/lib/format";
 import { listRoutes } from "@/lib/maps";
@@ -51,11 +53,15 @@ export async function SiteHeader() {
           <Logo />
         </Link>
 
+        {/* Four targets, not seven. The old bar needed roughly 930px and was
+            switched on at 640, so it wrapped inside a fixed h-14 on every
+            tablet and small laptop. At four items lg is honest. */}
         <nav
           aria-label="Main"
-          className="ml-auto hidden items-center gap-6 sm:flex"
+          className="ml-auto hidden items-center gap-6 lg:flex"
         >
           {navRoutes.length > 0 && <RouteMenu routes={navRoutes} />}
+          <PlanMenu />
           {NAV_LINKS.map((link) => (
             <NavLink key={link.href} href={link.href}>
               {link.label}
@@ -63,9 +69,27 @@ export async function SiteHeader() {
           ))}
         </nav>
 
-        <div className="ml-auto flex items-center gap-2 sm:ml-0">
-          <Button asChild size="sm" className="press hidden sm:inline-flex">
-            <Link href="/#quote">Book</Link>
+        <div className="ml-auto flex items-center gap-2 lg:ml-0">
+          {/* WhatsApp is the main customer channel, and the desktop header
+              computed this href and then threw it away — phones got the real
+              channel, desktop got a link to a contact page. */}
+          {whatsappHref && (
+            <a
+              href={whatsappHref}
+              target="_blank"
+              rel="noopener noreferrer"
+              aria-label="WhatsApp us"
+              className="press focus-ring text-muted-foreground hover:text-foreground hidden size-9 items-center justify-center rounded-md lg:inline-flex"
+            >
+              <MessageCircleIcon className="size-4" aria-hidden />
+            </a>
+          )}
+          {/* "Get a price" rather than "Book": it is what the button does —
+              it goes to a price, before any commitment — and cold traffic
+              that has not landed in the country is not ready to be asked to
+              book. */}
+          <Button asChild size="sm" className="press h-9">
+            <Link href="/#quote">Get a price</Link>
           </Button>
           <MobileMenu routes={navRoutes} whatsappHref={whatsappHref} />
         </div>

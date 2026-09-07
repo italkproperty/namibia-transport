@@ -13,7 +13,8 @@ import {
   SheetTrigger,
 } from "@/components/ui/sheet";
 import {
-  NAV_GUIDES,
+  ARRIVAL_GUIDES,
+  DECISION_GUIDES,
   NAV_LINKS,
   type NavRoute,
 } from "@/components/marketing/nav-data";
@@ -44,7 +45,7 @@ export function MobileMenu({
         <Button
           variant="ghost"
           size="icon"
-          className="press sm:hidden"
+          className="press focus-ring size-11 sm:size-10 lg:hidden"
           aria-label="Open menu"
         >
           <MenuIcon className="size-5" aria-hidden />
@@ -55,18 +56,37 @@ export function MobileMenu({
         <SheetTitle className="sr-only">Menu</SheetTitle>
 
         <nav aria-label="Mobile" className="p-4 pt-14">
-          <p className="text-muted-foreground px-1 pb-2 text-[0.7rem] font-medium tracking-wide uppercase">
+          {/* Actions first. They were below twenty-five links, at the bottom
+              of a scroll, on the surface most likely to be opened by someone
+              standing in an arrivals hall. */}
+          <div className="grid gap-2 pb-5">
+            <Button asChild className="press focus-ring w-full">
+              <Link href="/#quote" onClick={() => setOpen(false)}>
+                Get a price
+              </Link>
+            </Button>
+            {whatsappHref && (
+              <Button asChild variant="outline" className="press focus-ring w-full">
+                <a href={whatsappHref} target="_blank" rel="noopener noreferrer">
+                  <MessageCircleIcon className="size-4" aria-hidden />
+                  WhatsApp us
+                </a>
+              </Button>
+            )}
+          </div>
+
+          <p className="text-muted-foreground px-1 pb-2 text-xs font-semibold tracking-[0.08em] uppercase">
             Transfers
           </p>
           <ul className="grid gap-0.5">
             {routes.map((route) => (
-              <li key={route.slug}>
+              <li key={route.slug} className="min-w-0">
                 <Link
                   href={`/transfers/${route.slug}`}
-                  className="hover:bg-muted flex items-baseline justify-between gap-3 rounded-lg px-3 py-2.5"
+                  className="hover:bg-muted focus-ring flex items-start justify-between gap-3 rounded-lg px-3 py-2.5"
                 >
-                  <span className="min-w-0">
-                    <span className="block truncate text-sm">
+                  <span className="min-w-0 flex-1">
+                    <span className="block text-sm leading-snug">
                       {route.from} → {route.to}
                     </span>
                     {route.duration && (
@@ -84,35 +104,34 @@ export function MobileMenu({
             <li>
               <Link
                 href="/transfers"
-                className="text-muted-foreground hover:text-foreground block px-3 py-2 text-sm underline underline-offset-2"
+                className="text-muted-foreground hover:text-foreground focus-ring block rounded-lg px-3 py-2 text-sm underline underline-offset-2"
               >
                 Every route and price
               </Link>
             </li>
           </ul>
 
-          <p className="text-muted-foreground px-1 pt-5 pb-2 text-[0.7rem] font-medium tracking-wide uppercase">
-            Planning your arrival
-          </p>
-          <ul className="grid gap-0.5">
-            {NAV_GUIDES.map((guide) => (
-              <li key={guide.href}>
-                <Link
-                  href={guide.href}
-                  className="hover:bg-muted block rounded-lg px-3 py-2 text-sm leading-snug"
-                >
-                  {guide.label}
-                </Link>
-              </li>
-            ))}
-          </ul>
+          <GuideGroup title="Arriving in Namibia" items={ARRIVAL_GUIDES} />
+          <GuideGroup
+            title="Self-drive or be driven"
+            items={[
+              { href: "/self-drive", label: "Compare the real cost" },
+              ...DECISION_GUIDES,
+            ]}
+          />
+          <GuideGroup
+            title="Our numbers"
+            items={[
+              { href: "/methodology", label: "How we compute our numbers" },
+            ]}
+          />
 
           <ul className="mt-5 grid gap-0.5 border-t pt-4">
             {NAV_LINKS.map((link) => (
               <li key={link.href}>
                 <Link
                   href={link.href}
-                  className="hover:bg-muted block rounded-lg px-3 py-2.5 text-sm font-medium"
+                  className="hover:bg-muted focus-ring block rounded-lg px-3 py-2.5 text-sm font-medium"
                 >
                   {link.label}
                 </Link>
@@ -120,21 +139,38 @@ export function MobileMenu({
             ))}
           </ul>
 
-          <div className="mt-5 grid gap-2">
-            <Button asChild className="press w-full">
-              <Link href="/#quote">Book a transfer</Link>
-            </Button>
-            {whatsappHref && (
-              <Button asChild variant="outline" className="press w-full">
-                <a href={whatsappHref}>
-                  <MessageCircleIcon className="size-4" aria-hidden />
-                  WhatsApp us
-                </a>
-              </Button>
-            )}
-          </div>
         </nav>
       </SheetContent>
     </Sheet>
+  );
+}
+
+function GuideGroup({
+  title,
+  items,
+}: {
+  title: string;
+  items: { href: string; label: string }[];
+}) {
+  if (items.length === 0) return null;
+
+  return (
+    <>
+      <p className="text-muted-foreground px-1 pt-5 pb-2 text-xs font-semibold tracking-[0.08em] uppercase">
+        {title}
+      </p>
+      <ul className="grid gap-0.5">
+        {items.map((item) => (
+          <li key={item.href}>
+            <Link
+              href={item.href}
+              className="hover:bg-muted focus-ring block rounded-lg px-3 py-2 text-sm leading-snug"
+            >
+              {item.label}
+            </Link>
+          </li>
+        ))}
+      </ul>
+    </>
   );
 }

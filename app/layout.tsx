@@ -69,6 +69,14 @@ export default function RootLayout({
       <body
         className={`${geistSans.variable} ${archivo.variable} font-sans antialiased`}
       >
+        {/* The <main id="main"> was already there; the link to it was not, so
+            a keyboard user tabbed the whole header on every page. */}
+        <a
+          href="#main"
+          className="focus-ring bg-card text-foreground sr-only rounded-md px-4 py-2 text-sm font-medium focus:not-sr-only focus:fixed focus:top-3 focus:left-3 focus:z-50"
+        >
+          Skip to content
+        </a>
         {children}
         <Toaster />
               <SiteSchema />

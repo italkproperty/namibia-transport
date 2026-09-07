@@ -50,12 +50,11 @@ export function RouteMenu({ routes }: { routes: NavRoute[] }) {
           setOpen(true);
         }}
         onMouseLeave={scheduleClose}
-        className="text-muted-foreground hover:text-foreground focus-visible:ring-ring data-[state=open]:text-foreground inline-flex items-center gap-1 rounded-sm text-sm transition-colors focus-visible:ring-[3px] focus-visible:outline-none"
+        className="press focus-ring text-muted-foreground hover:text-foreground data-[state=open]:text-foreground group inline-flex items-center gap-1 rounded-sm text-sm"
       >
         Transfers
         <ChevronDownIcon
-          className="size-3.5 transition-transform duration-200 data-[open=true]:rotate-180"
-          data-open={open}
+          className="size-3.5 transition-transform duration-200 group-data-[state=open]:rotate-180"
           aria-hidden
         />
       </PopoverTrigger>
@@ -75,7 +74,7 @@ export function RouteMenu({ routes }: { routes: NavRoute[] }) {
         <Link
           href="/transfers"
           onClick={() => setOpen(false)}
-          className="text-muted-foreground hover:text-foreground flex items-center justify-between border-t px-4 py-2.5 text-xs transition-colors"
+          className="text-muted-foreground hover:text-foreground focus-ring flex items-center justify-between border-t px-4 py-2.5 text-xs transition-colors"
         >
           Every route and price
           <ArrowRightIcon className="size-3.5" aria-hidden />
@@ -87,9 +86,18 @@ export function RouteMenu({ routes }: { routes: NavRoute[] }) {
         <Link
           href="/journey"
           onClick={() => setOpen(false)}
-          className="text-muted-foreground hover:text-foreground flex items-center justify-between border-t px-4 py-2.5 text-xs transition-colors"
+          className="text-muted-foreground hover:text-foreground focus-ring flex items-center justify-between border-t px-4 py-2.5 text-xs transition-colors"
         >
           Price any other journey — coast to dunes, park to park
+          <ArrowRightIcon className="size-3.5" aria-hidden />
+        </Link>
+
+        <Link
+          href="/vehicles"
+          onClick={() => setOpen(false)}
+          className="text-muted-foreground hover:text-foreground focus-ring flex items-center justify-between border-t px-4 py-2.5 text-xs transition-colors"
+        >
+          The vehicles — what each class seats and carries
           <ArrowRightIcon className="size-3.5" aria-hidden />
         </Link>
       </PopoverContent>
@@ -115,14 +123,14 @@ function Column({
       </p>
       <ul>
         {routes.map((route) => (
-          <li key={route.slug}>
+          <li key={route.slug} className="min-w-0">
             <Link
               href={`/transfers/${route.slug}`}
               onClick={onPick}
-              className="hover:bg-muted focus-visible:bg-muted group flex items-baseline justify-between gap-3 rounded-md px-3 py-2 focus-visible:outline-none"
+              className="hover:bg-muted focus-ring group flex items-start justify-between gap-3 rounded-md px-3 py-2"
             >
-              <span className="min-w-0">
-                <span className="block truncate text-sm">
+              <span className="min-w-0 flex-1">
+                <span className="block text-sm leading-snug">
                   {route.from} → {route.to}
                 </span>
                 {route.duration && (
