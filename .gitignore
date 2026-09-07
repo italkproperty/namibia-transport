@@ -42,3 +42,8 @@ next-env.d.ts
 
 # keep the placeholder template tracked
 !.env.example
+
+# Throwaway browser-driving scripts. They live in the repo root because that
+# is where Node resolves playwright from, not because they belong to the
+# project — they are written, run once against a local build, and deleted.
+/.*.mjs
