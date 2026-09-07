@@ -58,7 +58,7 @@ export default async function Image({
           display: "flex",
           flexDirection: "column",
           justifyContent: "space-between",
-          background: "#fcfaf7",
+          background: "#f3f4f6",
           padding: 72,
           fontFamily: "sans-serif",
         }}
@@ -69,31 +69,31 @@ export default async function Image({
               width: 52,
               height: 52,
               borderRadius: 13,
-              background: "#1a1614",
+              background: "#14181f",
               display: "flex",
               alignItems: "center",
               justifyContent: "center",
-              color: "#fcfaf7",
+              color: "#f3f4f6",
               fontSize: 31,
               fontWeight: 700,
             }}
           >
             N
           </div>
-          <div style={{ fontSize: 28, fontWeight: 600, color: "#1a1614" }}>
+          <div style={{ fontSize: 28, fontWeight: 600, color: "#14181f" }}>
             {SITE.name}
           </div>
         </div>
 
         <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
-          <div style={{ fontSize: 26, color: "#6a635e", letterSpacing: 1 }}>
+          <div style={{ fontSize: 26, color: "#61666f", letterSpacing: 1 }}>
             PRIVATE TRANSFER
           </div>
           <div
             style={{
               fontSize: 58,
               fontWeight: 600,
-              color: "#1a1614",
+              color: "#14181f",
               lineHeight: 1.12,
               maxWidth: 1000,
             }}
@@ -101,7 +101,7 @@ export default async function Image({
             {from} → {to}
           </div>
           {(distance || duration) && (
-            <div style={{ fontSize: 28, color: "#6a635e" }}>
+            <div style={{ fontSize: 28, color: "#61666f" }}>
               {[distance, duration && `about ${duration}`]
                 .filter(Boolean)
                 .join("  ·  ")}
@@ -117,12 +117,12 @@ export default async function Image({
           }}
         >
           <div style={{ display: "flex", alignItems: "baseline", gap: 14 }}>
-            <div style={{ fontSize: 76, fontWeight: 700, color: "#bc4b00" }}>
+            <div style={{ fontSize: 76, fontWeight: 700, color: "#0b4f8f" }}>
               {price}
             </div>
-            <div style={{ fontSize: 28, color: "#6a635e" }}>{unit}</div>
+            <div style={{ fontSize: 28, color: "#61666f" }}>{unit}</div>
           </div>
-          <div style={{ fontSize: 24, color: "#6a635e" }}>
+          <div style={{ fontSize: 24, color: "#61666f" }}>
             namibiatransport.com
           </div>
         </div>

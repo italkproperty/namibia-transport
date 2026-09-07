@@ -31,6 +31,27 @@ export function HomeQuote({
 }) {
   const trip = useTrip(routes, vehicleClasses, initialTrip);
 
+  /**
+   * Six chips, chosen once at mount and then held still.
+   *
+   * Seven routes filled two rows of three and left the seventh alone in a
+   * third, which reads as an unfinished grid — but a flat `slice(0, 6)` drops
+   * whichever route someone arrived on from a link, leaving the row with no
+   * selection at all. So the selected route is swapped into the last slot if
+   * it would otherwise be cut. Fixed at mount rather than recomputed, because
+   * a chip that vanishes the moment you click a different one is worse than
+   * either problem it solves. The full list stays in the header menu and the
+   * footer.
+   */
+  const [visibleRoutes] = React.useState(() => {
+    const shown = routes.slice(0, 6);
+    const selected = initialTrip?.routeSlug;
+    if (!selected || shown.some((r) => r.slug === selected)) return shown;
+
+    const missing = routes.find((r) => r.slug === selected);
+    return missing ? [...shown.slice(0, 5), missing] : shown;
+  });
+
   const selectRoute = React.useCallback(
     (slug: string) => {
       trip?.setRouteSlug(slug);
@@ -57,7 +78,7 @@ export function HomeQuote({
           Popular routes
         </h2>
         <ul className="grid gap-2 sm:grid-cols-3">
-          {routes.map((route) => {
+          {visibleRoutes.map((route) => {
             const isSelected = route.slug === trip.routeSlug;
             // Chips advertise the from-price for one unit (seat or vehicle).
             const routeFare = unitFare(route, trip.vehicleClass);

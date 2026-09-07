@@ -8,6 +8,7 @@
  * renders without the route line.
  */
 import { staticRouteMapUrl } from "@/lib/maps/mapbox";
+import { BRAND_COLORS, mapHex } from "@/lib/brand-colors";
 
 let passed = 0;
 let failed = 0;
@@ -58,13 +59,16 @@ check("auto-fits rather than guessing a zoom", url.includes("/auto/"));
 // Mapbox takes lng,lat — reversing this puts Windhoek in the Indian Ocean.
 check(
   "origin pin is lng,lat not lat,lng",
-  url.includes("pin-s%2B1a1614(17.470900%2C-22.479900)") ||
-    url.includes("pin-s+1a1614(17.470900,-22.479900)"),
+  decodeURIComponent(url).includes(
+      `pin-s+${mapHex(BRAND_COLORS.ink)}(17.470900,-22.479900)`,
+    ),
   decodeURIComponent(url)
 );
 check(
   "destination pin present and brand-coloured",
-  decodeURIComponent(url).includes("pin-s+bc4b00(17.065800,-22.560900)")
+  decodeURIComponent(url).includes(
+    `pin-s+${mapHex(BRAND_COLORS.brand)}(17.065800,-22.560900)`,
+  )
 );
 check("no route line when there is no geometry", !url.includes("path-4"));
 

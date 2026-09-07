@@ -3,6 +3,7 @@ import { formatDateTime } from "@/lib/format";
 import { mapsLink } from "@/lib/maps/bounds";
 import { formatNad } from "@/lib/money";
 import { SITE } from "@/lib/site";
+import { BRAND_COLORS as C } from "@/lib/brand-colors";
 
 /**
  * The booking confirmation, written once and rendered for both channels.
@@ -117,15 +118,15 @@ export function confirmationText(details: ConfirmationDetails): string {
 export function confirmationHtml(details: ConfirmationDetails): string {
   const row = (label: string, value: string) =>
     `<tr>
-      <td style="padding:6px 16px 6px 0;color:#6a635e;font-size:14px;white-space:nowrap;vertical-align:top">${esc(label)}</td>
-      <td style="padding:6px 0;color:#1a1614;font-size:14px;font-weight:500">${esc(value)}</td>
+      <td style="padding:6px 16px 6px 0;color:${C.muted};font-size:14px;white-space:nowrap;vertical-align:top">${esc(label)}</td>
+      <td style="padding:6px 0;color:${C.ink};font-size:14px;font-weight:500">${esc(value)}</td>
     </tr>`;
 
   const pinRow = (label: string, point: { lat: number; lng: number }) =>
     `<tr>
-      <td style="padding:6px 16px 6px 0;color:#6a635e;font-size:14px;white-space:nowrap;vertical-align:top">${esc(label)}</td>
+      <td style="padding:6px 16px 6px 0;color:${C.muted};font-size:14px;white-space:nowrap;vertical-align:top">${esc(label)}</td>
       <td style="padding:6px 0;font-size:14px">
-        <a href="${esc(mapsLink(point))}" style="color:#bc4b00;font-weight:500">Check the pinned spot</a>
+        <a href="${esc(mapsLink(point))}" style="color:${C.brand};font-weight:500">Check the pinned spot</a>
       </td>
     </tr>`;
 
@@ -148,7 +149,7 @@ export function confirmationHtml(details: ConfirmationDetails): string {
   const pins = (details.pickupPin ? 1 : 0) + (details.dropoffPin ? 1 : 0);
   const pinNote =
     pins > 0
-      ? `<p style="margin:0 0 18px;color:#6a635e;font-size:14px;line-height:1.5">
+      ? `<p style="margin:0 0 18px;color:${C.muted};font-size:14px;line-height:1.5">
            Worth opening ${pins === 1 ? "that link" : "those links"} to check the spot is right. It is a
            one-minute fix now and a problem on the day.
          </p>`
@@ -163,17 +164,17 @@ export function confirmationHtml(details: ConfirmationDetails): string {
   ]
     .map(
       (step) =>
-        `<li style="margin:0 0 6px;color:#1a1614;font-size:14px;line-height:1.5">${step}</li>`,
+        `<li style="margin:0 0 6px;color:${C.ink};font-size:14px;line-height:1.5">${step}</li>`,
     )
     .join("");
 
   const payLine = details.checkoutUrl
-    ? `<a href="${esc(details.checkoutUrl)}" style="display:inline-block;background:#bc4b00;color:#fcfaf7;text-decoration:none;padding:11px 20px;border-radius:6px;font-size:14px;font-weight:600">Pay now</a>`
-    : `<p style="margin:0;color:#6a635e;font-size:14px;line-height:1.5">Nothing has been charged. You can pay by card from your booking page, or settle on the day.</p>`;
+    ? `<a href="${esc(details.checkoutUrl)}" style="display:inline-block;background:${C.brand};color:${C.paper};text-decoration:none;padding:11px 20px;border-radius:6px;font-size:14px;font-weight:600">Pay now</a>`
+    : `<p style="margin:0;color:${C.muted};font-size:14px;line-height:1.5">Nothing has been charged. You can pay by card from your booking page, or settle on the day.</p>`;
 
   const support = details.supportWhatsapp
-    ? `<p style="margin:0 0 6px;color:#6a635e;font-size:13px;line-height:1.5">
-         Questions? <a href="${esc(whatsappLink(details.supportWhatsapp, `Hi — about booking ${details.ref}.`))}" style="color:#1a1614">WhatsApp us</a>
+    ? `<p style="margin:0 0 6px;color:${C.muted};font-size:13px;line-height:1.5">
+         Questions? <a href="${esc(whatsappLink(details.supportWhatsapp, `Hi — about booking ${details.ref}.`))}" style="color:${C.ink}">WhatsApp us</a>
          and quote ${esc(details.ref)} — we can see your whole trip.
        </p>`
     : "";
@@ -181,39 +182,39 @@ export function confirmationHtml(details: ConfirmationDetails): string {
   return `<!doctype html>
 <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width">
 <title>${esc(confirmationSubject(details))}</title></head>
-<body style="margin:0;padding:0;background:#fcfaf7;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif">
+<body style="margin:0;padding:0;background:${C.paper};font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif">
   <div style="display:none;max-height:0;overflow:hidden;opacity:0">Reference ${esc(details.ref)} — ${esc(details.routeLabel)}, ${esc(formatDateTime(details.scheduledAt))}.</div>
-  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#fcfaf7">
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:${C.paper}">
     <tr><td align="center" style="padding:28px 16px">
-      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:560px;background:#ffffff;border:1px solid #e2dfdb;border-radius:14px">
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:560px;background:#ffffff;border:1px solid ${C.line};border-radius:14px">
         <tr><td style="padding:28px">
 
-          <p style="margin:0 0 4px;letter-spacing:0.14em;text-transform:uppercase;font-size:11px;font-weight:600;color:#bc4b00">${esc(SITE.name)}</p>
-          <h1 style="margin:0 0 6px;font-size:22px;line-height:1.25;color:#1a1614">Your transfer is booked</h1>
-          <p style="margin:0 0 18px;color:#6a635e;font-size:14px;line-height:1.5">Hi ${esc(details.fullName)} — here is everything on file. Quote your reference any time you message us.</p>
+          <p style="margin:0 0 4px;letter-spacing:0.14em;text-transform:uppercase;font-size:11px;font-weight:600;color:${C.brand}">${esc(SITE.name)}</p>
+          <h1 style="margin:0 0 6px;font-size:22px;line-height:1.25;color:${C.ink}">Your transfer is booked</h1>
+          <p style="margin:0 0 18px;color:${C.muted};font-size:14px;line-height:1.5">Hi ${esc(details.fullName)} — here is everything on file. Quote your reference any time you message us.</p>
 
-          <div style="background:#fcfaf7;border:1px solid #e2dfdb;border-radius:10px;padding:14px 16px;margin:0 0 18px">
-            <p style="margin:0 0 2px;color:#6a635e;font-size:12px">Your reference</p>
-            <p style="margin:0;color:#1a1614;font-size:22px;font-weight:700;letter-spacing:0.06em">${esc(details.ref)}</p>
+          <div style="background:${C.paper};border:1px solid ${C.line};border-radius:10px;padding:14px 16px;margin:0 0 18px">
+            <p style="margin:0 0 2px;color:${C.muted};font-size:12px">Your reference</p>
+            <p style="margin:0;color:${C.ink};font-size:22px;font-weight:700;letter-spacing:0.06em">${esc(details.ref)}</p>
           </div>
 
-          <table role="presentation" cellpadding="0" cellspacing="0" style="width:100%;border-top:1px solid #e2dfdb;margin:0 0 16px">${rows}</table>
+          <table role="presentation" cellpadding="0" cellspacing="0" style="width:100%;border-top:1px solid ${C.line};margin:0 0 16px">${rows}</table>
           ${pinNote}
 
-          <p style="margin:0 0 4px;color:#1a1614;font-size:14px;font-weight:600">Total, all in</p>
-          <p style="margin:0 0 18px;color:#bc4b00;font-size:26px;font-weight:700">${esc(formatNad(details.total))}</p>
+          <p style="margin:0 0 4px;color:${C.ink};font-size:14px;font-weight:600">Total, all in</p>
+          <p style="margin:0 0 18px;color:${C.brand};font-size:26px;font-weight:700">${esc(formatNad(details.total))}</p>
           ${payLine}
 
-          <p style="margin:22px 0 6px;color:#1a1614;font-size:14px;font-weight:600">What happens next</p>
+          <p style="margin:22px 0 6px;color:${C.ink};font-size:14px;font-weight:600">What happens next</p>
           <ol style="margin:0 0 18px;padding-left:20px">${steps}</ol>
 
           <p style="margin:0 0 18px;font-size:14px">
-            <a href="${esc(`${SITE.url}/booking/${details.ref}`)}" style="color:#bc4b00;font-weight:500">View your booking page</a>
+            <a href="${esc(`${SITE.url}/booking/${details.ref}`)}" style="color:${C.brand};font-weight:500">View your booking page</a>
           </p>
 
-          <div style="border-top:1px solid #e2dfdb;padding-top:14px">
+          <div style="border-top:1px solid ${C.line};padding-top:14px">
             ${support}
-            <p style="margin:0;color:#6a635e;font-size:13px">Coordination ${esc(SUPPORT.officeHours)}.</p>
+            <p style="margin:0;color:${C.muted};font-size:13px">Coordination ${esc(SUPPORT.officeHours)}.</p>
           </div>
 
         </td></tr>
@@ -295,8 +296,8 @@ export function assignmentText(details: AssignmentDetails): string {
 export function assignmentHtml(details: AssignmentDetails): string {
   const row = (label: string, value: string) =>
     `<tr>
-      <td style="padding:6px 16px 6px 0;color:#6a635e;font-size:14px;white-space:nowrap">${esc(label)}</td>
-      <td style="padding:6px 0;color:#1a1614;font-size:14px;font-weight:500">${esc(value)}</td>
+      <td style="padding:6px 16px 6px 0;color:${C.muted};font-size:14px;white-space:nowrap">${esc(label)}</td>
+      <td style="padding:6px 0;color:${C.ink};font-size:14px;font-weight:500">${esc(value)}</td>
     </tr>`;
 
   const rows = [
@@ -308,19 +309,19 @@ export function assignmentHtml(details: AssignmentDetails): string {
   ].join("");
 
   const plate = details.registration
-    ? `<div style="background:#fcfaf7;border:1px solid #e2dfdb;border-radius:10px;padding:14px 16px;margin:0 0 18px">
-         <p style="margin:0 0 2px;color:#6a635e;font-size:12px">Registration</p>
-         <p style="margin:0;color:#1a1614;font-size:22px;font-weight:700;letter-spacing:0.06em">${esc(details.registration)}</p>
+    ? `<div style="background:${C.paper};border:1px solid ${C.line};border-radius:10px;padding:14px 16px;margin:0 0 18px">
+         <p style="margin:0 0 2px;color:${C.muted};font-size:12px">Registration</p>
+         <p style="margin:0;color:${C.ink};font-size:22px;font-weight:700;letter-spacing:0.06em">${esc(details.registration)}</p>
        </div>`
     : "";
 
   const meeting = details.meetingNote
-    ? `<p style="margin:0 0 18px;color:#6a635e;font-size:14px;line-height:1.5">${esc(details.meetingNote)}</p>`
+    ? `<p style="margin:0 0 18px;color:${C.muted};font-size:14px;line-height:1.5">${esc(details.meetingNote)}</p>`
     : "";
 
   const support = details.supportWhatsapp
-    ? `<p style="margin:0;color:#6a635e;font-size:13px;line-height:1.5">
-         Cannot find them? <a href="${esc(whatsappLink(details.supportWhatsapp, `Hi — I cannot find my driver for ${details.ref}.`))}" style="color:#1a1614">Message us</a>
+    ? `<p style="margin:0;color:${C.muted};font-size:13px;line-height:1.5">
+         Cannot find them? <a href="${esc(whatsappLink(details.supportWhatsapp, `Hi — I cannot find my driver for ${details.ref}.`))}" style="color:${C.ink}">Message us</a>
          and quote ${esc(details.ref)} — we are in contact with your driver.
        </p>`
     : "";
@@ -328,22 +329,22 @@ export function assignmentHtml(details: AssignmentDetails): string {
   return `<!doctype html>
 <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width">
 <title>${esc(assignmentSubject(details))}</title></head>
-<body style="margin:0;padding:0;background:#fcfaf7;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif">
+<body style="margin:0;padding:0;background:${C.paper};font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif">
   <div style="display:none;max-height:0;overflow:hidden;opacity:0">${esc(details.driverName)}${details.registration ? `, ${esc(details.registration)}` : ""} — ${esc(formatDateTime(details.scheduledAt))}.</div>
-  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#fcfaf7">
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:${C.paper}">
     <tr><td align="center" style="padding:28px 16px">
-      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:560px;background:#ffffff;border:1px solid #e2dfdb;border-radius:14px">
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:560px;background:#ffffff;border:1px solid ${C.line};border-radius:14px">
         <tr><td style="padding:28px">
-          <p style="margin:0 0 4px;letter-spacing:0.14em;text-transform:uppercase;font-size:11px;font-weight:600;color:#bc4b00">${esc(SITE.name)} &middot; ${esc(details.ref)}</p>
-          <h1 style="margin:0 0 6px;font-size:22px;line-height:1.25;color:#1a1614">Your driver is ${esc(details.driverName)}</h1>
-          <p style="margin:0 0 18px;color:#6a635e;font-size:14px;line-height:1.5">Hi ${esc(details.fullName)} — this is who to look for.</p>
+          <p style="margin:0 0 4px;letter-spacing:0.14em;text-transform:uppercase;font-size:11px;font-weight:600;color:${C.brand}">${esc(SITE.name)} &middot; ${esc(details.ref)}</p>
+          <h1 style="margin:0 0 6px;font-size:22px;line-height:1.25;color:${C.ink}">Your driver is ${esc(details.driverName)}</h1>
+          <p style="margin:0 0 18px;color:${C.muted};font-size:14px;line-height:1.5">Hi ${esc(details.fullName)} — this is who to look for.</p>
           ${plate}
-          <table role="presentation" cellpadding="0" cellspacing="0" style="width:100%;border-top:1px solid #e2dfdb;margin:0 0 16px">${rows}</table>
+          <table role="presentation" cellpadding="0" cellspacing="0" style="width:100%;border-top:1px solid ${C.line};margin:0 0 16px">${rows}</table>
           ${meeting}
           <p style="margin:0 0 18px;font-size:14px">
-            <a href="${esc(`${SITE.url}/booking/${details.ref}`)}" style="color:#bc4b00;font-weight:500">View your booking page</a>
+            <a href="${esc(`${SITE.url}/booking/${details.ref}`)}" style="color:${C.brand};font-weight:500">View your booking page</a>
           </p>
-          <div style="border-top:1px solid #e2dfdb;padding-top:14px">${support}</div>
+          <div style="border-top:1px solid ${C.line};padding-top:14px">${support}</div>
         </td></tr>
       </table>
     </td></tr>

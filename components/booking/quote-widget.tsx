@@ -189,12 +189,49 @@ export function QuoteWidget({
  * actually look at, so it is the last place that should differ.
  */
 export function VehicleToggle({ trip }: { trip: TripState }) {
+  const group = React.useRef<HTMLDivElement | null>(null);
+
+  /**
+   * A radiogroup is one tab stop, and the arrow keys move within it. The
+   * markup already claimed those roles; without this the group was five tab
+   * stops and the arrow keys did nothing, so a keyboard user got a control
+   * that announced one behaviour and performed another. Disabled options are
+   * skipped, because a vehicle too small for the party is not a choice.
+   */
+  const onKeyDown = (event: React.KeyboardEvent<HTMLDivElement>) => {
+    const step =
+      event.key === "ArrowRight" || event.key === "ArrowDown"
+        ? 1
+        : event.key === "ArrowLeft" || event.key === "ArrowUp"
+          ? -1
+          : 0;
+    if (step === 0) return;
+
+    const options = trip.vehicleClasses.filter(
+      (c) =>
+        c.capacity >= trip.passengers && c.luggageCapacity >= trip.luggage,
+    );
+    if (options.length < 2) return;
+
+    event.preventDefault();
+    const at = options.findIndex((c) => c.id === trip.vehicleClass.id);
+    const next = options[(at + step + options.length) % options.length];
+    trip.setVehicleClassId(next.id);
+
+    // Selection follows focus in a radiogroup, so focus has to follow it back.
+    group.current
+      ?.querySelector<HTMLButtonElement>(`[data-class-id="${next.id}"]`)
+      ?.focus();
+  };
+
   return (
     <div className="grid gap-1.5">
       <span className="text-muted-foreground text-xs font-medium">Vehicle</span>
       <div
+        ref={group}
         role="radiogroup"
         aria-label="Vehicle class"
+        onKeyDown={onKeyDown}
         className="bg-muted grid grid-cols-2 gap-1 rounded-md p-1"
       >
         {trip.vehicleClasses.map((vehicleClass) => {
@@ -214,12 +251,22 @@ export function VehicleToggle({ trip }: { trip: TripState }) {
               key={id}
               type="button"
               role="radio"
+              data-class-id={id}
               aria-checked={isSelected}
-              aria-label={`${name}, ${formatNad(fare)} per vehicle, seats ${capacity}, ${vehicleClass.luggageCapacity} large cases`}
+              // Only the checked option is in the tab order; the arrow keys
+              // reach the rest. Announcing the fare here and a different one
+              // in the visible line below is how a screen-reader user ends up
+              // quoted a price the page never showed, so both read
+              // `unitFares` — the number actually on screen.
+              tabIndex={isSelected ? 0 : -1}
+              aria-label={`${name}, ${formatNad(trip.unitFares.get(id) ?? fare)} ${trip.unitLabel}, seats ${capacity}, ${vehicleClass.luggageCapacity} large cases`}
               disabled={tooSmall}
               onClick={() => trip.setVehicleClassId(id)}
               className={[
-                "press focus-visible:ring-ring rounded px-2 py-1.5 text-left focus-visible:ring-[3px] focus-visible:outline-none disabled:opacity-40",
+                // 40% put the "seats 3 · 2 large cases" line — the text that
+                // says *why* the option is unavailable — at 1.75:1. Measured
+                // at 4.9:1 now, and still plainly dimmed.
+                "press focus-visible:ring-ring rounded px-2 py-1.5 text-left focus-visible:ring-[3px] focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-[0.65]",
                 isSelected ? "bg-card shadow-card" : "hover:bg-card/60",
               ].join(" ")}
             >

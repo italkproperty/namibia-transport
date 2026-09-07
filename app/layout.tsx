@@ -1,31 +1,42 @@
 import type { Metadata } from "next";
-import { Archivo, Geist } from "next/font/google";
+import { Archivo, IBM_Plex_Mono } from "next/font/google";
 
 import { Toaster } from "@/components/ui/sonner";
 import { SiteSchema } from "@/components/marketing/site-schema";
 import { SITE } from "@/lib/site";
 import "./globals.css";
 
-/** The interface family. Weight and scale carry the hierarchy. */
-const geistSans = Geist({
-  variable: "--font-geist-sans",
+/**
+ * One family runs the whole interface, and it is the wordmark's own.
+ *
+ * The site used to set everything in Geist and reserve Archivo for the logo,
+ * which meant the only piece of the page with a point of view was forty pixels
+ * wide in the corner — and Geist, like Inter, is the face every product
+ * deployed this year already uses. Archivo is a grotesque descended from
+ * highway-sign lettering: square, tightly fitted, legible at speed. For a
+ * company that sells road distance that is not a decorative coincidence, and
+ * it lets the wordmark stop being an island.
+ *
+ * Variable, so 400 through 700 cost one file rather than four.
+ */
+const archivo = Archivo({
+  variable: "--font-archivo",
   subsets: ["latin"],
   display: "swap",
 });
 
 /**
- * The brand family, used for the wordmark and nothing else.
+ * The figure face, for things that are read as data rather than prose:
+ * booking references, road numbers, coordinates, distances in a table.
  *
- * Geist is the interface typeface and a fine one, but a wordmark set in it
- * looks like every other site deployed this year. Archivo is a grotesque with
- * enough weight and squareness to read as infrastructure rather than software,
- * which is closer to what a transport operator should feel like. One weight,
- * subset to Latin — it costs a few kilobytes and only the logo uses it.
+ * `--font-mono` previously pointed at a Geist Mono variable that was never
+ * loaded, so every `font-mono` on the site silently fell back to whatever the
+ * device had. Two weights, because that is all the data ever needs.
  */
-const archivo = Archivo({
-  variable: "--font-archivo",
+const plexMono = IBM_Plex_Mono({
+  variable: "--font-plex-mono",
   subsets: ["latin"],
-  weight: ["700"],
+  weight: ["400", "500"],
   display: "swap",
 });
 
@@ -67,7 +78,7 @@ export default function RootLayout({
         />
       </head>
       <body
-        className={`${geistSans.variable} ${archivo.variable} font-sans antialiased`}
+        className={`${archivo.variable} ${plexMono.variable} font-sans antialiased`}
       >
         {/* The <main id="main"> was already there; the link to it was not, so
             a keyboard user tabbed the whole header on every page. */}

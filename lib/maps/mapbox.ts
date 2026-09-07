@@ -1,4 +1,5 @@
 import type { LatLng, RouteLeg, RouteProvider } from "./types";
+import { BRAND_COLORS, mapHex } from "@/lib/brand-colors";
 
 /**
  * Mapbox, behind the RouteProvider interface that was defined for it.
@@ -112,13 +113,16 @@ export function staticRouteMapUrl({
   const overlays: string[] = [];
 
   if (encodedGeometry) {
-    // path-{width}+{colour}-{opacity}({polyline}) — brand amber, matching the
-    // route stroke in the logo.
-    overlays.push(`path-4+bc4b00-0.9(${encodeURIComponent(encodedGeometry)})`);
+    // path-{width}+{colour}-{opacity}({polyline})
+    overlays.push(
+      `path-4+${mapHex(BRAND_COLORS.brand)}-0.9(${encodeURIComponent(encodedGeometry)})`,
+    );
   }
 
-  overlays.push(`pin-s+1a1614(${toPair(origin)})`);
-  overlays.push(`pin-s+bc4b00(${toPair(destination)})`);
+  // Origin in ink, destination in the accent: on a route map the end you are
+  // going to is the one worth finding at a glance.
+  overlays.push(`pin-s+${mapHex(BRAND_COLORS.ink)}(${toPair(origin)})`);
+  overlays.push(`pin-s+${mapHex(BRAND_COLORS.brand)}(${toPair(destination)})`);
 
   const size = `${Math.min(width, 1280)}x${Math.min(height, 1280)}${retina ? "@2x" : ""}`;
   const url = new URL(
@@ -153,7 +157,7 @@ export function staticPinMapUrl({
 
   const size = `${Math.min(width, 1280)}x${Math.min(height, 1280)}${retina ? "@2x" : ""}`;
   const url = new URL(
-    `${STATIC_BASE}/streets-v12/static/pin-l+bc4b00(${toPair(point)})/${toPair(point)},${zoom},0/${size}`,
+    `${STATIC_BASE}/streets-v12/static/pin-l+${mapHex(BRAND_COLORS.brand)}(${toPair(point)})/${toPair(point)},${zoom},0/${size}`,
   );
   url.searchParams.set("access_token", token);
 

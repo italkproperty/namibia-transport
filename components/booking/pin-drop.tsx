@@ -10,6 +10,7 @@ import { Button } from "@/components/ui/button";
 import { isInNamibia, mapsLink, roundCoord } from "@/lib/maps/bounds";
 import { publicMapboxToken } from "@/lib/maps/mapbox";
 import type { LatLng } from "@/lib/maps/types";
+import { BRAND_COLORS } from "@/lib/brand-colors";
 
 /**
  * The third part of the address answer, after the pick-list and the note.
@@ -193,7 +194,7 @@ function PinMap({
         });
         instance.addControl(new mapboxgl.NavigationControl(), "top-right");
 
-        const pin = new mapboxgl.Marker({ color: "#bc4b00", draggable: true })
+        const pin = new mapboxgl.Marker({ color: BRAND_COLORS.brand, draggable: true })
           .setLngLat([centre.lng, centre.lat])
           .addTo(instance);
 

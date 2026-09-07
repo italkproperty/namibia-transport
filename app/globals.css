@@ -6,54 +6,60 @@
 /**
  * Product tokens, not editorial ones.
  *
- * Every foreground/background pair below is measured against WCAG AA at 4.5:1
- * — the accent is the tight one at 4.85:1 on the base and 4.92:1 for its own
- * ink, so darken `--accent` before you lighten it.
+ * The palette that shipped first was warm cream under a terracotta accent —
+ * which is the default look of every generated page this year, and reads as a
+ * boutique lodge rather than an operator. This one comes from the subject:
+ * calcrete dust, tar, and the white-on-blue of a SADC route marker, the plate
+ * screwed to a post at every junction on the B1. That blue is also the only
+ * accent, and at 8.2:1 on white it clears AA for text as well as for buttons,
+ * where the old accent had 0.35 of contrast to spare.
  *
  * The accent earns its place on exactly two things: primary actions and live
- * prices. Anything else that wants to be orange should be neutral instead.
+ * prices. Anything else that wants to be blue should be neutral instead.
  */
 :root {
   --radius: 0.5rem;
 
-  /* Warm neutral base with crisp white surfaces on top. */
-  --background: oklch(0.985 0.004 75); /* #fcfaf7 */
-  --foreground: oklch(0.205 0.008 60); /* #1a1614 */
+  /* Cool paper, not cream. Barely-there blue keeps it reading as a surface
+     you measure on rather than one you write a menu on. */
+  --background: oklch(0.968 0.003 240); /* #f3f4f6 */
+  --foreground: oklch(0.195 0.012 250); /* #14181f — tar */
   --card: oklch(1 0 0);
-  --card-foreground: oklch(0.205 0.008 60);
+  --card-foreground: oklch(0.195 0.012 250);
   --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.205 0.008 60);
+  --popover-foreground: oklch(0.195 0.012 250);
 
   /* Near-black primary: buttons that are not the money action. */
-  --primary: oklch(0.205 0.008 60);
-  --primary-foreground: oklch(0.99 0.004 75);
+  --primary: oklch(0.195 0.012 250);
+  --primary-foreground: oklch(0.985 0.002 240);
 
-  --secondary: oklch(0.965 0.005 75);
-  --secondary-foreground: oklch(0.265 0.008 60);
-  --muted: oklch(0.965 0.005 75);
-  --muted-foreground: oklch(0.505 0.012 65); /* #6a635e — 5.6:1 */
+  --secondary: oklch(0.955 0.004 240);
+  --secondary-foreground: oklch(0.265 0.012 250);
+  --muted: oklch(0.955 0.004 240);
+  --muted-foreground: oklch(0.505 0.014 250); /* #61666f — 5.9:1 */
 
-  --accent: oklch(0.965 0.005 75);
-  --accent-foreground: oklch(0.265 0.008 60);
+  --accent: oklch(0.955 0.004 240);
+  --accent-foreground: oklch(0.265 0.012 250);
 
-  /* The one decisive accent. #bc4b00 */
-  --brand: oklch(0.555 0.165 47);
-  --brand-foreground: oklch(0.99 0.004 75);
-  --brand-hover: oklch(0.5 0.155 47);
-  --brand-subtle: oklch(0.965 0.022 60);
+  /* Route-marker blue. #0b4f8f */
+  --brand: oklch(0.425 0.135 253);
+  --brand-foreground: oklch(0.99 0.002 240);
+  --brand-hover: oklch(0.365 0.125 253);
+  --brand-subtle: oklch(0.955 0.022 253);
 
-  /* Semantic states. */
+  /* Semantic states. Kept distinct in hue from the accent so "this is the
+     price" and "this needs your attention" never look like the same thing. */
   --success: oklch(0.52 0.13 152); /* #137d41 */
   --success-subtle: oklch(0.96 0.03 152);
   --destructive: oklch(0.505 0.19 27); /* #b91c1e */
-  --destructive-foreground: oklch(0.99 0.004 75);
+  --destructive-foreground: oklch(0.99 0.002 240);
   --destructive-subtle: oklch(0.96 0.025 27);
   --warning: oklch(0.53 0.13 70);
   --warning-subtle: oklch(0.96 0.04 75);
 
-  --border: oklch(0.905 0.006 75); /* #e2dfdb */
-  --input: oklch(0.885 0.007 75);
-  --ring: oklch(0.555 0.165 47);
+  --border: oklch(0.9 0.005 240); /* #dfe1e5 */
+  --input: oklch(0.875 0.006 245);
+  --ring: oklch(0.425 0.135 253);
 
   /* Functional motion only. Nothing decorative. */
   --ease: cubic-bezier(0.2, 0, 0, 1);
@@ -61,41 +67,47 @@
   --duration: 200ms;
 }
 
+/**
+ * Nothing applies `.dark` yet — no toggle, no `prefers-color-scheme` hook.
+ * It is kept in step with the light palette rather than deleted because the
+ * dispatch board is the surface that will want it first, and a dark set that
+ * has silently drifted for months is worse than no dark set at all.
+ */
 .dark {
-  --background: oklch(0.175 0.008 60);
-  --foreground: oklch(0.97 0.004 75);
-  --card: oklch(0.225 0.009 60);
-  --card-foreground: oklch(0.97 0.004 75);
-  --popover: oklch(0.225 0.009 60);
-  --popover-foreground: oklch(0.97 0.004 75);
+  --background: oklch(0.175 0.012 250);
+  --foreground: oklch(0.97 0.003 240);
+  --card: oklch(0.225 0.013 250);
+  --card-foreground: oklch(0.97 0.003 240);
+  --popover: oklch(0.225 0.013 250);
+  --popover-foreground: oklch(0.97 0.003 240);
 
-  --primary: oklch(0.97 0.004 75);
-  --primary-foreground: oklch(0.205 0.008 60);
+  --primary: oklch(0.97 0.003 240);
+  --primary-foreground: oklch(0.195 0.012 250);
 
-  --secondary: oklch(0.275 0.01 60);
-  --secondary-foreground: oklch(0.97 0.004 75);
-  --muted: oklch(0.275 0.01 60);
-  --muted-foreground: oklch(0.735 0.011 70);
+  --secondary: oklch(0.275 0.014 250);
+  --secondary-foreground: oklch(0.97 0.003 240);
+  --muted: oklch(0.275 0.014 250);
+  --muted-foreground: oklch(0.74 0.012 245);
 
-  --accent: oklch(0.29 0.012 60);
-  --accent-foreground: oklch(0.97 0.004 75);
+  --accent: oklch(0.29 0.015 250);
+  --accent-foreground: oklch(0.97 0.003 240);
 
-  --brand: oklch(0.7 0.15 52);
-  --brand-foreground: oklch(0.185 0.008 60);
-  --brand-hover: oklch(0.75 0.145 52);
-  --brand-subtle: oklch(0.3 0.05 50);
+  --brand: oklch(0.72 0.12 250);
+  --brand-foreground: oklch(0.185 0.012 250);
+  --brand-hover: oklch(0.78 0.11 250);
+  --brand-subtle: oklch(0.3 0.06 253);
 
   --success: oklch(0.72 0.16 152);
   --success-subtle: oklch(0.3 0.05 152);
   --destructive: oklch(0.68 0.19 25);
-  --destructive-foreground: oklch(0.185 0.008 60);
+  --destructive-foreground: oklch(0.185 0.012 250);
   --destructive-subtle: oklch(0.3 0.06 25);
   --warning: oklch(0.78 0.13 75);
   --warning-subtle: oklch(0.3 0.05 75);
 
   --border: oklch(1 0 0 / 12%);
   --input: oklch(1 0 0 / 16%);
-  --ring: oklch(0.7 0.15 52);
+  --ring: oklch(0.72 0.12 250);
 }
 
 @theme inline {
@@ -134,21 +146,18 @@
   --color-input: var(--input);
   --color-ring: var(--ring);
 
-  /* Geist runs the interface. Archivo is the wordmark's alone and is
-     referenced directly by the logo — next/font sets its variable on <body>,
-     so a @theme token resolving at :root would come back empty. */
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  /* Archivo runs the interface and the wordmark alike; Plex Mono is for
+     figures read as data. next/font sets both variables on <body>, and the
+     logo still references --font-archivo directly because it renders inside
+     an SVG where a Tailwind class does not reach. */
+  --font-sans: var(--font-archivo);
+  --font-mono: var(--font-plex-mono);
 
-  /* Tight, confident scale. Headings are semibold, never light. */
-  --text-display: 2.25rem;
-  --text-display--line-height: 1.1;
-  --text-display--letter-spacing: -0.025em;
-  --text-display--font-weight: 600;
-
-  --shadow-card: 0 1px 2px oklch(0.2 0.01 60 / 0.05), 0 1px 3px oklch(0.2 0.01 60 / 0.06);
-  --shadow-raised: 0 2px 4px oklch(0.2 0.01 60 / 0.05), 0 4px 12px oklch(0.2 0.01 60 / 0.08);
-  --shadow-sticky: 0 -1px 3px oklch(0.2 0.01 60 / 0.06), 0 -4px 16px oklch(0.2 0.01 60 / 0.08);
+  /* Shadows are cast in the ink's own hue, so a raised panel reads as lifted
+     rather than as a grey smudge sitting on a cool ground. */
+  --shadow-card: 0 1px 2px oklch(0.2 0.012 250 / 0.05), 0 1px 3px oklch(0.2 0.012 250 / 0.06);
+  --shadow-raised: 0 2px 4px oklch(0.2 0.012 250 / 0.05), 0 4px 12px oklch(0.2 0.012 250 / 0.08);
+  --shadow-sticky: 0 -1px 3px oklch(0.2 0.012 250 / 0.06), 0 -4px 16px oklch(0.2 0.012 250 / 0.08);
 }
 
 @layer base {
@@ -158,7 +167,6 @@
 
   body {
     @apply bg-background text-foreground;
-    font-feature-settings: "cv11";
   }
 
   /* Headings carry weight, not flourish. */

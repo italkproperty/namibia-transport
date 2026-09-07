@@ -22,6 +22,16 @@ import * as React from "react";
 const NAME = "Namibia Transport";
 
 /**
+ * The wordmark is drawn into SVG and into favicons, where a CSS custom
+ * property does not resolve, so these two are the one place in the codebase
+ * that legitimately hard-codes a colour. They are the literal values of
+ * `--foreground` and `--background`; change them together or the mark drifts
+ * away from the site it sits on.
+ */
+const INK = "#14181f";
+const PAPER = "#f3f4f6";
+
+/**
  * The single-letter tile, for a favicon and anywhere too tight for the name.
  * Not a symbol in its own right — it is the wordmark's first letter, in the
  * wordmark's typeface.
@@ -39,8 +49,8 @@ export function BrandMark({
   const mono = variant === "mono";
   const inverse = variant === "inverse";
 
-  const tile = mono || inverse ? "none" : "#1a1614";
-  const letter = mono ? "currentColor" : inverse ? "#1a1614" : "#fcfaf7";
+  const tile = mono || inverse ? "none" : INK;
+  const letter = mono ? "currentColor" : inverse ? INK : PAPER;
 
   return (
     <svg
@@ -52,7 +62,7 @@ export function BrandMark({
       className={className}
     >
       {tile !== "none" && <rect width="64" height="64" rx="13" fill={tile} />}
-      {inverse && <rect width="64" height="64" rx="13" fill="#fcfaf7" />}
+      {inverse && <rect width="64" height="64" rx="13" fill={PAPER} />}
       {/* Drawn as paths rather than a text node: a glyph would depend on the
           brand font having loaded, and this has to hold at 16px in a browser
           tab and inside a printed quotation alike. */}
@@ -88,8 +98,8 @@ export function Logo({
     variant === "mono"
       ? "currentColor"
       : variant === "inverse"
-        ? "#fcfaf7"
-        : "#1a1614";
+        ? PAPER
+        : INK;
 
   const brandFont = {
     fontFamily:

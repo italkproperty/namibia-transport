@@ -14,6 +14,7 @@ import type {
 
 import { boundsOf, decodePolyline } from "@/lib/maps/polyline";
 import { publicMapboxToken } from "@/lib/maps/mapbox";
+import { BRAND_COLORS } from "@/lib/brand-colors";
 
 /**
  * Upgrades a static route map into a real one you can pan, zoom and read.
@@ -156,7 +157,7 @@ export function InteractiveRouteMap({
               source: "route",
               layout: { "line-cap": "round", "line-join": "round" },
               paint: {
-                "line-color": "#fcfaf7",
+                "line-color": BRAND_COLORS.paper,
                 "line-width": 9,
                 "line-opacity": 0.9,
               },
@@ -166,13 +167,13 @@ export function InteractiveRouteMap({
               type: "line",
               source: "route",
               layout: { "line-cap": "round", "line-join": "round" },
-              paint: { "line-color": "#bc4b00", "line-width": 4.5 },
+              paint: { "line-color": BRAND_COLORS.brand, "line-width": 4.5 },
             });
           }
 
           markers.current = {
-            origin: marker("#1a1614", origin, originLabel),
-            destination: marker("#bc4b00", destination, destinationLabel),
+            origin: marker(BRAND_COLORS.ink, origin, originLabel),
+            destination: marker(BRAND_COLORS.brand, destination, destinationLabel),
           };
 
           const bounds = boundsOf(
