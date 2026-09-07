@@ -24,7 +24,7 @@ export default async function Image() {
           display: "flex",
           flexDirection: "column",
           justifyContent: "space-between",
-          background: "#f3f4f6",
+          background: "#f3f5f6",
           padding: 72,
           fontFamily: "sans-serif",
         }}
@@ -35,18 +35,18 @@ export default async function Image() {
               width: 64,
               height: 64,
               borderRadius: 16,
-              background: "#14181f",
+              background: "#11151a",
               display: "flex",
               alignItems: "center",
               justifyContent: "center",
-              color: "#f3f4f6",
+              color: "#f3f5f6",
               fontSize: 38,
               fontWeight: 700,
             }}
           >
             N
           </div>
-          <div style={{ fontSize: 34, fontWeight: 600, color: "#14181f" }}>
+          <div style={{ fontSize: 34, fontWeight: 600, color: "#11151a" }}>
             {SITE.name}
           </div>
         </div>
@@ -56,14 +56,14 @@ export default async function Image() {
             style={{
               fontSize: 62,
               fontWeight: 600,
-              color: "#14181f",
+              color: "#11151a",
               lineHeight: 1.1,
               maxWidth: 900,
             }}
           >
             Fixed-price transfers across Namibia
           </div>
-          <div style={{ fontSize: 30, color: "#61666f", maxWidth: 880 }}>
+          <div style={{ fontSize: 30, color: "#5f656d", maxWidth: 880 }}>
             Airport transfers · Intercity · Corporate
           </div>
         </div>
@@ -74,11 +74,11 @@ export default async function Image() {
             alignItems: "center",
             gap: 16,
             fontSize: 26,
-            color: "#0b4f8f",
+            color: "#004e94",
             fontWeight: 600,
           }}
         >
-          <div style={{ width: 120, height: 6, background: "#0b4f8f" }} />
+          <div style={{ width: 120, height: 6, background: "#004e94" }} />
           namibiatransport.com
         </div>
       </div>

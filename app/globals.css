@@ -11,7 +11,7 @@
  * boutique lodge rather than an operator. This one comes from the subject:
  * calcrete dust, tar, and the white-on-blue of a SADC route marker, the plate
  * screwed to a post at every junction on the B1. That blue is also the only
- * accent, and at 8.2:1 on white it clears AA for text as well as for buttons,
+ * accent, and at 8.3:1 on white it clears AA for text as well as for buttons,
  * where the old accent had 0.35 of contrast to spare.
  *
  * The accent earns its place on exactly two things: primary actions and live
@@ -22,8 +22,8 @@
 
   /* Cool paper, not cream. Barely-there blue keeps it reading as a surface
      you measure on rather than one you write a menu on. */
-  --background: oklch(0.968 0.003 240); /* #f3f4f6 */
-  --foreground: oklch(0.195 0.012 250); /* #14181f — tar */
+  --background: oklch(0.968 0.003 240); /* #f3f5f6 */
+  --foreground: oklch(0.195 0.012 250); /* #11151a — tar, 16.7:1 on the ground */
   --card: oklch(1 0 0);
   --card-foreground: oklch(0.195 0.012 250);
   --popover: oklch(1 0 0);
@@ -36,12 +36,12 @@
   --secondary: oklch(0.955 0.004 240);
   --secondary-foreground: oklch(0.265 0.012 250);
   --muted: oklch(0.955 0.004 240);
-  --muted-foreground: oklch(0.505 0.014 250); /* #61666f — 5.9:1 */
+  --muted-foreground: oklch(0.505 0.014 250); /* #5f656d — 5.4:1 on the ground */
 
   --accent: oklch(0.955 0.004 240);
   --accent-foreground: oklch(0.265 0.012 250);
 
-  /* Route-marker blue. #0b4f8f */
+  /* Route-marker blue. #004e94 */
   --brand: oklch(0.425 0.135 253);
   --brand-foreground: oklch(0.99 0.002 240);
   --brand-hover: oklch(0.365 0.125 253);
@@ -57,7 +57,7 @@
   --warning: oklch(0.53 0.13 70);
   --warning-subtle: oklch(0.96 0.04 75);
 
-  --border: oklch(0.9 0.005 240); /* #dfe1e5 */
+  --border: oklch(0.9 0.005 240); /* #dbdee1 */
   --input: oklch(0.875 0.006 245);
   --ring: oklch(0.425 0.135 253);
 

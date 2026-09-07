@@ -1,5 +1,6 @@
 import { PLACE_NODES } from "@/lib/network/nodes";
 import { ROAD_EDGES } from "@/lib/network/roads";
+import { BRAND_COLORS } from "@/lib/brand-colors";
 
 /**
  * The road network, drawn from the model that prices every trip on this site.
@@ -68,7 +69,7 @@ export function RoadNetwork({
   /** "light" draws on a dark ground; "ink" draws on paper. */
   tone?: "light" | "ink";
 }) {
-  const stroke = tone === "light" ? "#ffffff" : "#14181f";
+  const stroke = tone === "light" ? BRAND_COLORS.surface : BRAND_COLORS.ink;
 
   return (
     <svg

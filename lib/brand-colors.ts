@@ -17,21 +17,28 @@
  * over typing a hex anywhere else.
  */
 
+/**
+ * These are the *compiled* values of the OKLCH tokens, read back off the built
+ * stylesheet — not hand-converted approximations of them. The difference is
+ * not academic: eyeballing --brand as #0b4f8f put a route-map pin four points
+ * of blue away from the button beside it. If a token in globals.css changes,
+ * take the new value from the built CSS rather than from a colour picker.
+ */
 export const BRAND_COLORS = {
   /** --foreground. Tar. */
-  ink: "#14181f",
+  ink: "#11151a",
   /** --background. Cool paper. */
-  paper: "#f3f4f6",
+  paper: "#f3f5f6",
   /** --card. */
   surface: "#ffffff",
   /** --muted-foreground. */
-  muted: "#61666f",
+  muted: "#5f656d",
   /** --border. */
-  line: "#dfe1e5",
+  line: "#dbdee1",
   /** --brand. Route-marker blue. */
-  brand: "#0b4f8f",
+  brand: "#004e94",
   /** --brand-foreground. */
-  onBrand: "#ffffff",
+  onBrand: "#fbfcfd",
 } as const;
 
 /**

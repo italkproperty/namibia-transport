@@ -28,8 +28,8 @@ const NAME = "Namibia Transport";
  * `--foreground` and `--background`; change them together or the mark drifts
  * away from the site it sits on.
  */
-const INK = "#14181f";
-const PAPER = "#f3f4f6";
+const INK = "#11151a";
+const PAPER = "#f3f5f6";
 
 /**
  * The single-letter tile, for a favicon and anywhere too tight for the name.
