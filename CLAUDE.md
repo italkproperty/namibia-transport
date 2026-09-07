@@ -35,8 +35,12 @@ shuttle, which does not exist yet.
 - **PayToday keys are server-only.** Shop Key, Shop Handle and Private Key never take a
   `NEXT_PUBLIC_` prefix and never reach a browser bundle. Their guide §3.3 forbids keys in
   client code even though their own React sample does it; we follow the disclaimer and run
-  the SDK server-side. PayToday also validates the request origin, so the site's domain
-  must be registered with them.
+  the SDK server-side. We send an Origin and Referer for the site because their API is
+  browser-shaped, but note that nothing in their guide documents an origin or domain
+  check — that was a guess from an earlier session, and it is not a documented
+  requirement. Credentials are issued by their support desk on request (§3.1, §6.6),
+  though §1.6 says a suspected leak is regenerated in the Merchant Portal; the guide
+  contradicts itself on which.
 - **PayToday has no sandbox.** Every transaction is live and charged in real currency
   (refunded in 3–5 business days; immediately for Nedbank accounts). Never wire real
   payment intents into an automated test.
@@ -146,7 +150,10 @@ Content: four arrival guides and four self-drive decision guides, each carrying 
 one number only the road model can produce, plus `/methodology`, which stands behind
 every figure and is our substitute for the reviews and photography we do not have.
 
-In flight: PayToday returns 403 until the domain is registered with them. Next up:
+In flight: PayToday returns 403 at initialize() — their endpoint answers
+`{"status":"unauthorized","error":"Authorization error:"}` with the reason left blank
+after the colon, which is an account-side refusal we cannot fix in code. `/admin/paytoday`
+shows the live evidence. Next up:
 WhatsApp via the Meta Cloud API — the messaging adapter is stubbed and waiting — then a
 German translation of `/self-drive`, which is the highest-return content follow-up.
 Guides 5 and 6 are deliberately gated on 60/90-day measurement of the first four.
