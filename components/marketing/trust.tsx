@@ -11,7 +11,7 @@ const CONTINGENCIES = [
   {
     question: "What if my flight is delayed?",
     answer:
-      "We monitor your flight and move the pickup to your actual landing time. No waiting fee — a delay is not your fault.",
+      "Your flight number goes to your driver with the booking, so the pickup follows your actual landing time. No waiting fee — a delay is not your fault.",
   },
   {
     question: "What if I cannot find my driver?",

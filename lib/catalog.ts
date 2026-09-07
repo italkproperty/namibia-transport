@@ -103,7 +103,7 @@ export const CATALOG_ROUTES: NewRoute[] = [
     seoDescription:
       "Book a private transfer from Hosea Kutako International Airport (WDH) to Windhoek CBD. Fixed price, meet & greet in arrivals, flight monitoring and professional Namibian drivers.",
     seoBody:
-      "Hosea Kutako International Airport sits about 45 kilometres east of Windhoek, a straight 45-minute run into the city on the B6. There is no train and no reliable scheduled shuttle, so a pre-booked private car is how most visitors make the trip. Your driver tracks your flight, waits in the arrivals hall with a name board, and helps with luggage — so a delayed landing costs you nothing and there is no queue to join at midnight.",
+      "Hosea Kutako International Airport sits about 45 kilometres east of Windhoek, a straight 45-minute run into the city on the B6. There is no train and no reliable scheduled shuttle, so a pre-booked private car is how most visitors make the trip. Your driver has your flight number, waits in the arrivals hall with a name board, and helps with luggage — so a delayed landing costs you nothing and there is no queue to join at midnight.",
   },
   {
     id: ROUTE_IDS.wdhSwakopmund,

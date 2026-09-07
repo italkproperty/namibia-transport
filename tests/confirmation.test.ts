@@ -123,9 +123,24 @@ check(
   text.includes("before pickup"),
 );
 check(
-  "flight monitoring is only promised when a flight was given",
-  everything.includes("watch your flight") && !text.includes("watch your flight"),
+  "the flight promise appears only when a flight number was given",
+  everything.includes("flight number") && !text.includes("flight number"),
 );
+// We collect the flight number, store it, and put it in front of the driver
+// and dispatch — nothing anywhere checks whether the flight is late. Until
+// something does, no message may imply that it does.
+for (const claim of [
+  "watch your flight",
+  "track your flight",
+  "monitor your flight",
+  "tracks your flight",
+  "we track the flight",
+]) {
+  check(
+    `claims no flight monitoring we do not do: "${claim}"`,
+    !everything.toLowerCase().includes(claim),
+  );
+}
 check(
   "says nothing is charged when there is no checkout url",
   text.includes("nothing has been charged"),

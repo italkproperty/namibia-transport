@@ -61,8 +61,8 @@ export default async function HomePage({ searchParams }: PageProps) {
             </h1>
             <p className="text-muted-foreground mt-2 max-w-xl text-sm text-pretty sm:text-base">
               Fixed prices across Namibia. Your driver waits inside arrivals
-              with your name on a board, and we watch your flight — so a delay
-              costs you nothing.
+              with your name on a board, and a late landing never becomes a
+              waiting fee.
             </p>
 
             {/* Renders only once real published reviews exist. */}

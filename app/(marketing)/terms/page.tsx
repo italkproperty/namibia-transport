@@ -84,9 +84,10 @@ export default async function TermsPage() {
 
             <Section title="If your flight is delayed">
               <p>
-                Give us your flight number and we track the flight. Your pickup
-                moves with your actual landing time at no extra charge — a
-                delayed flight never becomes a missed transfer or a waiting fee.
+                Give us your flight number and it goes to your driver with the
+                booking. Your pickup moves with your actual landing time at no
+                extra charge — a delayed flight never becomes a missed transfer
+                or a waiting fee.
               </p>
             </Section>
 

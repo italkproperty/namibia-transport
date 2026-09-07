@@ -41,8 +41,8 @@ const NEXT_STEPS = [
     body: "Your booking details, before your travel date.",
   },
   {
-    title: "We watch your flight",
-    body: "If you land late, the pickup moves with you. No waiting charge.",
+    title: "Late flights are fine",
+    body: "Your flight number is on the driver's job card. If you land late, the pickup moves with you. No waiting charge.",
   },
   {
     title: "Your driver is assigned",

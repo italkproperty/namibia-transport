@@ -41,8 +41,8 @@ export const INCLUSIONS = [
     body: "Your driver waits inside arrivals with a name board and helps with luggage.",
   },
   {
-    title: "Flight monitoring",
-    body: "We track your inbound flight and adjust the pickup when it moves.",
+    title: "Late flights",
+    body: "Your flight number goes to the driver with the booking, so the pickup follows your actual landing time. No waiting fee.",
   },
   {
     title: "Professional local drivers",

@@ -93,7 +93,7 @@ export function confirmationText(details: ConfirmationDetails): string {
     "  1. We confirm your booking and put a partner driver on your trip.",
     "  2. You get the driver's name, the vehicle and its registration before pickup.",
     details.flightNumber
-      ? "  3. We watch your flight and move the pickup if it slips. A delay costs you nothing."
+      ? "  3. Your driver has your flight number. If you land late the pickup moves with you — a delay costs you nothing."
       : "  3. We are reachable throughout your journey if anything changes.",
     "",
     details.checkoutUrl
@@ -158,7 +158,7 @@ export function confirmationHtml(details: ConfirmationDetails): string {
     "We confirm your booking and put a partner driver on your trip.",
     "You get the driver&rsquo;s name, the vehicle and its registration before pickup.",
     details.flightNumber
-      ? "We watch your flight and move the pickup if it slips. A delay costs you nothing."
+      ? "Your driver has your flight number. If you land late the pickup moves with you — a delay costs you nothing."
       : "We are reachable throughout your journey if anything changes.",
   ]
     .map(
