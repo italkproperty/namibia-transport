@@ -107,6 +107,10 @@ gateway) is a conversation first.
   cost a feature, not the business.
 - Prefer Server Components and Server Actions. TanStack Query only for genuinely live
   surfaces, like the dispatch board.
+- **Colour lives in `app/globals.css`.** Components use the tokens and never a hex.
+  The four surfaces CSS cannot reach — Mapbox overlays, HTML email, `next/og` images,
+  favicons — read `lib/brand-colors.ts`, which holds the same values as literals.
+  Those two files are the only place a colour is written down.
 - Secrets live in `.env.local` (gitignored) and Vercel. `.env.example` carries placeholders
   and the reasoning. Never commit a real secret.
 
@@ -137,6 +141,11 @@ local Postgres is not to hand.
 Live and working: the booking flow end to end on Supabase, server-computed per-vehicle
 fares, the map-pin drop, the corporate quotation engine, the reviews admin, route maps,
 the custom domain and Spacemail.
+
+The identity is tar, cool paper and route-marker blue, set in Archivo with IBM Plex Mono
+for figures — replacing a cream-and-terracotta palette in Geist that read as generated.
+The homepage hero draws the road network itself from `PLACE_NODES` and `ROAD_EDGES`, so
+the graphic cannot drift from the model that prices the trips.
 
 The road model is the moat, and most of the platform now derives from it: 49 places and
 62 road segments, so any of 2,352 ordered pairs can be priced from cost rather than a
