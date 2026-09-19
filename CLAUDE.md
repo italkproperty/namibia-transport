@@ -155,9 +155,13 @@ the fleet timeline and marginal-offer engine, the self-drive cost planner
 rain-season notes on the passes that close. Twelve test suites, ~374 checks, including
 the model against published distances, times and fares.
 
-Content: four arrival guides and four self-drive decision guides, each carrying at least
+Content: four arrival guides and seven self-drive decision guides, each carrying at least
 one number only the road model can produce, plus `/methodology`, which stands behind
 every figure and is our substitute for the reviews and photography we do not have.
+`/self-drive` is the cluster hub and lists every decision guide from the data.
+`tests/guides.test.ts` resolves every slug a guide points at — a mistyped journey renders
+an empty table rather than throwing — and holds guide prose to the same credibility rules
+as the confirmation email.
 
 In flight: PayToday returns 403 at initialize() — their endpoint answers
 `{"status":"unauthorized","error":"Authorization error:"}` with the reason left blank

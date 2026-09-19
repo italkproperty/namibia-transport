@@ -271,7 +271,7 @@ export const ITINERARY_PRESETS: Preset[] = [
   },
   {
     id: "grand",
-    name: "The grand tour, fourteen days",
+    name: "The grand tour, twelve days",
     blurb: "Everything above plus the Kavango, for people with the time.",
     stops: [
       { slug: "hosea-kutako", nights: 0 },

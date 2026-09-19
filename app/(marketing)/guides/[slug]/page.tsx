@@ -4,7 +4,9 @@ import { notFound } from "next/navigation";
 import { ArrowRightIcon } from "lucide-react";
 
 import { CircuitCompare } from "@/components/marketing/circuit-compare";
+import { GateTable } from "@/components/marketing/gate-table";
 import { JourneyTable } from "@/components/marketing/journey-table";
+import { RainTable } from "@/components/marketing/rain-table";
 import { RouteMap } from "@/components/marketing/route-map";
 import { SiteFooter } from "@/components/marketing/site-footer";
 import { SiteHeader } from "@/components/marketing/site-header";
@@ -160,6 +162,8 @@ export default async function GuidePage({ params }: PageProps) {
                 </p>
               ))}
               {section.routeTable && <JourneyTable spec={section.routeTable} />}
+              {section.gateTable && <GateTable spec={section.gateTable} />}
+              {section.rainTable && <RainTable spec={section.rainTable} />}
               {section.circuitCompare && (
                 <CircuitCompare presetId={section.circuitCompare.presetId} />
               )}
@@ -273,7 +277,8 @@ export default async function GuidePage({ params }: PageProps) {
                         <span className="min-w-0">
                           <span className="block text-sm font-medium">
                             {road.origin.shortName ?? road.origin.name} →{" "}
-                            {road.destination.shortName ?? road.destination.name}
+                            {road.destination.shortName ??
+                              road.destination.name}
                           </span>
                           <span className="text-muted-foreground mt-0.5 block text-xs">
                             {road.km} km · {formatDuration(road.minutes)}
@@ -327,8 +332,8 @@ export default async function GuidePage({ params }: PageProps) {
             {guide.kind === "decision" && (
               <>
                 {" "}
-                Every route figure above is computed from our road network
-                model —{" "}
+                Every route figure above is computed from our road network model
+                —{" "}
                 <Link
                   href="/methodology"
                   className="underline underline-offset-2"

@@ -5,6 +5,7 @@ import { SelfDrivePlanner } from "@/components/marketing/self-drive-planner";
 import { SiteFooter } from "@/components/marketing/site-footer";
 import { SiteHeader } from "@/components/marketing/site-header";
 import { getCompanyInfo, whatsappLink } from "@/lib/company";
+import { GUIDES } from "@/lib/guides";
 import { listRoutes } from "@/lib/maps";
 import { SITE } from "@/lib/site";
 
@@ -22,6 +23,9 @@ import { SITE } from "@/lib/site";
  * tool says so when it does. A comparison that always came out our way would
  * be worth nothing to the reader and they would know it within a screen.
  */
+
+/** Every decision guide, newest question first, with its one-line answer. */
+const DECISION_GUIDES = GUIDES.filter((guide) => guide.kind === "decision");
 
 const TITLE = "Should you drive Namibia yourself?";
 
@@ -110,9 +114,9 @@ export default async function SelfDrivePage() {
                 driving yourself is cheaper and the tool above will tell you so.
                 It also buys something we cannot sell you: stopping where you
                 like, for as long as you like, without anyone waiting. If that
-                is the trip you want, take it &mdash; and book us for the airport
-                run at either end, which is the leg nobody enjoys driving after
-                a long-haul flight.
+                is the trip you want, take it &mdash; and book us for the
+                airport run at either end, which is the leg nobody enjoys
+                driving after a long-haul flight.
               </p>
             </div>
             <div>
@@ -172,15 +176,54 @@ export default async function SelfDrivePage() {
             </dl>
           </section>
 
+          {/* ------------------------------------------------ the cluster */}
+          {/*
+            This page is the hub for every decision guide we write, and until
+            now it linked to none of them — the guides were reachable from the
+            header menu and from each other, but not from the one page that
+            ranks for the question they all answer. Read from the data, so a
+            new guide appears here the day it is written.
+          */}
+          <section aria-labelledby="guides-heading" className="mt-12">
+            <h2 id="guides-heading" className="text-xl">
+              The questions underneath this one
+            </h2>
+            <p className="text-muted-foreground mt-1.5 max-w-xl text-sm text-pretty">
+              Each of these answers one decision with numbers from the same road
+              model as the comparison above.
+            </p>
+            <ul className="mt-4 divide-y border-t border-b">
+              {DECISION_GUIDES.map((guide) => (
+                <li key={guide.slug}>
+                  <Link
+                    href={`/guides/${guide.slug}`}
+                    className="hover:bg-card focus-ring group -mx-3 block rounded-md px-3 py-4 transition-colors"
+                  >
+                    <span className="block font-medium">{guide.title}</span>
+                    <span className="text-muted-foreground mt-1 block text-sm leading-snug text-pretty">
+                      {guide.answer}
+                    </span>
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          </section>
+
           {/* --------------------------------------------------- where next */}
           <section className="mt-12 border-t pt-8">
             <p className="text-muted-foreground text-sm leading-relaxed">
               Only need one leg?{" "}
-              <Link href="/transfers" className="text-foreground underline underline-offset-4">
+              <Link
+                href="/transfers"
+                className="text-foreground underline underline-offset-4"
+              >
                 Every route we run, with the price on it
               </Link>
               , or{" "}
-              <Link href="/journey" className="text-foreground underline underline-offset-4">
+              <Link
+                href="/journey"
+                className="text-foreground underline underline-offset-4"
+              >
                 price any journey in Namibia
               </Link>{" "}
               between two places.

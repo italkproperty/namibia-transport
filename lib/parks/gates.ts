@@ -164,7 +164,12 @@ export type GateCheck = {
 };
 
 /** How much road delay a sane plan absorbs before the gate becomes a problem. */
-const SAFETY_MARGIN_MIN = 45;
+/**
+ * The cushion between a predicted arrival and the gate shutting. Exported
+ * because the gate guide publishes the same deadline this check enforces —
+ * two different margins would be two different answers to one question.
+ */
+export const SAFETY_MARGIN_MIN = 45;
 
 /**
  * Whether a pickup at `timeHHMM` on `dateIso` reaches a gated destination
