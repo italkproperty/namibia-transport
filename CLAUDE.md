@@ -158,6 +158,12 @@ the model against published distances, times and fares.
 Content: four arrival guides and seven self-drive decision guides, each carrying at least
 one number only the road model can produce, plus `/methodology`, which stands behind
 every figure and is our substitute for the reviews and photography we do not have.
+On top of those, 160 leg pages at `/drive/<a>-to-<b>` — one per drive people actually
+make, with roads by number, surface split, honest time, rain closures, gate deadline and
+a fixed price both ways. `lib/network/legs.ts` decides which legs qualify and why; the
+three filters exist to stop a page being published that nobody searches for, and
+`tests/legs.test.ts` enforces them, including that no leg competes with a curated
+`/transfers` page.
 `/self-drive` is the cluster hub and lists every decision guide from the data.
 `tests/guides.test.ts` resolves every slug a guide points at — a mistyped journey renders
 an empty table rather than throwing — and holds guide prose to the same credibility rules
