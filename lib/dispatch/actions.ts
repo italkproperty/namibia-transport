@@ -1,7 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { and, eq } from "drizzle-orm";
+import { and, eq, inArray } from "drizzle-orm";
 import { z } from "zod";
 
 import { getDb, isDatabaseConfigured } from "@/db";
@@ -9,6 +9,7 @@ import {
   bookings,
   dispatchAssignments,
   drivers,
+  payments,
   vehicleClasses,
   vehicles,
 } from "@/db/schema";
@@ -273,6 +274,40 @@ export async function assignDriver(
   }
 }
 
+/**
+ * Whether money has actually landed for this booking — the payments table is
+ * the record, not the booking's own status, which an assignment overwrites.
+ * A trip quoted as an itinerary is paid as one transfer against the group, so
+ * a leg is settled when the trip is.
+ */
+async function isSettled(bookingId: string): Promise<boolean> {
+  const db = getDb();
+
+  const [booking] = await db
+    .select({ id: bookings.id, groupRef: bookings.groupRef })
+    .from(bookings)
+    .where(eq(bookings.id, bookingId))
+    .limit(1);
+  if (!booking) return false;
+
+  const ids = booking.groupRef
+    ? (
+        await db
+          .select({ id: bookings.id })
+          .from(bookings)
+          .where(eq(bookings.groupRef, booking.groupRef))
+      ).map((row) => row.id)
+    : [booking.id];
+
+  const [paid] = await db
+    .select({ id: payments.id })
+    .from(payments)
+    .where(and(inArray(payments.bookingId, ids), eq(payments.status, "paid")))
+    .limit(1);
+
+  return Boolean(paid);
+}
+
 export async function unassignDriver(
   assignmentId: string,
   bookingId: string
@@ -287,12 +322,16 @@ export async function unassignDriver(
       .set({ status: "cancelled", respondedAt: new Date() })
       .where(eq(dispatchAssignments.id, assignmentId));
 
-    // Back to confirmed, not to pending_payment: money already changed hands
-    // or did not, and re-assignment must never rewrite that.
+    // Back to where it was before the assignment. Setting "confirmed" flatly
+    // was the reverse of what its own comment promised: a booking assigned on
+    // trust before the money arrived came back from unassigning marked paid,
+    // and the only record that it was not sat in the payments table where
+    // nobody on the dispatch board looks. Cancelled and completed are left
+    // alone — an assignment is not what put them there.
     await db
       .update(bookings)
-      .set({ status: "confirmed" })
-      .where(eq(bookings.id, bookingId));
+      .set({ status: (await isSettled(bookingId)) ? "confirmed" : "pending_payment" })
+      .where(and(eq(bookings.id, bookingId), eq(bookings.status, "assigned")));
 
     revalidatePath("/admin/bookings");
     return { ok: true, message: "Assignment cancelled. Nobody has been told." };

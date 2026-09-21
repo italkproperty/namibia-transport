@@ -1,6 +1,6 @@
 import "server-only";
 
-import { and, desc, eq, inArray, ne } from "drizzle-orm";
+import { and, desc, eq, inArray, ne, sql } from "drizzle-orm";
 
 import { getDb, isDatabaseConfigured } from "@/db";
 import { bookings, payments } from "@/db/schema";
@@ -150,17 +150,31 @@ export async function declareTransfer(
       .set({ raw, amount: payable.total, updatedAt: new Date() })
       .where(eq(payments.id, existing.id));
   } else {
-    await db.insert(payments).values({
-      bookingId: booking.id,
-      provider: BANK_TRANSFER_PROVIDER,
-      // Pending is the truth: we are waiting to see it. There is no status
-      // that means "they say so", and inventing one would tempt a future
-      // reader into treating it as money.
-      status: "pending",
-      amount: payable.total,
-      currency: payable.currency,
-      raw,
-    });
+    // An upsert, not an insert: two presses a moment apart both read no row
+    // and both got here, which stacked the same money twice in the operator's
+    // queue. The partial unique index on (booking_id) where the provider is
+    // bank_transfer is what makes this collide instead of duplicating.
+    await db
+      .insert(payments)
+      .values({
+        bookingId: booking.id,
+        provider: BANK_TRANSFER_PROVIDER,
+        // Pending is the truth: we are waiting to see it. There is no status
+        // that means "they say so", and inventing one would tempt a future
+        // reader into treating it as money.
+        status: "pending",
+        amount: payable.total,
+        currency: payable.currency,
+        raw,
+      })
+      .onConflictDoUpdate({
+        target: payments.bookingId,
+        targetWhere: sql`${payments.provider} = ${BANK_TRANSFER_PROVIDER}`,
+        set: { raw, amount: payable.total, updatedAt: new Date() },
+        // The loser of the race must not un-pay a transfer the winner's press
+        // raced against an operator confirming.
+        setWhere: sql`${payments.status} <> 'paid'`,
+      });
   }
 
   return { ok: true };

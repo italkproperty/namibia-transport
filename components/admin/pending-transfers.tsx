@@ -1,8 +1,7 @@
 import Link from "next/link";
 import { LandmarkIcon, MessageCircleIcon } from "lucide-react";
 
-import { Button } from "@/components/ui/button";
-import { confirmTransferAction } from "@/lib/admin/quote-actions";
+import { ConfirmTransferButton } from "@/components/admin/confirm-transfer";
 import { whatsappLink } from "@/lib/company";
 import { formatDateTime } from "@/lib/format";
 import { formatNad } from "@/lib/money";
@@ -90,16 +89,10 @@ export function PendingTransfers({
               >
                 <MessageCircleIcon className="size-4" aria-hidden />
               </a>
-              <form action={confirmTransferAction}>
-                <input
-                  type="hidden"
-                  name="bookingId"
-                  value={transfer.bookingId}
-                />
-                <Button type="submit" size="sm" className="press">
-                  Money received
-                </Button>
-              </form>
+              <ConfirmTransferButton
+                bookingId={transfer.bookingId}
+                bookingRef={transfer.ref}
+              />
             </div>
           </li>
         ))}

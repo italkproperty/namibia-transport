@@ -629,8 +629,8 @@ export function BookingDetailsForm({
         </Button>
 
         <p className="text-muted-foreground text-center text-xs">
-          No payment now. We confirm your driver and send payment details on
-          WhatsApp.
+          Nothing is charged here. Your fare and how to pay are on the next
+          screen, and we confirm your driver on WhatsApp.
         </p>
       </form>
     </Form>

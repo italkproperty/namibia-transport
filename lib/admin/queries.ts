@@ -54,6 +54,7 @@ export async function listBookings(filters: BookingFilters) {
       .select({
         id: bookings.id,
         ref: bookings.ref,
+      groupRef: bookings.groupRef,
         scheduledAt: bookings.scheduledAt,
         createdAt: bookings.createdAt,
         passengers: bookings.passengers,

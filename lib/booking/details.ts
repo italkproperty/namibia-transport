@@ -44,7 +44,22 @@ export type DetailsResult =
   | { ok: true; groupRef: string | null }
   | { ok: false; message: string };
 
-function text(data: FormData, key: string, max: number): string | null {
+/**
+ * A field that is absent from the form is not a field the traveller cleared.
+ *
+ * The distinction matters because the patch used to be built unconditionally:
+ * a POST carrying only `ref` — which is every partial form, every request that
+ * lost a field, and anyone poking at the endpoint — wrote null over the flight
+ * number, the pick-up spot and the note, and the traveller's answers were gone
+ * with nothing to say they had ever been given. Absent now means untouched;
+ * present and empty still means cleared, so a traveller can take back a note.
+ */
+function text(
+  data: FormData,
+  key: string,
+  max: number,
+): string | null | undefined {
+  if (!data.has(key)) return undefined;
   const value = String(data.get(key) ?? "").trim();
   return value ? value.slice(0, max) : null;
 }
@@ -89,17 +104,23 @@ export async function updateTripDetails(
   }
 
   const patch: {
-    pickupDetail: string | null;
-    travellerNotes: string | null;
-    flightNumber: string | null;
+    pickupDetail?: string | null;
+    travellerNotes?: string | null;
+    flightNumber?: string | null;
     detailsUpdatedAt: Date;
     scheduledAt?: Date;
-  } = {
+  } = { detailsUpdatedAt: new Date() };
+
+  const fields = {
     pickupDetail: text(formData, "pickupDetail", 300),
     travellerNotes: text(formData, "travellerNotes", 1000),
     flightNumber: text(formData, "flightNumber", 20),
-    detailsUpdatedAt: new Date(),
-  };
+  } as const;
+  for (const [key, value] of Object.entries(fields)) {
+    if (value !== undefined) {
+      patch[key as keyof typeof fields] = value;
+    }
+  }
 
   // The time is optional: leaving it alone keeps whatever was quoted. A date
   // is deliberately not accepted — moving a leg to another day changes what

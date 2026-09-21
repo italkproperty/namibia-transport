@@ -60,7 +60,54 @@ ALTER TABLE "bookings" ADD COLUMN IF NOT EXISTS "pickup_detail" text;
 ALTER TABLE "bookings" ADD COLUMN IF NOT EXISTS "traveller_notes" text;
 ALTER TABLE "bookings" ADD COLUMN IF NOT EXISTS "details_updated_at" timestamptz;
 
+/* ---------------------------------------------- 21 September 2026 (audit) -- */
+
+-- A traveller pressing "I have made the transfer" twice at once used to write
+-- two rows, and the operator then saw the same money queued twice. There is
+-- only ever one bank transfer per booking, so the database says so — and the
+-- code's insert turns into an upsert against this.
+--
+-- Partial, not a plain unique on (booking_id, provider): a card payment that
+-- failed and was retried is a legitimate second row, and this must not stop it.
+CREATE UNIQUE INDEX IF NOT EXISTS "payments_one_bank_transfer_idx"
+  ON "payments" ("booking_id")
+  WHERE "provider" = 'bank_transfer';
+
+-- Reconciliation looks up the latest non-bank attempt for a booking, and the
+-- admin queues scan by status. Both were sequential scans of the whole table.
+CREATE INDEX IF NOT EXISTS "payments_booking_provider_idx"
+  ON "payments" USING btree ("booking_id", "provider", "created_at" DESC);
+CREATE INDEX IF NOT EXISTS "payments_provider_status_idx"
+  ON "payments" USING btree ("provider", "status");
+
+-- The dispatch board orders by when a driver was put on a trip, and the
+-- traveller-details queue by when a traveller last sent something.
+CREATE INDEX IF NOT EXISTS "dispatch_assignments_assigned_at_idx"
+  ON "dispatch_assignments" USING btree ("assigned_at" DESC);
+CREATE INDEX IF NOT EXISTS "bookings_details_updated_at_idx"
+  ON "bookings" USING btree ("details_updated_at" DESC);
+
+-- /admin/bookings pages by scheduled date and searches by reference. Without
+-- these, both are a full scan that grows with every booking ever taken.
+CREATE INDEX IF NOT EXISTS "bookings_scheduled_at_idx"
+  ON "bookings" USING btree ("scheduled_at" DESC);
+CREATE INDEX IF NOT EXISTS "bookings_status_scheduled_idx"
+  ON "bookings" USING btree ("status", "scheduled_at" DESC);
+
 COMMIT;
+
+/*
+ * If the unique index above fails, a booking already has two bank_transfer
+ * rows. Find them, keep the newest, and re-run:
+ *
+ *   SELECT booking_id, count(*) FROM payments
+ *    WHERE provider = 'bank_transfer' GROUP BY booking_id HAVING count(*) > 1;
+ *
+ *   DELETE FROM payments p USING payments keep
+ *    WHERE p.provider = 'bank_transfer' AND keep.provider = 'bank_transfer'
+ *      AND p.booking_id = keep.booking_id
+ *      AND (p.status, p.created_at) < (keep.status, keep.created_at);
+ */
 
 /*
  * Check it worked — this should return 7.

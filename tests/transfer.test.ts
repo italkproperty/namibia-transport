@@ -309,6 +309,83 @@ async function main() {
     stillCancelled?.status === "cancelled",
   );
 
+  /* ------------------------------------------------ two presses at once */
+
+  /**
+   * One impatient traveller on a bad connection is not two payments. The
+   * declare path reads, then writes, so two presses a moment apart both saw no
+   * row and both inserted — and the operator's queue showed the same money
+   * twice, which is the one thing that makes a person confirm something they
+   * have not actually seen on a statement.
+   *
+   * The guarantee is the partial unique index in db/manual/RUN-ME.sql. A
+   * failure here usually means that migration has not been run.
+   */
+  console.log("\nten presses at once");
+
+  const [impatient] = await db
+    .insert(bookings)
+    .values({
+      ref: `${ref.slice(0, 6)}P7`.slice(0, 9),
+      customerId: customer.id,
+      pickupLabel: "Impatient",
+      dropoffLabel: "Traveller",
+      scheduledAt: new Date(Date.now() + 5 * 86_400_000),
+      customerPrice: "6500.00",
+      driverPayout: "4550.00",
+      contribution: "1950.00",
+      status: "pending_payment",
+    })
+    .returning();
+
+  const presses = await Promise.allSettled(
+    Array.from({ length: 10 }, (_, i) =>
+      declareTransfer(impatient.ref, `press ${i}`),
+    ),
+  );
+  const threw = presses.filter((p) => p.status === "rejected");
+  check(
+    "ten simultaneous presses all succeed",
+    threw.length === 0,
+    threw.length
+      ? String((threw[0] as PromiseRejectedResult).reason?.message)
+      : "",
+  );
+
+  const raced = await db
+    .select()
+    .from(payments)
+    .where(
+      and(
+        eq(payments.bookingId, impatient.id),
+        eq(payments.provider, BANK_TRANSFER_PROVIDER),
+      ),
+    );
+  check(
+    "THE RULE: they leave exactly one row, not ten",
+    raced.length === 1,
+    `${raced.length} rows — has db/manual/RUN-ME.sql been run?`,
+  );
+  check("and it is still pending", raced[0]?.status === "pending");
+
+  // A press landing while an operator confirms must lose, not un-pay it.
+  await confirmTransfer(impatient.id);
+  await Promise.allSettled(
+    Array.from({ length: 5 }, () => declareTransfer(impatient.ref, "again")),
+  );
+  const [stillPaid] = await db
+    .select()
+    .from(payments)
+    .where(eq(payments.bookingId, impatient.id));
+  check(
+    "THE RULE: a press racing a confirmation cannot un-pay it",
+    stillPaid?.status === "paid",
+    `status was ${stillPaid?.status}`,
+  );
+
+  await db.delete(payments).where(eq(payments.bookingId, impatient.id));
+  await db.delete(bookings).where(eq(bookings.id, impatient.id));
+
   /* ---------------------------------------------- a trip, not a single leg */
 
   /**

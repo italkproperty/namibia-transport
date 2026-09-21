@@ -3,6 +3,7 @@ import Link from "next/link";
 import { ArrowDownIcon, ArrowUpIcon, MapPinIcon } from "lucide-react";
 
 import { AssignDriver } from "@/components/admin/assign-driver";
+import { BookingRowActions } from "@/components/admin/booking-actions";
 import { PendingTransfers } from "@/components/admin/pending-transfers";
 import { TravellerDetails } from "@/components/admin/traveller-details";
 import { AdminShell } from "@/components/admin/shell";
@@ -339,6 +340,7 @@ export default async function AdminBookingsPage({ searchParams }: PageProps) {
                   <TableHead>Source</TableHead>
                   <TableHead>Return</TableHead>
                   <TableHead>Driver</TableHead>
+                  <TableHead className="text-right">Void</TableHead>
                 </TableRow>
               </TableHeader>
 
@@ -437,6 +439,13 @@ export default async function AdminBookingsPage({ searchParams }: PageProps) {
                         bookingId={row.id}
                         drivers={assignable}
                         current={assignments.get(row.id)}
+                      />
+                    </TableCell>
+                    <TableCell className="text-right">
+                      <BookingRowActions
+                        bookingId={row.id}
+                        isCancelled={row.status === "cancelled"}
+                        isGroup={Boolean(row.groupRef)}
                       />
                     </TableCell>
                   </TableRow>
