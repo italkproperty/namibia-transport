@@ -508,6 +508,12 @@ export default async function AdminBookingsPage({ searchParams }: PageProps) {
                       <BookingRowActions
                         bookingId={row.id}
                         isCancelled={row.status === "cancelled"}
+                        isCompleted={row.status === "completed"}
+                        canComplete={
+                          (row.status === "assigned" ||
+                            row.status === "confirmed") &&
+                          row.scheduledAt.getTime() <= Date.now()
+                        }
                         isGroup={Boolean(row.groupRef)}
                       />
                     </TableCell>

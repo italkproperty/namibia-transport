@@ -6,6 +6,11 @@ import { getDb, isDatabaseConfigured } from "@/db";
 import { bookings, payments } from "@/db/schema";
 
 import { getBankDetails, transferReference } from "./bank";
+import {
+  groupValidity,
+  quoteValidity,
+  type Validity,
+} from "@/lib/booking/validity";
 
 /**
  * Bank transfers, and the one rule that governs them.
@@ -87,6 +92,38 @@ type TransferRaw = {
  * against a paid booking is harmless and should not produce an error the
  * traveller has to understand.
  */
+/**
+ * Whether the trip this leg belongs to is still a live quote. A leg of an
+ * itinerary is only as current as the earliest leg of it — paying for the last
+ * leg of a trip whose first leg has already departed is not a payment we can
+ * honour.
+ */
+async function groupValidityFor(
+  db: ReturnType<typeof getDb>,
+  booking: {
+    id: string;
+    groupRef: string | null;
+    status: string;
+    scheduledAt: Date;
+    createdAt: Date;
+  },
+): Promise<Validity> {
+  if (!booking.groupRef) return quoteValidity(booking);
+
+  const legs = await db
+    .select({
+      status: bookings.status,
+      scheduledAt: bookings.scheduledAt,
+      createdAt: bookings.createdAt,
+    })
+    .from(bookings)
+    .where(
+      and(eq(bookings.groupRef, booking.groupRef), ne(bookings.status, "cancelled")),
+    );
+
+  return legs.length > 0 ? groupValidity(legs) : quoteValidity(booking);
+}
+
 export async function declareTransfer(
   bookingRef: string,
   note?: string,
@@ -105,6 +142,8 @@ export async function declareTransfer(
       id: bookings.id,
       ref: bookings.ref,
       status: bookings.status,
+      scheduledAt: bookings.scheduledAt,
+      createdAt: bookings.createdAt,
       amount: bookings.customerPrice,
       currency: bookings.currency,
       groupRef: bookings.groupRef,
@@ -117,6 +156,13 @@ export async function declareTransfer(
   if (booking.status === "cancelled") {
     return { error: "That booking has been cancelled." };
   }
+
+  // The pages hide the bank details on an expired quote, but a hidden control
+  // is not a rule — this is a public endpoint and the form can be re-posted.
+  // A trip lapses as a whole, so the whole group is tested, not just the leg
+  // whose reference was quoted.
+  const validity = await groupValidityFor(db, booking);
+  if (validity.expired) return { error: validity.message };
 
   const [existing] = await db
     .select()

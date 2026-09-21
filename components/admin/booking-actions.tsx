@@ -1,11 +1,12 @@
 "use client";
 
 import * as React from "react";
-import { RotateCcwIcon, XIcon } from "lucide-react";
+import { CheckIcon, RotateCcwIcon, XIcon } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import {
   cancelBooking,
+  completeBooking,
   reinstateBooking,
   type VoidState,
 } from "@/lib/admin/booking-actions";
@@ -22,10 +23,15 @@ import {
 export function BookingRowActions({
   bookingId,
   isCancelled,
+  isCompleted,
+  /** Sold, departed, and not yet marked as run. */
+  canComplete,
   isGroup,
 }: {
   bookingId: string;
   isCancelled: boolean;
+  isCompleted: boolean;
+  canComplete: boolean;
   isGroup: boolean;
 }) {
   const [cancelState, cancel, cancelling] = React.useActionState<
@@ -36,7 +42,17 @@ export function BookingRowActions({
     reinstateBooking,
     null,
   );
+  const [doneState, complete, completing] = React.useActionState<
+    VoidState,
+    FormData
+  >(completeBooking, null);
   const [confirming, setConfirming] = React.useState(false);
+
+  // A trip that has run is finished in both directions: it cannot be cancelled
+  // without rewriting history, and it is already complete.
+  if (isCompleted) {
+    return <span className="text-muted-foreground text-xs">Ran</span>;
+  }
 
   if (isCancelled) {
     return (
@@ -58,16 +74,40 @@ export function BookingRowActions({
 
   if (!confirming) {
     return (
-      <Button
-        type="button"
-        size="sm"
-        variant="ghost"
-        onClick={() => setConfirming(true)}
-        className="press text-muted-foreground hover:text-destructive h-8 gap-1.5 text-xs"
-      >
-        <XIcon className="size-3.5" aria-hidden />
-        Cancel
-      </Button>
+      <div className="grid justify-items-start gap-0.5">
+        {/* Only offered once the trip has actually departed — marking a future
+            trip run is always a mis-click, and the server refuses it anyway. */}
+        {canComplete && (
+          <form action={complete}>
+            <input type="hidden" name="bookingId" value={bookingId} />
+            <Button
+              type="submit"
+              size="sm"
+              variant="ghost"
+              disabled={completing}
+              className="press text-muted-foreground hover:text-success h-8 gap-1.5 text-xs"
+            >
+              <CheckIcon className="size-3.5" aria-hidden />
+              {completing ? "Marking…" : "Mark as run"}
+            </Button>
+          </form>
+        )}
+        <Button
+          type="button"
+          size="sm"
+          variant="ghost"
+          onClick={() => setConfirming(true)}
+          className="press text-muted-foreground hover:text-destructive h-8 gap-1.5 text-xs"
+        >
+          <XIcon className="size-3.5" aria-hidden />
+          Cancel
+        </Button>
+        {doneState && !doneState.ok && (
+          <p className="text-destructive max-w-48 text-[0.7rem] leading-snug">
+            {doneState.message}
+          </p>
+        )}
+      </div>
     );
   }
 

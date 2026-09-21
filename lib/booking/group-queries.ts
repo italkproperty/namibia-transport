@@ -17,6 +17,8 @@ export type QuoteGroup = {
     pickupLabel: string;
     dropoffLabel: string;
     scheduledAt: Date;
+    /** When the fare was struck, so the quote can be told it has lapsed. */
+    createdAt: Date;
     price: string;
     distanceKm: string | null;
     durationMin: number | null;
@@ -77,6 +79,7 @@ export async function getQuoteGroup(
         pickupLabel: row.booking.pickupLabel,
         dropoffLabel: row.booking.dropoffLabel,
         scheduledAt: row.booking.scheduledAt,
+        createdAt: row.booking.createdAt,
         price: row.booking.customerPrice,
         distanceKm: row.booking.distanceKm,
         durationMin: row.booking.durationMin,
