@@ -53,6 +53,13 @@ export type Itinerary = {
   /** Local running while on the ground, which a self-driver also does. */
   localKm: number;
   nights: number;
+  /**
+   * Which entries of `stops` each leg runs between. Not always `i` to `i + 1`:
+   * two consecutive stops at the same place are a longer stay, not a drive, so
+   * that pair produces no leg and every later leg shifts. Callers that read a
+   * stop's label or nights off the leg index get the wrong stop without this.
+   */
+  legStops: { from: number; to: number }[];
   /** Every travel day ends in a night on the ground, except the last one home. */
   days: number;
   chauffeured: {
@@ -83,6 +90,7 @@ export function planItinerary(stops: ItineraryStop[]): Itinerary | null {
   }
 
   const legs: Road[] = [];
+  const legStops: { from: number; to: number }[] = [];
   for (let i = 0; i < resolved.length - 1; i++) {
     const road = findRoad(resolved[i].node.slug, resolved[i + 1].node.slug);
     // Two stops in a row at the same place is a longer stay, not a drive.
@@ -91,6 +99,7 @@ export function planItinerary(stops: ItineraryStop[]): Itinerary | null {
       return null;
     }
     legs.push(road);
+    legStops.push({ from: i, to: i + 1 });
   }
   if (legs.length === 0) return null;
 
@@ -140,6 +149,7 @@ export function planItinerary(stops: ItineraryStop[]): Itinerary | null {
     drivingMinutes,
     localKm,
     nights,
+    legStops,
     days,
     chauffeured: {
       vehicleCost,

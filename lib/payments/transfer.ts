@@ -1,6 +1,6 @@
 import "server-only";
 
-import { and, desc, eq } from "drizzle-orm";
+import { and, desc, eq, inArray, ne } from "drizzle-orm";
 
 import { getDb, isDatabaseConfigured } from "@/db";
 import { bookings, payments } from "@/db/schema";
@@ -23,6 +23,49 @@ import { getBankDetails, transferReference } from "./bank";
  */
 
 export const BANK_TRANSFER_PROVIDER = "bank_transfer";
+
+/**
+ * Every booking a single transfer settles, and what it comes to.
+ *
+ * A multi-leg itinerary is several bookings and one thing the traveller
+ * agreed to. The quote page shows them the trip total and one reference, so
+ * that is what they transfer — and before this, the payment was recorded
+ * against the first leg alone at the first leg's price. A traveller sending
+ * N$16,050 produced a N$5,786 line on the operator's board, and confirming it
+ * flipped one leg of three: money received in full, two driving jobs still
+ * unpaid, and the traveller's own page still telling them they had not paid.
+ *
+ * So a transfer covers the whole group or the single booking, and the amount
+ * is the sum of what it covers.
+ */
+async function payableSet(
+  db: ReturnType<typeof getDb>,
+  booking: { id: string; groupRef: string | null; amount: string; currency: string },
+): Promise<{ ids: string[]; total: string; currency: string }> {
+  if (!booking.groupRef) {
+    return { ids: [booking.id], total: booking.amount, currency: booking.currency };
+  }
+
+  const legs = await db
+    .select({ id: bookings.id, price: bookings.customerPrice })
+    .from(bookings)
+    .where(
+      and(
+        eq(bookings.groupRef, booking.groupRef),
+        ne(bookings.status, "cancelled"),
+      ),
+    );
+
+  if (legs.length === 0) {
+    return { ids: [booking.id], total: booking.amount, currency: booking.currency };
+  }
+
+  const total = legs
+    .reduce((sum, leg) => sum + Number(leg.price), 0)
+    .toFixed(2);
+
+  return { ids: legs.map((leg) => leg.id), total, currency: booking.currency };
+}
 
 /** Shape we keep in `payments.raw` for a transfer. */
 type TransferRaw = {
@@ -64,6 +107,7 @@ export async function declareTransfer(
       status: bookings.status,
       amount: bookings.customerPrice,
       currency: bookings.currency,
+      groupRef: bookings.groupRef,
     })
     .from(bookings)
     .where(eq(bookings.ref, bookingRef))
@@ -96,10 +140,14 @@ export async function declareTransfer(
     ...(note ? { note: note.slice(0, 500) } : {}),
   };
 
+  // The amount is what the traveller was actually asked to send, which for an
+  // itinerary is the whole trip rather than the leg carrying the reference.
+  const payable = await payableSet(db, booking);
+
   if (existing) {
     await db
       .update(payments)
-      .set({ raw, amount: booking.amount, updatedAt: new Date() })
+      .set({ raw, amount: payable.total, updatedAt: new Date() })
       .where(eq(payments.id, existing.id));
   } else {
     await db.insert(payments).values({
@@ -109,8 +157,8 @@ export async function declareTransfer(
       // that means "they say so", and inventing one would tempt a future
       // reader into treating it as money.
       status: "pending",
-      amount: booking.amount,
-      currency: booking.currency,
+      amount: payable.total,
+      currency: payable.currency,
       raw,
     });
   }
@@ -137,6 +185,7 @@ export async function confirmTransfer(
     .select({
       id: bookings.id,
       status: bookings.status,
+      groupRef: bookings.groupRef,
       amount: bookings.customerPrice,
       currency: bookings.currency,
     })
@@ -164,10 +213,12 @@ export async function confirmTransfer(
     confirmedAt: now.toISOString(),
   };
 
+  const payable = await payableSet(db, booking);
+
   if (existing) {
     await db
       .update(payments)
-      .set({ status: "paid", paidAt: now, raw, updatedAt: now })
+      .set({ status: "paid", paidAt: now, raw, amount: payable.total, updatedAt: now })
       .where(eq(payments.id, existing.id));
   } else {
     // An operator can confirm a transfer the traveller never declared — most
@@ -176,21 +227,25 @@ export async function confirmTransfer(
       bookingId: booking.id,
       provider: BANK_TRANSFER_PROVIDER,
       status: "paid",
-      amount: booking.amount,
-      currency: booking.currency,
+      amount: payable.total,
+      currency: payable.currency,
       paidAt: now,
       raw,
     });
   }
 
-  // Cancelled stays cancelled: money arriving after a cancellation is a
-  // refund conversation, not a reinstatement.
-  if (booking.status === "pending_payment") {
-    await db
-      .update(bookings)
-      .set({ status: "confirmed", updatedAt: now })
-      .where(eq(bookings.id, booking.id));
-  }
+  // Every leg the money covers, not just the one carrying the reference.
+  // Cancelled stays cancelled: money arriving after a cancellation is a refund
+  // conversation, not a reinstatement.
+  await db
+    .update(bookings)
+    .set({ status: "confirmed", updatedAt: now })
+    .where(
+      and(
+        inArray(bookings.id, payable.ids),
+        eq(bookings.status, "pending_payment"),
+      ),
+    );
 
   return { ok: true };
 }
