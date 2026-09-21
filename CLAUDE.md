@@ -178,6 +178,18 @@ holds the line against a real Postgres. Declared transfers queue at the top of
 `/admin/bookings`. `/admin/quotes/new` writes a quote by hand for trips the road model
 cannot price and returns a shareable `/booking/REF` link.
 
+Quoting: `/admin/quotes/new` is the booking engine. A trip is an ordered list of
+stops with nights, searchable over all 49 network places, and each stop carries an
+optional display label so a lodge the network does not model ("Namib Desert Lodge") is
+routed through the nearest town it does. `priceItinerary` wraps `planItinerary`, so a
+multi-day driven trip includes the nights the driver is away — which a per-leg sum
+silently loses — and splits the total across legs so the parts reconcile exactly
+(`tests/itinerary-quote.test.ts`). Each leg is saved as its own booking sharing a
+`group_ref`: dispatch sees the driving jobs, the traveller sees one page at
+`/quote/<group_ref>`. Schema reaches production by hand, so `lib/admin/migrations.ts`
+introspects the database and the quote page says which column is missing and which file
+to run.
+
 In flight: PayToday returns 403 at initialize() — their endpoint answers
 `{"status":"unauthorized","error":"Authorization error:"}` with the reason left blank
 after the colon, which is an account-side refusal we cannot fix in code. `/admin/paytoday`

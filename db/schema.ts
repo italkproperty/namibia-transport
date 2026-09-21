@@ -157,7 +157,9 @@ export const routes = pgTable(
     /** Fare for the baseline vehicle class; multipliers scale from here. */
     fixedPrice: money("fixed_price").notNull(),
     /** What one unit of fixed_price buys: the whole vehicle, or one seat. */
-    pricingUnit: pricingUnitEnum("pricing_unit").notNull().default("per_vehicle"),
+    pricingUnit: pricingUnitEnum("pricing_unit")
+      .notNull()
+      .default("per_vehicle"),
     currency: currency(),
     /** What the partner driver earns; customer_price minus this is our margin. */
     defaultDriverPayout: money("default_driver_payout").notNull(),
@@ -187,7 +189,7 @@ export const routes = pgTable(
     uniqueIndex("routes_slug_key").on(t.slug),
     index("routes_is_active_idx").on(t.isActive),
     index("routes_category_idx").on(t.category),
-  ]
+  ],
 );
 
 export const vehicleClasses = pgTable(
@@ -211,7 +213,7 @@ export const vehicleClasses = pgTable(
     sortOrder: smallint("sort_order").notNull().default(0),
     ...timestamps,
   },
-  (t) => [uniqueIndex("vehicle_classes_slug_key").on(t.slug)]
+  (t) => [uniqueIndex("vehicle_classes_slug_key").on(t.slug)],
 );
 
 export const addOns = pgTable(
@@ -227,7 +229,7 @@ export const addOns = pgTable(
     sortOrder: smallint("sort_order").notNull().default(0),
     ...timestamps,
   },
-  (t) => [uniqueIndex("add_ons_slug_key").on(t.slug)]
+  (t) => [uniqueIndex("add_ons_slug_key").on(t.slug)],
 );
 
 export const promoCodes = pgTable(
@@ -250,7 +252,7 @@ export const promoCodes = pgTable(
     isActive: boolean("is_active").notNull().default(true),
     ...timestamps,
   },
-  (t) => [uniqueIndex("promo_codes_code_key").on(t.code)]
+  (t) => [uniqueIndex("promo_codes_code_key").on(t.code)],
 );
 
 /**
@@ -268,7 +270,7 @@ export const pricingRules = pgTable(
     }),
     vehicleClassId: uuid("vehicle_class_id").references(
       () => vehicleClasses.id,
-      { onDelete: "cascade" }
+      { onDelete: "cascade" },
     ),
     ruleType: pricingRuleTypeEnum("rule_type").notNull(),
     /** Rands for base/per_km/flat_surcharge; a factor for multiplier. */
@@ -282,7 +284,7 @@ export const pricingRules = pgTable(
   (t) => [
     index("pricing_rules_route_idx").on(t.routeId),
     index("pricing_rules_vehicle_class_idx").on(t.vehicleClassId),
-  ]
+  ],
 );
 
 /* -------------------------------------------------------------------------- */
@@ -297,7 +299,9 @@ export const customers = pgTable(
     email: text("email"),
     /** E.164, the primary contact channel. */
     whatsapp: text("whatsapp").notNull(),
-    customerType: customerTypeEnum("customer_type").notNull().default("tourist"),
+    customerType: customerTypeEnum("customer_type")
+      .notNull()
+      .default("tourist"),
     locale: text("locale").notNull().default("en"),
     notes: text("notes"),
     ...timestamps,
@@ -306,7 +310,7 @@ export const customers = pgTable(
     uniqueIndex("customers_whatsapp_key").on(t.whatsapp),
     index("customers_email_idx").on(t.email),
     index("customers_type_idx").on(t.customerType),
-  ]
+  ],
 );
 
 export const drivers = pgTable(
@@ -344,7 +348,7 @@ export const drivers = pgTable(
   (t) => [
     uniqueIndex("drivers_whatsapp_key").on(t.whatsapp),
     index("drivers_status_idx").on(t.status),
-  ]
+  ],
 );
 
 export const vehicles = pgTable(
@@ -369,7 +373,7 @@ export const vehicles = pgTable(
   (t) => [
     uniqueIndex("vehicles_registration_key").on(t.registration),
     index("vehicles_driver_idx").on(t.driverId),
-  ]
+  ],
 );
 
 /* -------------------------------------------------------------------------- */
@@ -382,6 +386,18 @@ export const bookings = pgTable(
     id: uuid("id").primaryKey().defaultRandom(),
     /** Short human code shown to the traveller, e.g. NT-7Q4K2M. */
     ref: text("ref").notNull(),
+    /**
+     * Ties the legs of one multi-day itinerary together.
+     *
+     * A trip that goes Windhoek → Sossusvlei → Swakopmund → the airport is
+     * four driving jobs and one thing the traveller agreed to. Dispatch needs
+     * the four — each is a separate car, day and payout — and the traveller
+     * needs the one. So the legs stay individual bookings and share this
+     * reference, and `/quote/<group_ref>` is where they add back up.
+     *
+     * Null for an ordinary single-leg booking, which is most of them.
+     */
+    groupRef: text("group_ref"),
     routeId: uuid("route_id").references(() => routes.id, {
       onDelete: "set null",
     }),
@@ -399,7 +415,7 @@ export const bookings = pgTable(
     journeySlug: text("journey_slug"),
     vehicleClassId: uuid("vehicle_class_id").references(
       () => vehicleClasses.id,
-      { onDelete: "set null" }
+      { onDelete: "set null" },
     ),
     customerId: uuid("customer_id")
       .notNull()
@@ -451,11 +467,12 @@ export const bookings = pgTable(
     uniqueIndex("bookings_ref_key").on(t.ref),
     index("bookings_route_idx").on(t.routeId),
     index("bookings_journey_idx").on(t.journeySlug),
+    index("bookings_group_ref_idx").on(t.groupRef),
     index("bookings_customer_idx").on(t.customerId),
     index("bookings_status_idx").on(t.status),
     index("bookings_scheduled_at_idx").on(t.scheduledAt),
     index("bookings_created_at_idx").on(t.createdAt),
-  ]
+  ],
 );
 
 /** Add-ons attached to a booking, with the price snapshotted at purchase. */
@@ -479,9 +496,9 @@ export const bookingAddOns = pgTable(
   (t) => [
     uniqueIndex("booking_add_ons_booking_add_on_key").on(
       t.bookingId,
-      t.addOnId
+      t.addOnId,
     ),
-  ]
+  ],
 );
 
 export const payments = pgTable(
@@ -510,7 +527,7 @@ export const payments = pgTable(
   (t) => [
     index("payments_booking_idx").on(t.bookingId),
     index("payments_provider_reference_idx").on(t.providerReference),
-  ]
+  ],
 );
 
 export const dispatchAssignments = pgTable(
@@ -539,7 +556,7 @@ export const dispatchAssignments = pgTable(
   (t) => [
     index("dispatch_assignments_booking_idx").on(t.bookingId),
     index("dispatch_assignments_driver_idx").on(t.driverId),
-  ]
+  ],
 );
 
 export const flightStatusEvents = pgTable(
@@ -564,7 +581,7 @@ export const flightStatusEvents = pgTable(
   (t) => [
     index("flight_status_events_booking_idx").on(t.bookingId),
     index("flight_status_events_flight_number_idx").on(t.flightNumber),
-  ]
+  ],
 );
 
 /**
@@ -591,7 +608,7 @@ export const corporateEnquiries = pgTable(
   (t) => [
     index("corporate_enquiries_status_idx").on(t.status),
     index("corporate_enquiries_created_at_idx").on(t.createdAt),
-  ]
+  ],
 );
 
 /**
@@ -642,7 +659,7 @@ export const corporateQuotes = pgTable(
     uniqueIndex("corporate_quotes_number_key").on(t.quoteNumber),
     index("corporate_quotes_status_idx").on(t.status),
     index("corporate_quotes_created_at_idx").on(t.createdAt),
-  ]
+  ],
 );
 
 export const corporateQuoteItems = pgTable(
@@ -663,7 +680,7 @@ export const corporateQuoteItems = pgTable(
       .notNull()
       .defaultNow(),
   },
-  (t) => [index("corporate_quote_items_quote_idx").on(t.quoteId)]
+  (t) => [index("corporate_quote_items_quote_idx").on(t.quoteId)],
 );
 
 /**
@@ -686,7 +703,7 @@ export const reviews = pgTable(
     isPublished: boolean("is_published").notNull().default(false),
     ...timestamps,
   },
-  (t) => [index("reviews_published_idx").on(t.isPublished)]
+  (t) => [index("reviews_published_idx").on(t.isPublished)],
 );
 
 /* -------------------------------------------------------------------------- */
@@ -720,7 +737,6 @@ export type BookingStatus = (typeof bookingStatusEnum.enumValues)[number];
 
 export type DriverStatus = (typeof driverStatusEnum.enumValues)[number];
 
-export type AssignmentStatus =
-  (typeof assignmentStatusEnum.enumValues)[number];
+export type AssignmentStatus = (typeof assignmentStatusEnum.enumValues)[number];
 export type CustomerType = (typeof customerTypeEnum.enumValues)[number];
 export type PaymentStatus = (typeof paymentStatusEnum.enumValues)[number];

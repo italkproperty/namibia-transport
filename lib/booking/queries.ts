@@ -33,10 +33,10 @@ export async function getBookingByRef(ref: string) {
          * moment it is true rather than leaving the traveller with only the
          * message we sent — a message they may have deleted or never received.
          */
+        driverId: drivers.id,
         driverName: drivers.fullName,
         driverPhone: drivers.phone,
         driverWhatsapp: drivers.whatsapp,
-        driverPhotoUrl: drivers.photoUrl,
         vehicleMake: vehicles.make,
         vehicleModel: vehicles.model,
         vehicleColour: vehicles.colour,
@@ -52,8 +52,8 @@ export async function getBookingByRef(ref: string) {
         dispatchAssignments,
         and(
           eq(dispatchAssignments.bookingId, bookings.id),
-          ne(dispatchAssignments.status, "cancelled")
-        )
+          ne(dispatchAssignments.status, "cancelled"),
+        ),
       )
       .leftJoin(drivers, eq(drivers.id, dispatchAssignments.driverId))
       .leftJoin(vehicles, eq(vehicles.id, dispatchAssignments.vehicleId))
@@ -61,7 +61,29 @@ export async function getBookingByRef(ref: string) {
       .orderBy(desc(dispatchAssignments.assignedAt))
       .limit(1);
 
-    return row ?? null;
+    if (!row) return null;
+
+    // The photograph is looked up separately and allowed to fail.
+    //
+    // `drivers.photo_url` arrives by migration, and a deployment whose
+    // database has not had it applied yet would otherwise fail this entire
+    // query — turning a missing avatar into a booking page that 404s for a
+    // traveller holding a payment link. Degrade, never collapse.
+    let driverPhotoUrl: string | null = null;
+    if (row.driverId) {
+      try {
+        const [photo] = await getDb()
+          .select({ photoUrl: drivers.photoUrl })
+          .from(drivers)
+          .where(eq(drivers.id, row.driverId))
+          .limit(1);
+        driverPhotoUrl = photo?.photoUrl ?? null;
+      } catch {
+        // Column not migrated yet. The card falls back to initials.
+      }
+    }
+
+    return { ...row, driverPhotoUrl };
   } catch (error) {
     console.error("[booking] lookup failed", error);
     return null;

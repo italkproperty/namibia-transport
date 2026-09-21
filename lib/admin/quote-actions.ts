@@ -7,6 +7,7 @@ import { getDb, isDatabaseConfigured } from "@/db";
 import { bookings, customers, vehicleClasses } from "@/db/schema";
 import { getAdminGateState } from "@/lib/admin/auth";
 import { generateBookingRef } from "@/lib/booking/ref";
+import { namibianLocalToInstant } from "@/lib/booking/time";
 import { modelPayout } from "@/lib/network/fare-model";
 import { SITE } from "@/lib/site";
 
@@ -115,8 +116,11 @@ export async function createCustomQuote(
     };
   }
 
-  const scheduledAt = new Date(scheduledAtRaw);
-  if (!scheduledAtRaw || Number.isNaN(scheduledAt.getTime())) {
+  const [datePart, timePart] = scheduledAtRaw.split("T");
+  let scheduledAt: Date;
+  try {
+    scheduledAt = namibianLocalToInstant(datePart ?? "", timePart ?? "");
+  } catch {
     return { ok: false, message: "Give the pickup date and time." };
   }
 
