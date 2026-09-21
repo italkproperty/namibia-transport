@@ -14,6 +14,7 @@ import {
   confirmationText,
   type ConfirmationDetails,
 } from "@/lib/messaging/templates";
+import { normaliseFrom } from "@/lib/messaging/smtp";
 
 let passed = 0;
 let failed = 0;
@@ -166,6 +167,58 @@ check(
     ...base,
     checkoutUrl: "https://pay.example/abc",
   }).includes("https://pay.example/abc"),
+);
+
+/* ------------------------------------------------ the address we send from */
+
+/**
+ * Production rejected every confirmation email with
+ *   553 Sender address rejected: not owned by user
+ * against `<Namibia Transport  bookings@namibiatransport.com>` — the display
+ * name and the address inside one pair of brackets, which is what nodemailer
+ * makes of a MAIL_FROM pasted without them. The booking still saved; the
+ * traveller just never heard from us.
+ */
+console.log("\nthe From header survives being typed by a human");
+
+const FALLBACK = "bookings@namibiatransport.com";
+
+check(
+  "a correctly formed value is left alone",
+  normaliseFrom("Namibia Transport <bookings@namibiatransport.com>", FALLBACK) ===
+    "Namibia Transport <bookings@namibiatransport.com>",
+);
+check(
+  "THE BUG: missing angle brackets are put back",
+  normaliseFrom("Namibia Transport bookings@namibiatransport.com", FALLBACK) ===
+    '"Namibia Transport" <bookings@namibiatransport.com>',
+  normaliseFrom("Namibia Transport bookings@namibiatransport.com", FALLBACK),
+);
+check(
+  "and so is the double space the log showed",
+  normaliseFrom("Namibia Transport  bookings@namibiatransport.com", FALLBACK) ===
+    '"Namibia Transport" <bookings@namibiatransport.com>',
+  normaliseFrom("Namibia Transport  bookings@namibiatransport.com", FALLBACK),
+);
+check(
+  "a bare address needs no name",
+  normaliseFrom("bookings@namibiatransport.com", FALLBACK) ===
+    "bookings@namibiatransport.com",
+  normaliseFrom("bookings@namibiatransport.com", FALLBACK),
+);
+check(
+  "quotes someone added by hand do not stack",
+  normaliseFrom('"Namibia Transport" bookings@namibiatransport.com', FALLBACK) ===
+    '"Namibia Transport" <bookings@namibiatransport.com>',
+  normaliseFrom('"Namibia Transport" bookings@namibiatransport.com', FALLBACK),
+);
+check(
+  "a value with no address at all falls back rather than sending nothing",
+  normaliseFrom("Namibia Transport", FALLBACK) === FALLBACK,
+);
+check(
+  "an empty value falls back too",
+  normaliseFrom("   ", FALLBACK) === FALLBACK,
 );
 
 console.log(`\n${passed} passed, ${failed} failed`);
