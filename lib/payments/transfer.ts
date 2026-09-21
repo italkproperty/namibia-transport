@@ -92,6 +92,16 @@ type TransferRaw = {
  * against a paid booking is harmless and should not produce an error the
  * traveller has to understand.
  */
+/** 42P10 — no index matches an ON CONFLICT clause — anywhere in the cause chain. */
+function isMissingConflictIndex(error: unknown): boolean {
+  for (let cause = error, depth = 0; cause && depth < 5; depth += 1) {
+    if (typeof cause !== "object") break;
+    if ((cause as { code?: string }).code === "42P10") return true;
+    cause = (cause as { cause?: unknown }).cause;
+  }
+  return false;
+}
+
 /**
  * Whether the trip this leg belongs to is still a live quote. A leg of an
  * itinerary is only as current as the earliest leg of it — paying for the last
@@ -196,31 +206,54 @@ export async function declareTransfer(
       .set({ raw, amount: payable.total, updatedAt: new Date() })
       .where(eq(payments.id, existing.id));
   } else {
-    // An upsert, not an insert: two presses a moment apart both read no row
-    // and both got here, which stacked the same money twice in the operator's
-    // queue. The partial unique index on (booking_id) where the provider is
-    // bank_transfer is what makes this collide instead of duplicating.
-    await db
-      .insert(payments)
-      .values({
-        bookingId: booking.id,
-        provider: BANK_TRANSFER_PROVIDER,
-        // Pending is the truth: we are waiting to see it. There is no status
-        // that means "they say so", and inventing one would tempt a future
-        // reader into treating it as money.
-        status: "pending",
-        amount: payable.total,
-        currency: payable.currency,
-        raw,
-      })
-      .onConflictDoUpdate({
-        target: payments.bookingId,
-        targetWhere: sql`${payments.provider} = ${BANK_TRANSFER_PROVIDER}`,
-        set: { raw, amount: payable.total, updatedAt: new Date() },
-        // The loser of the race must not un-pay a transfer the winner's press
-        // raced against an operator confirming.
-        setWhere: sql`${payments.status} <> 'paid'`,
-      });
+    const values = {
+      bookingId: booking.id,
+      provider: BANK_TRANSFER_PROVIDER,
+      // Pending is the truth: we are waiting to see it. There is no status
+      // that means "they say so", and inventing one would tempt a future
+      // reader into treating it as money.
+      status: "pending" as const,
+      amount: payable.total,
+      currency: payable.currency,
+      raw,
+    };
+
+    try {
+      // An upsert, not an insert: two presses a moment apart both read no row
+      // and both got here, which stacked the same money twice in the
+      // operator's queue. The partial unique index on (booking_id) where the
+      // provider is bank_transfer is what makes this collide rather than
+      // duplicate.
+      await db
+        .insert(payments)
+        .values(values)
+        .onConflictDoUpdate({
+          target: payments.bookingId,
+          targetWhere: sql`${payments.provider} = ${BANK_TRANSFER_PROVIDER}`,
+          set: { raw, amount: payable.total, updatedAt: new Date() },
+          // The loser of the race must not un-pay a transfer whose press
+          // raced an operator confirming it.
+          setWhere: sql`${payments.status} <> 'paid'`,
+        });
+    } catch (error) {
+      // Schema reaches production by hand, so the index may not be there yet.
+      // Postgres rejects the ON CONFLICT clause outright when it is missing,
+      // which would take bank transfers — currently the only way anyone can
+      // pay us — down completely. Losing the race guard is worth far less
+      // than that, so fall back to the plain insert and say what is missing.
+      //
+      // Matched on the SQLSTATE rather than the wording, and down the cause
+      // chain: Drizzle wraps the driver's error, so the 42P10 that actually
+      // identifies "no index matches this ON CONFLICT" is one or two levels
+      // in rather than on the object thrown.
+      if (!isMissingConflictIndex(error)) throw error;
+
+      console.warn(
+        "[payments] payments_one_bank_transfer_idx is missing — run db/manual/RUN-ME.sql. " +
+          "Concurrent declarations can duplicate a row until it exists.",
+      );
+      await db.insert(payments).values(values);
+    }
   }
 
   return { ok: true };
