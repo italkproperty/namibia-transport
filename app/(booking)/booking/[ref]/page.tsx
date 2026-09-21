@@ -26,6 +26,7 @@ import { isLiveGatewayConfigured } from "@/lib/payments";
 import {
   bankTransferLines,
   getBankDetails,
+  proofOfPaymentLink,
   TRANSFER_NOTE,
 } from "@/lib/payments/bank";
 import { getTransferState } from "@/lib/payments/transfer";
@@ -261,6 +262,16 @@ export default async function BookingConfirmationPage({ params }: PageProps) {
                 note={TRANSFER_NOTE}
                 declaredAt={transfer.declaredAt}
                 confirmed={transfer.status === "confirmed"}
+                proofEmail={company.email}
+                proofHref={
+                  company.email
+                    ? proofOfPaymentLink(
+                        company.email,
+                        booking.ref,
+                        formatNad(booking.customerPrice),
+                      )
+                    : null
+                }
               />
             </div>
           )}

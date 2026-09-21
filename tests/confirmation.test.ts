@@ -47,13 +47,20 @@ const base: ConfirmationDetails = {
 const text = confirmationText(base);
 const html = confirmationHtml(base);
 
-check("the subject carries the reference", confirmationSubject(base).includes("NT-4KQ8ZP"));
+check(
+  "the subject carries the reference",
+  confirmationSubject(base).includes("NT-4KQ8ZP"),
+);
 check("the text carries the reference", text.includes("NT-4KQ8ZP"));
 check("the html carries the reference", html.includes("NT-4KQ8ZP"));
 check("the text formats the fare as NAD", text.includes("N$1,300"));
 check("the html formats the fare as NAD", html.includes("N$1,300"));
 check("the text names the vehicle class", text.includes("Private Car"));
-check("the text names both ends", text.includes("Arrivals hall") && text.includes("Windhoek Country Club Resort"));
+check(
+  "the text names both ends",
+  text.includes("Arrivals hall") &&
+    text.includes("Windhoek Country Club Resort"),
+);
 
 /* ------------------------------------------------------------ the pins */
 
@@ -66,10 +73,7 @@ check(
   withPin.includes("query=-22.6018,17.0842"),
 );
 check("one pin reads as singular", withPin.includes("The spot you pinned"));
-check(
-  "one pin does not say 'either'",
-  !withPin.includes("If either is wrong"),
-);
+check("one pin does not say 'either'", !withPin.includes("If either is wrong"));
 
 const withBoth = confirmationText({
   ...base,
@@ -77,14 +81,17 @@ const withBoth = confirmationText({
   dropoffPin: { lat: -22.6018, lng: 17.0842 },
 });
 check("two pins read as plural", withBoth.includes("The spots you pinned"));
-check("two pins both appear", withBoth.includes("17.4709") && withBoth.includes("17.0842"));
 check(
-  "no pins means no pin section",
-  !text.includes("pinned"),
+  "two pins both appear",
+  withBoth.includes("17.4709") && withBoth.includes("17.0842"),
 );
+check("no pins means no pin section", !text.includes("pinned"));
 check(
   "the html says 'that link' for a single pin",
-  confirmationHtml({ ...base, dropoffPin: { lat: -22.6, lng: 17.08 } }).includes("that link"),
+  confirmationHtml({
+    ...base,
+    dropoffPin: { lat: -22.6, lng: 17.08 },
+  }).includes("that link"),
 );
 
 /* ------------------------------------------------------------ escaping */
@@ -143,13 +150,22 @@ for (const claim of [
 }
 check(
   "says nothing is charged when there is no checkout url",
-  text.includes("nothing has been charged"),
+  text.includes("nothing has been charged yet"),
+);
+check(
+  "points an unpaid traveller at a way to actually pay",
+  text.includes("bank details"),
+);
+check(
+  "does not promise card payment while the gateway is refusing us",
+  !text.toLowerCase().includes("pay by card"),
 );
 check(
   "links the gateway when there is one",
-  confirmationText({ ...base, checkoutUrl: "https://pay.example/abc" }).includes(
-    "https://pay.example/abc",
-  ),
+  confirmationText({
+    ...base,
+    checkoutUrl: "https://pay.example/abc",
+  }).includes("https://pay.example/abc"),
 );
 
 console.log(`\n${passed} passed, ${failed} failed`);

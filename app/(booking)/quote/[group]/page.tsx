@@ -13,6 +13,7 @@ import { formatNad } from "@/lib/money";
 import {
   bankTransferLines,
   getBankDetails,
+  proofOfPaymentLink,
   TRANSFER_NOTE,
 } from "@/lib/payments/bank";
 import { getTransferState } from "@/lib/payments/transfer";
@@ -134,6 +135,16 @@ export default async function QuoteGroupPage({ params }: PageProps) {
                 note={TRANSFER_NOTE}
                 declaredAt={transfer.declaredAt}
                 confirmed={transfer.status === "confirmed"}
+                proofEmail={company.email}
+                proofHref={
+                  company.email
+                    ? proofOfPaymentLink(
+                        company.email,
+                        firstLeg.ref,
+                        formatNad(quote.total),
+                      )
+                    : null
+                }
               />
             </div>
           )}

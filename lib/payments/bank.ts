@@ -95,6 +95,37 @@ export function bankTransferLines(
 }
 
 /**
+ * Where a proof of payment goes, and the subject line that makes it findable.
+ *
+ * Sending a screenshot of the transfer is how this is done in Namibia — a
+ * traveller who has paid expects to send one, and an operator reconciling a
+ * bank statement by eye is far quicker with it than without. The address is
+ * the one already published as our reservations contact rather than a second
+ * thing to configure and keep in step.
+ *
+ * The subject carries the reference because that is what the proof has to be
+ * matched against: an inbox of messages all called "payment" is no better than
+ * no inbox at all.
+ */
+export function proofOfPaymentLink(
+  email: string,
+  bookingRef: string,
+  amount?: string,
+): string {
+  const subject = `Proof of payment — ${bookingRef}`;
+  const body = [
+    `Booking reference: ${bookingRef}`,
+    amount ? `Amount: ${amount}` : null,
+    "",
+    "Proof of payment attached.",
+  ]
+    .filter((line) => line !== null)
+    .join("\n");
+
+  return `mailto:${email}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+}
+
+/**
  * What we can honestly promise about timing.
  *
  * A Namibian EFT between different banks clears overnight on a working day;

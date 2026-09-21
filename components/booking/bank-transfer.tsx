@@ -1,7 +1,12 @@
 "use client";
 
 import * as React from "react";
-import { CheckCircle2Icon, CopyIcon, LandmarkIcon } from "lucide-react";
+import {
+  CheckCircle2Icon,
+  CopyIcon,
+  LandmarkIcon,
+  PaperclipIcon,
+} from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -27,12 +32,17 @@ export function BankTransfer({
   note,
   declaredAt,
   confirmed,
+  proofHref,
+  proofEmail,
 }: {
   bookingRef: string;
   lines: { label: string; value: string }[];
   note: string;
   declaredAt: string | null;
   confirmed: boolean;
+  /** Prefilled mailto for the proof of payment, when a mailbox is published. */
+  proofHref: string | null;
+  proofEmail: string | null;
 }) {
   const [state, action, pending] = React.useActionState<DeclareState, FormData>(
     declareTransferAction,
@@ -125,13 +135,27 @@ export function BankTransfer({
       </p>
 
       {declared ? (
-        <p className="text-success mt-4 flex items-start gap-2 text-sm leading-snug">
-          <CheckCircle2Icon className="mt-0.5 size-4 shrink-0" aria-hidden />
-          <span>
-            Thank you — we are watching for it. You will hear from us once it
-            lands; there is nothing else for you to do.
-          </span>
-        </p>
+        <div className="mt-4">
+          <p className="text-success flex items-start gap-2 text-sm leading-snug">
+            <CheckCircle2Icon className="mt-0.5 size-4 shrink-0" aria-hidden />
+            <span>
+              Thank you — we are watching for it. You will hear from us once it
+              lands.
+            </span>
+          </p>
+          {proofHref && (
+            <p className="text-muted-foreground mt-2 text-sm leading-relaxed">
+              Sending us the proof of payment gets it confirmed faster —{" "}
+              <a
+                href={proofHref}
+                className="text-brand font-medium underline underline-offset-2"
+              >
+                email it to {proofEmail}
+              </a>
+              .
+            </p>
+          )}
+        </div>
       ) : (
         <form action={action} className="mt-4">
           <input type="hidden" name="ref" value={bookingRef} />
@@ -148,6 +172,23 @@ export function BankTransfer({
             see the money, not when you press this.
           </p>
         </form>
+      )}
+
+      {proofHref && !declared && (
+        <p className="text-muted-foreground mt-3 flex items-start gap-2 border-t pt-3 text-sm leading-relaxed">
+          <PaperclipIcon className="mt-0.5 size-3.5 shrink-0" aria-hidden />
+          <span>
+            Have a proof of payment? Send it to{" "}
+            <a
+              href={proofHref}
+              className="text-brand font-medium underline underline-offset-2"
+            >
+              {proofEmail}
+            </a>{" "}
+            — the reference is already filled in, and it is the quickest way to
+            get your booking confirmed.
+          </span>
+        </p>
       )}
 
       {state && "error" in state && (

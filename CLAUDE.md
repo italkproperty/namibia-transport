@@ -182,7 +182,10 @@ The rule that governs it is in `lib/payments/transfer.ts`: a traveller pressing 
 made the transfer" records a claim and can never mark a booking paid — only
 `confirmTransfer`, behind the admin password, does that, and `tests/transfer.test.ts`
 holds the line against a real Postgres. Declared transfers queue at the top of
-`/admin/bookings`. `/admin/quotes/new` writes a quote by hand for trips the road model
+`/admin/bookings`. Both payment pages also offer a proof of payment by `mailto:`, with
+the reference already in the subject so an inbox of screenshots can be matched to
+bookings; the address is `NEXT_PUBLIC_SUPPORT_EMAIL` rather than a second thing to
+configure. `/admin/quotes/new` writes a quote by hand for trips the road model
 cannot price and returns a shareable `/booking/REF` link.
 
 Quoting: `/admin/quotes/new` is the booking engine. A trip is an ordered list of

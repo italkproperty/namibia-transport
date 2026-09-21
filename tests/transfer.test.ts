@@ -19,6 +19,7 @@ import { bookings, customers, payments } from "@/db/schema";
 import {
   bankTransferLines,
   getBankDetails,
+  proofOfPaymentLink,
   transferReference,
   type BankDetails,
 } from "@/lib/payments/bank";
@@ -102,6 +103,44 @@ if (saved.number === undefined) delete process.env.BANK_ACCOUNT_NUMBER;
 else process.env.BANK_ACCOUNT_NUMBER = saved.number;
 if (saved.branch === undefined) delete process.env.BANK_BRANCH_CODE;
 else process.env.BANK_BRANCH_CODE = saved.branch;
+
+/* -------------------------------------------------- the proof-of-payment link */
+
+console.log("\nthe proof-of-payment link");
+
+const proof = proofOfPaymentLink(
+  "bookings@namibiatransport.com",
+  "NT-4KQ8ZP",
+  "N$6,000",
+);
+
+check(
+  "it is a mailto",
+  proof.startsWith("mailto:bookings@namibiatransport.com?"),
+);
+check(
+  "the subject carries the reference, so the proof can be matched",
+  decodeURIComponent(proof).includes("subject=Proof of payment — NT-4KQ8ZP"),
+);
+check(
+  "the body repeats the reference",
+  decodeURIComponent(proof).includes("Booking reference: NT-4KQ8ZP"),
+);
+check(
+  "the amount is included when known",
+  decodeURIComponent(proof).includes("Amount: N$6,000"),
+);
+check(
+  "the amount line is omitted when it is not",
+  !decodeURIComponent(proofOfPaymentLink("a@b.com", "NT-4KQ8ZP")).includes(
+    "Amount:",
+  ),
+);
+// An unencoded space or newline breaks the link in some mail clients.
+check(
+  "the query is percent-encoded",
+  !proof.includes(" ") && !proof.includes("\n"),
+);
 
 /* ------------------------------------------------------ declaring vs paying */
 

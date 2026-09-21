@@ -99,7 +99,7 @@ export function confirmationText(details: ConfirmationDetails): string {
     "",
     details.checkoutUrl
       ? `Payment: ${details.checkoutUrl}`
-      : "Payment: nothing has been charged. You can pay by card from your booking page, or settle on the day.",
+      : "Payment: nothing has been charged yet. Your booking page carries our bank details and the reference to use.",
     "",
     `Your booking page: ${SITE.url}/booking/${details.ref}`,
     "",
@@ -170,7 +170,7 @@ export function confirmationHtml(details: ConfirmationDetails): string {
 
   const payLine = details.checkoutUrl
     ? `<a href="${esc(details.checkoutUrl)}" style="display:inline-block;background:${C.brand};color:${C.paper};text-decoration:none;padding:11px 20px;border-radius:6px;font-size:14px;font-weight:600">Pay now</a>`
-    : `<p style="margin:0;color:${C.muted};font-size:14px;line-height:1.5">Nothing has been charged. You can pay by card from your booking page, or settle on the day.</p>`;
+    : `<p style="margin:0;color:${C.muted};font-size:14px;line-height:1.5">Nothing has been charged yet. Your booking page carries our bank details and the reference to use.</p>`;
 
   const support = details.supportWhatsapp
     ? `<p style="margin:0 0 6px;color:${C.muted};font-size:13px;line-height:1.5">
@@ -277,10 +277,7 @@ export function assignmentText(details: AssignmentDetails): string {
 
   if (details.meetingNote) lines.push("", details.meetingNote);
 
-  lines.push(
-    "",
-    `Your booking page: ${SITE.url}/booking/${details.ref}`,
-  );
+  lines.push("", `Your booking page: ${SITE.url}/booking/${details.ref}`);
 
   if (details.supportWhatsapp) {
     lines.push(
