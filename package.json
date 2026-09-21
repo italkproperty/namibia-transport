@@ -29,7 +29,8 @@
     "test:guides": "tsx --conditions=react-server tests/guides.test.ts",
     "test:legs": "tsx --conditions=react-server tests/legs.test.ts",
     "test:transfer": "tsx --conditions=react-server tests/transfer.test.ts",
-    "test:itinerary-quote": "tsx --conditions=react-server tests/itinerary-quote.test.ts"
+    "test:itinerary-quote": "tsx --conditions=react-server tests/itinerary-quote.test.ts",
+    "test:details": "tsx --conditions=react-server tests/details.test.ts"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.9.1",

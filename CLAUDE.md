@@ -199,6 +199,20 @@ silently loses — and splits the total across legs so the parts reconcile exact
 `/quote/<group_ref>`. Schema reaches production by hand, so `lib/admin/migrations.ts`
 introspects the database and the quote page names the missing column.
 
+The traveller fills in the half only they know — pick-up time, flight number,
+exact spot, a note — from their own page. The booking link is the only
+authorisation, so `lib/booking/details.ts` is deliberately narrow: it cannot
+touch the fare, payout, status, or the place the leg was priced between, and
+`tests/details.test.ts` asserts each of those against a real Postgres. Their
+submissions surface on `/admin/bookings`. Airport legs are identified by node
+slug, never by a display label that may name a lodge instead.
+
+Fares are quoted in NAD and may carry an indicative US dollar figure beside
+them (`lib/fx.ts`, `USD_RATE` and `USD_RATE_AS_AT`). It is never the amount
+owed: we bank in NAD and a foreign bank converts at its own rate on the day, so
+the figure is dated, rounded to whole dollars, and captioned as approximate. An
+implausible rate is ignored rather than trusted.
+
 In flight: PayToday returns 403 at initialize() — their endpoint answers
 `{"status":"unauthorized","error":"Authorization error:"}` with the reason left blank
 after the colon, which is an account-side refusal we cannot fix in code. `/admin/paytoday`

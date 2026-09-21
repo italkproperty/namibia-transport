@@ -12,12 +12,15 @@ import {
 
 import { BankTransfer } from "@/components/booking/bank-transfer";
 import { DriverCard } from "@/components/booking/driver-card";
+import { TripDetailsForm } from "@/components/booking/trip-details-form";
 import { PayNowButton } from "@/components/booking/pay-now-button";
 import { SiteFooter } from "@/components/marketing/site-footer";
 import { SiteHeader } from "@/components/marketing/site-header";
 import { Button } from "@/components/ui/button";
+import { isAirportLeg } from "@/lib/booking/details";
 import { getBookingByRef } from "@/lib/booking/queries";
 import { getCompanyInfo, whatsappLink } from "@/lib/company";
+import { fxNote, indicativeUsd } from "@/lib/fx";
 import { formatDateTime } from "@/lib/format";
 import { mapsLink } from "@/lib/maps/bounds";
 import { formatNad } from "@/lib/money";
@@ -156,6 +159,28 @@ export default async function BookingConfirmationPage({ params }: PageProps) {
               />
             )}
 
+            <TripDetailsForm
+              bookingRef={booking.ref}
+              legLabel={routeLabel}
+              dateLabel={formatDateTime(booking.scheduledAt)}
+              isAirportLeg={isAirportLeg(
+                booking.journeySlug,
+                routeLabel,
+                booking.pickupLabel,
+                booking.dropoffLabel,
+              )}
+              pickupTime={new Intl.DateTimeFormat("en-GB", {
+                hour: "2-digit",
+                minute: "2-digit",
+                hour12: false,
+                timeZone: "Africa/Windhoek",
+              }).format(booking.scheduledAt)}
+              pickupDetail={booking.pickupDetail}
+              travellerNotes={booking.travellerNotes}
+              flightNumber={booking.flightNumber}
+              savedAt={booking.detailsUpdatedAt?.toISOString() ?? null}
+            />
+
             <dl className="mt-5 grid gap-x-6 gap-y-2.5 border-t pt-4 text-sm sm:grid-cols-2">
               <Row label="Route">{routeLabel}</Row>
               <Row label="Pickup">{formatDateTime(booking.scheduledAt)}</Row>
@@ -189,6 +214,13 @@ export default async function BookingConfirmationPage({ params }: PageProps) {
                 <p className="tabular text-brand text-3xl leading-none font-semibold tracking-tight">
                   {formatNad(booking.customerPrice)}
                 </p>
+                {indicativeUsd(booking.customerPrice) && (
+                  <p className="text-muted-foreground mt-1 text-xs leading-snug">
+                    about {indicativeUsd(booking.customerPrice)}
+                    {fxNote() ? ` — ${fxNote()}` : ""}. Charged in Namibian
+                    dollars.
+                  </p>
+                )}
               </div>
               <PaymentBadge status={payment?.status ?? null} />
             </div>

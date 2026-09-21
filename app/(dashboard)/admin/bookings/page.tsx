@@ -4,6 +4,7 @@ import { ArrowDownIcon, ArrowUpIcon, MapPinIcon } from "lucide-react";
 
 import { AssignDriver } from "@/components/admin/assign-driver";
 import { PendingTransfers } from "@/components/admin/pending-transfers";
+import { TravellerDetails } from "@/components/admin/traveller-details";
 import { AdminShell } from "@/components/admin/shell";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -21,6 +22,7 @@ import {
   SORTABLE_COLUMNS,
   type SortKey,
 } from "@/lib/admin/queries";
+import { listSubmittedDetails } from "@/lib/admin/detail-queries";
 import { listPendingTransfers } from "@/lib/admin/transfer-queries";
 import { isDatabaseConfigured } from "@/db";
 import type { BookingStatus, RouteCategory } from "@/db/schema";
@@ -144,7 +146,10 @@ export default async function AdminBookingsPage({ searchParams }: PageProps) {
 
   // Money a traveller says they have sent. Above everything else on the page
   // because it is the only item here with somebody waiting on the other end.
-  const pendingTransfers = await listPendingTransfers();
+  const [pendingTransfers, submittedDetails] = await Promise.all([
+    listPendingTransfers(),
+    listSubmittedDetails(),
+  ]);
 
   return (
     <AdminShell active="/admin/bookings">
@@ -162,6 +167,8 @@ export default async function AdminBookingsPage({ searchParams }: PageProps) {
         </div>
 
         <PendingTransfers transfers={pendingTransfers} />
+
+        <TravellerDetails items={submittedDetails} />
 
         {!isDatabaseConfigured() && (
           <p className="border-border text-muted-foreground rounded-xl border border-dashed p-4 text-sm">

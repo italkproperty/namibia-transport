@@ -432,6 +432,23 @@ export const bookings = pgTable(
     dropoffLat: doublePrecision("dropoff_lat"),
     dropoffLng: doublePrecision("dropoff_lng"),
     scheduledAt: timestamp("scheduled_at", { withTimezone: true }).notNull(),
+
+    /* ----------------------------------- what only the traveller can tell us */
+    /**
+     * The exact spot, in the traveller's own words: a room number, a gate, the
+     * name on the gatepost. Kept apart from `pickup_label`, which is the place
+     * we quoted and priced — a traveller correcting the detail must never
+     * silently move the leg the fare was computed for.
+     */
+    pickupDetail: text("pickup_detail"),
+    /**
+     * Anything else they want the driver to know. Separate from `notes`, which
+     * is the operator's note *to* them; one field for both would mean a
+     * traveller's message overwriting the terms they were quoted.
+     */
+    travellerNotes: text("traveller_notes"),
+    /** When they last filled the details in, so dispatch can see it is new. */
+    detailsUpdatedAt: timestamp("details_updated_at", { withTimezone: true }),
     passengers: smallint("passengers").notNull().default(1),
     luggageCount: smallint("luggage_count").notNull().default(0),
     flightNumber: text("flight_number"),

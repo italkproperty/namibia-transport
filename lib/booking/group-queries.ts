@@ -21,6 +21,13 @@ export type QuoteGroup = {
     distanceKm: string | null;
     durationMin: number | null;
     status: string;
+    /** `a-to-b` node pair, so an airport leg is identified by the node rather
+     *  than by a display label that may name a lodge instead. */
+    journeySlug: string | null;
+    pickupDetail: string | null;
+    travellerNotes: string | null;
+    flightNumber: string | null;
+    detailsUpdatedAt: Date | null;
   }[];
   total: string;
   currency: string;
@@ -74,6 +81,11 @@ export async function getQuoteGroup(
         distanceKm: row.booking.distanceKm,
         durationMin: row.booking.durationMin,
         status: row.booking.status,
+        journeySlug: row.booking.journeySlug,
+        pickupDetail: row.booking.pickupDetail,
+        travellerNotes: row.booking.travellerNotes,
+        flightNumber: row.booking.flightNumber,
+        detailsUpdatedAt: row.booking.detailsUpdatedAt,
       })),
       total,
       currency: rows[0].booking.currency,

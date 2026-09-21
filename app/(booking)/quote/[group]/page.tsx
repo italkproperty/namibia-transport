@@ -3,10 +3,13 @@ import { notFound } from "next/navigation";
 import { CheckCircle2Icon } from "lucide-react";
 
 import { BankTransfer } from "@/components/booking/bank-transfer";
+import { TripDetailsForm } from "@/components/booking/trip-details-form";
 import { SiteFooter } from "@/components/marketing/site-footer";
 import { SiteHeader } from "@/components/marketing/site-header";
 import { getQuoteGroup } from "@/lib/booking/group-queries";
+import { isAirportLeg } from "@/lib/booking/details";
 import { getCompanyInfo, SUPPORT, whatsappLink } from "@/lib/company";
+import { fxNote, indicativeUsd } from "@/lib/fx";
 import { formatDateTime, formatDuration } from "@/lib/format";
 import { listRoutes } from "@/lib/maps";
 import { formatNad } from "@/lib/money";
@@ -34,6 +37,8 @@ export default async function QuoteGroupPage({ params }: PageProps) {
   if (!quote) notFound();
 
   const { routes } = await listRoutes({ activeOnly: true });
+  const usd = indicativeUsd(quote.total);
+  const rateNote = fxNote();
   const company = getCompanyInfo();
   const bank = quote.isCancelled ? null : getBankDetails();
 
@@ -97,6 +102,22 @@ export default async function QuoteGroupPage({ params }: PageProps) {
                   <p className="text-muted-foreground mt-1 font-mono text-xs">
                     {leg.ref}
                   </p>
+
+                  <TripDetailsForm
+                    bookingRef={leg.ref}
+                    legLabel={`${leg.pickupLabel} → ${leg.dropoffLabel}`}
+                    dateLabel={formatDateTime(leg.scheduledAt)}
+                    isAirportLeg={isAirportLeg(
+                      leg.journeySlug,
+                      leg.pickupLabel,
+                      leg.dropoffLabel,
+                    )}
+                    pickupTime={namibianTime(leg.scheduledAt)}
+                    pickupDetail={leg.pickupDetail}
+                    travellerNotes={leg.travellerNotes}
+                    flightNumber={leg.flightNumber}
+                    savedAt={leg.detailsUpdatedAt?.toISOString() ?? null}
+                  />
                 </li>
               ))}
             </ol>
@@ -118,6 +139,13 @@ export default async function QuoteGroupPage({ params }: PageProps) {
                 <p className="tabular text-brand mt-1 text-3xl leading-none font-semibold">
                   {formatNad(quote.total)}
                 </p>
+                {usd && (
+                  <p className="text-muted-foreground mt-1 text-sm">
+                    about {usd}
+                    {rateNote ? ` — ${rateNote}` : ""}. We are paid in Namibian
+                    dollars; your bank converts at its own rate on the day.
+                  </p>
+                )}
               </div>
             </div>
             <p className="text-muted-foreground mt-2 text-sm leading-snug text-pretty">
@@ -170,4 +198,14 @@ export default async function QuoteGroupPage({ params }: PageProps) {
       <SiteFooter routes={routes} />
     </div>
   );
+}
+
+/** "09:00" in Namibian terms, for the time input's default. */
+function namibianTime(at: Date): string {
+  return new Intl.DateTimeFormat("en-GB", {
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false,
+    timeZone: "Africa/Windhoek",
+  }).format(at);
 }

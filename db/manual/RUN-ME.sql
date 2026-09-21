@@ -50,10 +50,20 @@ ALTER TABLE "drivers" ADD COLUMN IF NOT EXISTS "photo_url" text;
 ALTER TABLE "bookings" ADD COLUMN IF NOT EXISTS "group_ref" text;
 CREATE INDEX IF NOT EXISTS "bookings_group_ref_idx" ON "bookings" USING btree ("group_ref");
 
+/* ---------------------------------------------- 22 September 2026 (later) -- */
+
+-- What only the traveller knows: the exact pick-up spot, their flight, and
+-- anything the driver should be told. Kept apart from pickup_label and notes,
+-- which are ours — a traveller filling these in must never overwrite the place
+-- we priced or the terms we quoted.
+ALTER TABLE "bookings" ADD COLUMN IF NOT EXISTS "pickup_detail" text;
+ALTER TABLE "bookings" ADD COLUMN IF NOT EXISTS "traveller_notes" text;
+ALTER TABLE "bookings" ADD COLUMN IF NOT EXISTS "details_updated_at" timestamptz;
+
 COMMIT;
 
 /*
- * Check it worked — this should return 4.
+ * Check it worked — this should return 7.
  *
  *   SELECT count(*) FROM information_schema.columns
  *    WHERE table_schema = 'public'
@@ -61,6 +71,9 @@ COMMIT;
  *            ('bookings','journey_slug'),
  *            ('bookings','group_ref'),
  *            ('drivers','base_node'),
- *            ('drivers','photo_url')
+ *            ('drivers','photo_url'),
+ *            ('bookings','pickup_detail'),
+ *            ('bookings','traveller_notes'),
+ *            ('bookings','details_updated_at')
  *          );
  */
