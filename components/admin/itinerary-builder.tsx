@@ -143,8 +143,15 @@ export function ItineraryBuilder({ places }: { places: PlaceOption[] }) {
       {/* ------------------------------------------------------- the route */}
       <section>
         <h2 className="mb-1 text-sm font-semibold">Where they are going</h2>
-        <p className="text-muted-foreground mb-3 text-xs">
-          In order. Nights are how long they stay before the next leg.
+        <p className="text-muted-foreground mb-3 max-w-2xl text-xs leading-relaxed">
+          In order. Nights are how long they stay before the next leg.{" "}
+          <span className="text-foreground">
+            Staying at a lodge or guest farm?
+          </span>{" "}
+          Those are not in the search — the road model knows towns, gates and
+          airports. Pick the nearest town, then put the real name in{" "}
+          <span className="text-foreground">Called something else?</span>: we
+          price the drive to the town and the traveller sees the lodge.
         </p>
 
         <ul className="grid gap-2">
@@ -189,7 +196,7 @@ export function ItineraryBuilder({ places }: { places: PlaceOption[] }) {
                 <Input
                   id={`label-${stop.key}`}
                   value={stop.label}
-                  placeholder="Namib Desert Lodge"
+                  placeholder="Lodge or farm name"
                   onChange={(event) =>
                     update(stop.key, { label: event.target.value })
                   }

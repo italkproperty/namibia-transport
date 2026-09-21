@@ -107,6 +107,21 @@ export function PlaceSearch({
         className="border-input bg-background focus-ring h-10 w-full rounded-md border px-3 text-sm"
       />
 
+      {open && matches.length === 0 && (
+        <div className="bg-popover absolute z-30 mt-1 w-full rounded-md border p-3 shadow-lg">
+          <p className="text-sm font-medium">
+            No town called &ldquo;{query.trim()}&rdquo;
+          </p>
+          <p className="text-muted-foreground mt-1 text-xs leading-relaxed">
+            This list is the towns, gates and airports our road model knows —
+            lodges and guest farms are not in it. Pick the nearest town here,
+            then type the real name in{" "}
+            <span className="text-foreground">Called something else?</span> The
+            traveller sees the name you type.
+          </p>
+        </div>
+      )}
+
       {open && matches.length > 0 && (
         <ul
           id={id ? `${id}-list` : undefined}
