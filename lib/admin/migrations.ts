@@ -19,13 +19,13 @@ const CHECKS: { column: string; table: string; file: string; what: string }[] =
     {
       table: "bookings",
       column: "group_ref",
-      file: "db/manual/2026-09-22-quote-groups.sql",
+      file: "db/manual/RUN-ME.sql",
       what: "multi-leg itinerary quotes",
     },
     {
       table: "drivers",
       column: "photo_url",
-      file: "db/manual/2026-09-22-quote-groups.sql",
+      file: "db/manual/RUN-ME.sql",
       what: "driver photographs on the booking page",
     },
   ];

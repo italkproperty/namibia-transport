@@ -127,6 +127,13 @@ fields and coordinates, powering fixed pricing, the programmatic SEO pages and r
 Migrations are generated with `drizzle-kit`, and applied via Supabase's SQL editor when a
 local Postgres is not to hand.
 
+**There is one migration file: `db/manual/RUN-ME.sql`.** It is cumulative, idempotent and
+wrapped in a single transaction, so pasting the whole thing is always correct whatever
+state the database is in. Add new changes to the bottom of it rather than starting
+another file — an operator should never have to work out which of several scripts they
+are missing. **Always paste the SQL itself into the reply**, never a file path: the
+person running it is in the Supabase SQL editor, not in the repository.
+
 ## Working style
 - Small, reviewable commits. Explain *why* in the message; the diff already shows what.
 - `main` is always deployable and always deploying — never leave it broken.
@@ -187,8 +194,7 @@ silently loses — and splits the total across legs so the parts reconcile exact
 (`tests/itinerary-quote.test.ts`). Each leg is saved as its own booking sharing a
 `group_ref`: dispatch sees the driving jobs, the traveller sees one page at
 `/quote/<group_ref>`. Schema reaches production by hand, so `lib/admin/migrations.ts`
-introspects the database and the quote page says which column is missing and which file
-to run.
+introspects the database and the quote page names the missing column.
 
 In flight: PayToday returns 403 at initialize() — their endpoint answers
 `{"status":"unauthorized","error":"Authorization error:"}` with the reason left blank

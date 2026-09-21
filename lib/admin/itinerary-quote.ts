@@ -302,7 +302,7 @@ export async function saveItineraryQuote(
       return {
         ok: false,
         message:
-          "The bookings table has no group_ref column yet — run db/manual/2026-09-22-quote-groups.sql in Supabase, then try again.",
+          "The bookings table has no group_ref column yet — run db/manual/RUN-ME.sql in Supabase, then try again.",
       };
     }
     return { ok: false, message };
