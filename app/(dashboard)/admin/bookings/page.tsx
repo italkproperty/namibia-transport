@@ -1,6 +1,11 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { ArrowDownIcon, ArrowUpIcon, MapPinIcon } from "lucide-react";
+import {
+  ArrowDownIcon,
+  ArrowUpIcon,
+  MapPinIcon,
+  SearchIcon,
+} from "lucide-react";
 
 import { AssignDriver } from "@/components/admin/assign-driver";
 import { BookingRowActions } from "@/components/admin/booking-actions";
@@ -18,6 +23,8 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import {
+  BOOKINGS_PER_PAGE,
+  countBookings,
   getAdminSummary,
   listBookings,
   SORTABLE_COLUMNS,
@@ -94,6 +101,8 @@ export default async function AdminBookingsPage({ searchParams }: PageProps) {
   const categoryParam = one(params.category);
   const sortParam = one(params.sort);
   const dirParam = one(params.dir);
+  const search = one(params.q)?.trim().slice(0, 100) || undefined;
+  const page = Math.max(0, Number.parseInt(one(params.page) ?? "0", 10) || 0);
 
   const filters = {
     status: STATUSES.includes(statusParam as BookingStatus)
@@ -102,18 +111,25 @@ export default async function AdminBookingsPage({ searchParams }: PageProps) {
     category: CATEGORIES.includes(categoryParam as RouteCategory)
       ? (categoryParam as RouteCategory)
       : undefined,
+    query: search,
+    page,
     sort: (sortParam && sortParam in SORTABLE_COLUMNS
       ? sortParam
       : "createdAt") as SortKey,
     direction: dirParam === "asc" ? ("asc" as const) : ("desc" as const),
   };
 
-  const [rows, summary, driverRows, assignments] = await Promise.all([
+  const [rows, total, summary, driverRows, assignments] = await Promise.all([
     listBookings(filters),
+    countBookings(filters),
     getAdminSummary(),
     listDrivers(),
     assignmentsByBooking(),
   ]);
+
+  const pages = Math.max(1, Math.ceil(total / BOOKINGS_PER_PAGE));
+  const from = total === 0 ? 0 : page * BOOKINGS_PER_PAGE + 1;
+  const to = Math.min(total, page * BOOKINGS_PER_PAGE + rows.length);
 
   /**
    * Only drivers who are active AND have a vehicle on file can be assigned.
@@ -128,14 +144,20 @@ export default async function AdminBookingsPage({ searchParams }: PageProps) {
       registration: driver.registration,
     }));
 
-  /** Preserves the other filters when one control changes. */
+  /**
+   * Preserves the other filters when one control changes — and drops the page
+   * unless the caller is the pager itself, because page 7 of a narrower filter
+   * is usually nothing at all.
+   */
   function href(next: Record<string, string | undefined>) {
     const query = new URLSearchParams();
     const merged = {
       status: filters.status,
       category: filters.category,
+      q: search,
       sort: filters.sort,
       dir: filters.direction,
+      page: undefined as string | undefined,
       ...next,
     };
     for (const [key, value] of Object.entries(merged)) {
@@ -289,12 +311,53 @@ export default async function AdminBookingsPage({ searchParams }: PageProps) {
               </FilterChip>
             ))}
           </FilterRow>
+
+          {/* A GET form, so a search is a URL an operator can send to someone
+              else — and so the back button behaves. */}
+          <form method="get" action="/admin/bookings" className="flex gap-2">
+            {filters.status && (
+              <input type="hidden" name="status" value={filters.status} />
+            )}
+            {filters.category && (
+              <input type="hidden" name="category" value={filters.category} />
+            )}
+            <input type="hidden" name="sort" value={filters.sort} />
+            <input type="hidden" name="dir" value={filters.direction} />
+
+            <label htmlFor="booking-search" className="sr-only">
+              Find a booking
+            </label>
+            <div className="relative flex-1 sm:max-w-md">
+              <SearchIcon
+                className="text-muted-foreground pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2"
+                aria-hidden
+              />
+              <input
+                id="booking-search"
+                name="q"
+                type="search"
+                defaultValue={search ?? ""}
+                placeholder="Reference, name, number, flight or place"
+                className="border-input bg-background focus-visible:ring-ring h-10 w-full rounded-md border pr-3 pl-9 text-sm focus-visible:ring-[3px] focus-visible:outline-none"
+              />
+            </div>
+            <Button type="submit" variant="outline" size="sm" className="press h-10">
+              Find
+            </Button>
+            {search && (
+              <Button asChild variant="ghost" size="sm" className="press h-10">
+                <Link href={href({ q: undefined })}>Clear</Link>
+              </Button>
+            )}
+          </form>
         </section>
 
         {/* --------------------------------------------------------- table */}
         {rows.length === 0 ? (
           <p className="border-border text-muted-foreground rounded-xl border border-dashed p-10 text-center text-sm">
-            No bookings match these filters yet.
+            {search
+              ? `Nothing matches “${search}”. Try a reference, part of a name, or a phone number.`
+              : "No bookings match these filters yet."}
           </p>
         ) : (
           <div className="bg-card rounded-xl border">
@@ -455,10 +518,64 @@ export default async function AdminBookingsPage({ searchParams }: PageProps) {
           </div>
         )}
 
+        {total > 0 && (
+          <nav
+            aria-label="Pages of bookings"
+            className="flex flex-wrap items-center justify-between gap-3"
+          >
+            <p className="text-muted-foreground text-sm" aria-live="polite">
+              <span className="tabular">
+                {from}–{to}
+              </span>{" "}
+              of <span className="tabular">{total.toLocaleString("en-US")}</span>
+              {search ? " matching" : ""}
+            </p>
+
+            {pages > 1 && (
+              <div className="flex items-center gap-2">
+                <Button
+                  asChild={page > 0}
+                  variant="outline"
+                  size="sm"
+                  className="press"
+                  disabled={page === 0}
+                >
+                  {page > 0 ? (
+                    <Link href={href({ page: String(page - 1) })} rel="prev">
+                      Previous
+                    </Link>
+                  ) : (
+                    <span>Previous</span>
+                  )}
+                </Button>
+                <span className="text-muted-foreground text-sm">
+                  Page <span className="tabular">{page + 1}</span> of{" "}
+                  <span className="tabular">{pages}</span>
+                </span>
+                <Button
+                  asChild={page + 1 < pages}
+                  variant="outline"
+                  size="sm"
+                  className="press"
+                  disabled={page + 1 >= pages}
+                >
+                  {page + 1 < pages ? (
+                    <Link href={href({ page: String(page + 1) })} rel="next">
+                      Next
+                    </Link>
+                  ) : (
+                    <span>Next</span>
+                  )}
+                </Button>
+              </div>
+            )}
+          </nav>
+        )}
+
         <p className="text-muted-foreground text-xs">
-          Showing up to 500 bookings. Access is a shared password for now —
-          Supabase Auth with per-user accounts and row-level security replaces
-          it before this leaves the founding team.
+          Access is a shared password for now — Supabase Auth with per-user
+          accounts and row-level security replaces it before this leaves the
+          founding team.
         </p>
       </div>
     </AdminShell>
