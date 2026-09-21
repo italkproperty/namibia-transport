@@ -10,6 +10,8 @@ import {
   ShieldCheckIcon,
 } from "lucide-react";
 
+import { BankTransfer } from "@/components/booking/bank-transfer";
+import { DriverCard } from "@/components/booking/driver-card";
 import { PayNowButton } from "@/components/booking/pay-now-button";
 import { SiteFooter } from "@/components/marketing/site-footer";
 import { SiteHeader } from "@/components/marketing/site-header";
@@ -21,6 +23,12 @@ import { mapsLink } from "@/lib/maps/bounds";
 import { formatNad } from "@/lib/money";
 import { journeyLabel } from "@/lib/network/journey";
 import { isLiveGatewayConfigured } from "@/lib/payments";
+import {
+  bankTransferLines,
+  getBankDetails,
+  TRANSFER_NOTE,
+} from "@/lib/payments/bank";
+import { getTransferState } from "@/lib/payments/transfer";
 import {
   getLatestPayment,
   reconcileBookingPayment,
@@ -83,6 +91,12 @@ export default async function BookingConfirmationPage({ params }: PageProps) {
     isLiveGatewayConfigured() &&
     payment?.provider !== "stub" &&
     booking.status !== "cancelled";
+  // Bank transfer stands on its own rather than behind a "card failed" branch:
+  // an EFT is how most Namibian business money moves, and while PayToday is
+  // refusing our account it is the only way anyone can pay us at all.
+  const bank = booking.status === "cancelled" ? null : getBankDetails();
+  const transfer = await getTransferState(booking.id);
+
   const company = getCompanyInfo();
   const routeLabel =
     detail.routeOrigin && detail.routeDestination
@@ -123,44 +137,22 @@ export default async function BookingConfirmationPage({ params }: PageProps) {
                 question an arriving traveller actually has, so it sits above
                 the trip detail rather than among it. */}
             {detail.driverName && (
-              <div className="bg-success-subtle mt-5 rounded-xl border p-4">
-                <p className="text-success text-xs font-semibold tracking-[0.14em] uppercase">
-                  Your driver
-                </p>
-                <p className="mt-1 text-lg font-semibold">
-                  {detail.driverName}
-                </p>
-                {detail.vehicleRegistration && (
-                  <p className="tabular mt-2 text-sm">
-                    <span className="text-muted-foreground">
-                      Look for{" "}
-                    </span>
-                    <span className="font-medium">
-                      {[
-                        detail.vehicleColour,
-                        detail.vehicleMake,
-                        detail.vehicleModel,
-                      ]
-                        .filter(Boolean)
-                        .join(" ")}
-                    </span>
-                    <span className="ml-2 rounded bg-white/70 px-1.5 py-0.5 font-semibold tracking-wider">
-                      {detail.vehicleRegistration}
-                    </span>
-                  </p>
-                )}
-                {(detail.driverPhone || detail.driverWhatsapp) && (
-                  <p className="text-muted-foreground mt-2 text-sm">
-                    Their number:{" "}
-                    <a
-                      href={`tel:${(detail.driverPhone ?? detail.driverWhatsapp ?? "").replace(/\s/g, "")}`}
-                      className="text-foreground underline underline-offset-2"
-                    >
-                      {detail.driverPhone ?? detail.driverWhatsapp}
-                    </a>
-                  </p>
-                )}
-              </div>
+              <DriverCard
+                name={detail.driverName}
+                photoUrl={detail.driverPhotoUrl}
+                phone={detail.driverPhone}
+                whatsapp={detail.driverWhatsapp}
+                vehicle={
+                  [
+                    detail.vehicleColour,
+                    detail.vehicleMake,
+                    detail.vehicleModel,
+                  ]
+                    .filter(Boolean)
+                    .join(" ") || null
+                }
+                registration={detail.vehicleRegistration}
+              />
             )}
 
             <dl className="mt-5 grid gap-x-6 gap-y-2.5 border-t pt-4 text-sm sm:grid-cols-2">
@@ -241,7 +233,9 @@ export default async function BookingConfirmationPage({ params }: PageProps) {
                     ? "Nothing was charged. Your booking and your fare are held — try again with another card."
                     : canPayNow
                       ? "Your booking is held. Pay now to have your driver assigned, or we will message you a link."
-                      : "Nothing has been charged. We will message you payment details before your travel date."}{" "}
+                      : bank
+                        ? "Nothing has been charged yet. You can settle it by bank transfer below."
+                        : "Nothing has been charged. We will message you payment details before your travel date."}{" "}
                   Your fare is locked in at {formatNad(booking.customerPrice)}{" "}
                   either way.
                 </p>
@@ -256,6 +250,18 @@ export default async function BookingConfirmationPage({ params }: PageProps) {
                   </div>
                 )}
               </div>
+            </div>
+          )}
+
+          {!isPaid && bank && (
+            <div className="mt-4">
+              <BankTransfer
+                bookingRef={booking.ref}
+                lines={bankTransferLines(bank, booking.ref)}
+                note={TRANSFER_NOTE}
+                declaredAt={transfer.declaredAt}
+                confirmed={transfer.status === "confirmed"}
+              />
             </div>
           )}
 

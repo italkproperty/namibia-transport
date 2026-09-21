@@ -27,7 +27,8 @@
     "test:gates": "tsx --conditions=react-server tests/gates.test.ts",
     "test:pricing": "tsx --conditions=react-server tests/pricing.test.ts",
     "test:guides": "tsx --conditions=react-server tests/guides.test.ts",
-    "test:legs": "tsx --conditions=react-server tests/legs.test.ts"
+    "test:legs": "tsx --conditions=react-server tests/legs.test.ts",
+    "test:transfer": "tsx --conditions=react-server tests/transfer.test.ts"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.9.1",

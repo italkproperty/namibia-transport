@@ -320,6 +320,14 @@ export const drivers = pgTable(
     /** Namibian PDP / operator licence reference. */
     licenseNumber: text("license_number"),
     licenseExpiresAt: timestamp("license_expires_at", { withTimezone: true }),
+    /**
+     * A photograph of this driver, so a traveller waiting in arrivals knows
+     * who they are looking for. It must be a real photograph of the person who
+     * is actually coming — a stock portrait here is not a design placeholder,
+     * it is a lie about who will meet a stranger at an airport, and the site
+     * falls back to their initials rather than tell it.
+     */
+    photoUrl: text("photo_url"),
     status: driverStatusEnum("status").notNull().default("pending"),
     /**
      * Where this driver lives, as a slug from the road network — "windhoek",

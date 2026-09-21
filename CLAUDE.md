@@ -169,6 +169,15 @@ three filters exist to stop a page being published that nobody searches for, and
 an empty table rather than throwing — and holds guide prose to the same credibility rules
 as the confirmation email.
 
+Taking money: bank transfer is a first-class payment method (`lib/payments/bank.ts`),
+configured by `BANK_ACCOUNT_*` in Vercel and server-only because this repo is public.
+The rule that governs it is in `lib/payments/transfer.ts`: a traveller pressing "I have
+made the transfer" records a claim and can never mark a booking paid — only
+`confirmTransfer`, behind the admin password, does that, and `tests/transfer.test.ts`
+holds the line against a real Postgres. Declared transfers queue at the top of
+`/admin/bookings`. `/admin/quotes/new` writes a quote by hand for trips the road model
+cannot price and returns a shareable `/booking/REF` link.
+
 In flight: PayToday returns 403 at initialize() — their endpoint answers
 `{"status":"unauthorized","error":"Authorization error:"}` with the reason left blank
 after the colon, which is an account-side refusal we cannot fix in code. `/admin/paytoday`

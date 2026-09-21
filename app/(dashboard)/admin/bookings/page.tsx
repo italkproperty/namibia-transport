@@ -3,8 +3,10 @@ import Link from "next/link";
 import { ArrowDownIcon, ArrowUpIcon, MapPinIcon } from "lucide-react";
 
 import { AssignDriver } from "@/components/admin/assign-driver";
+import { PendingTransfers } from "@/components/admin/pending-transfers";
 import { AdminShell } from "@/components/admin/shell";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import {
   Table,
   TableBody,
@@ -19,6 +21,7 @@ import {
   SORTABLE_COLUMNS,
   type SortKey,
 } from "@/lib/admin/queries";
+import { listPendingTransfers } from "@/lib/admin/transfer-queries";
 import { isDatabaseConfigured } from "@/db";
 import type { BookingStatus, RouteCategory } from "@/db/schema";
 import { formatDate, formatDateTime } from "@/lib/format";
@@ -139,15 +142,26 @@ export default async function AdminBookingsPage({ searchParams }: PageProps) {
     return qs ? `/admin/bookings?${qs}` : "/admin/bookings";
   }
 
+  // Money a traveller says they have sent. Above everything else on the page
+  // because it is the only item here with somebody waiting on the other end.
+  const pendingTransfers = await listPendingTransfers();
+
   return (
     <AdminShell active="/admin/bookings">
       <div className="space-y-6">
-        <div>
-          <h1 className="text-xl">Bookings</h1>
-          <p className="text-muted-foreground mt-2 text-sm">
-            Every booking, with the economics behind it.
-          </p>
+        <div className="flex flex-wrap items-start justify-between gap-4">
+          <div>
+            <h1 className="text-xl">Bookings</h1>
+            <p className="text-muted-foreground mt-2 text-sm">
+              Every booking, with the economics behind it.
+            </p>
+          </div>
+          <Button asChild size="sm" className="press shrink-0">
+            <Link href="/admin/quotes/new">Quote a trip by hand</Link>
+          </Button>
         </div>
+
+        <PendingTransfers transfers={pendingTransfers} />
 
         {!isDatabaseConfigured() && (
           <p className="border-border text-muted-foreground rounded-xl border border-dashed p-4 text-sm">

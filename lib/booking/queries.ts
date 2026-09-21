@@ -36,6 +36,7 @@ export async function getBookingByRef(ref: string) {
         driverName: drivers.fullName,
         driverPhone: drivers.phone,
         driverWhatsapp: drivers.whatsapp,
+        driverPhotoUrl: drivers.photoUrl,
         vehicleMake: vehicles.make,
         vehicleModel: vehicles.model,
         vehicleColour: vehicles.colour,

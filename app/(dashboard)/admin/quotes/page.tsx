@@ -4,6 +4,7 @@ import Link from "next/link";
 import { AdminShell } from "@/components/admin/shell";
 import { QuoteStatusSelect } from "@/components/admin/quote-status-select";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import {
   Table,
   TableBody,
@@ -40,13 +41,18 @@ export default async function AdminQuotesPage() {
   return (
     <AdminShell active="/admin/quotes">
       <div className="space-y-6">
-        <div>
-          <h1 className="text-xl">Corporate quotes</h1>
-          <p className="text-muted-foreground mt-1 text-sm">
-            Every quotation is a lead. Move the status as the conversation
-            moves — this is the data that shows which industries and routes
-            corporate demand comes from.
-          </p>
+        <div className="flex flex-wrap items-start justify-between gap-4">
+          <div>
+            <h1 className="text-xl">Quotes</h1>
+            <p className="text-muted-foreground mt-1 max-w-xl text-sm text-pretty">
+              Corporate quotations raised from the website, below. For a trip
+              the model cannot price — a lodge it does not know, a return
+              agreed as one number — write one by hand and send the link.
+            </p>
+          </div>
+          <Button asChild size="sm" className="press shrink-0">
+            <Link href="/admin/quotes/new">Quote a trip by hand</Link>
+          </Button>
         </div>
 
         <div className="grid gap-4 sm:grid-cols-3">
