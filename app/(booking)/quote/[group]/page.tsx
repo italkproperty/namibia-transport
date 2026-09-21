@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
-import { CheckCircle2Icon } from "lucide-react";
+import { CheckCircle2Icon, ClockIcon } from "lucide-react";
 
 import { BankTransfer } from "@/components/booking/bank-transfer";
 import { TripDetailsForm } from "@/components/booking/trip-details-form";
@@ -8,6 +8,7 @@ import { SiteFooter } from "@/components/marketing/site-footer";
 import { SiteHeader } from "@/components/marketing/site-header";
 import { getQuoteGroup } from "@/lib/booking/group-queries";
 import { isAirportLeg } from "@/lib/booking/details";
+import { groupValidity } from "@/lib/booking/validity";
 import { getCompanyInfo, SUPPORT, whatsappLink } from "@/lib/company";
 import { fxNote, indicativeUsd } from "@/lib/fx";
 import { formatDateTime, formatDuration } from "@/lib/format";
@@ -40,7 +41,15 @@ export default async function QuoteGroupPage({ params }: PageProps) {
   const usd = indicativeUsd(quote.total);
   const rateNote = fxNote();
   const company = getCompanyInfo();
-  const bank = quote.isCancelled ? null : getBankDetails();
+
+  // A quote at a public URL is a live price. One sent in September and opened
+  // in December would otherwise still be payable at September's fare, and the
+  // first we would know is a transfer arriving for a trip that now costs more
+  // to run than it earns. So an expired quote keeps its page — the traveller
+  // can still see what they were quoted — but loses the way to pay it.
+  const validity = groupValidity(quote.legs);
+  const bank =
+    quote.isCancelled || validity.expired ? null : getBankDetails();
 
   // One trip, one transfer: payment is tracked against the first leg, and its
   // reference is what the traveller puts in the bank's reference field.
@@ -69,6 +78,38 @@ export default async function QuoteGroupPage({ params }: PageProps) {
               <CheckCircle2Icon className="size-5" aria-hidden />
               Paid and confirmed.
             </p>
+          )}
+
+          {validity.expired && !quote.isCancelled && (
+            <div className="border-warning/40 bg-warning/10 mt-5 flex gap-3 rounded-xl border p-4">
+              <ClockIcon
+                className="text-warning mt-0.5 size-5 shrink-0"
+                aria-hidden
+              />
+              <div className="min-w-0">
+                <p className="font-medium">
+                  {validity.reason === "travelled"
+                    ? "These dates have passed"
+                    : "This fare is out of date"}
+                </p>
+                <p className="text-muted-foreground mt-1 text-sm leading-relaxed text-pretty">
+                  {validity.message}
+                </p>
+                {company.whatsapp && (
+                  <a
+                    href={whatsappLink(
+                      company.whatsapp,
+                      `Hi — quote ${quote.groupRef}. Could you re-price it?`,
+                    )}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="focus-ring mt-3 inline-flex items-center gap-1.5 rounded-sm text-sm font-medium underline underline-offset-4"
+                  >
+                    Ask us to re-price it on WhatsApp
+                  </a>
+                )}
+              </div>
+            </div>
           )}
 
           {/* ------------------------------------------------ the itinerary */}

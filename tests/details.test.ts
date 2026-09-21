@@ -244,6 +244,55 @@ async function main() {
   const rejected = await updateTripDetails(badTime);
   check("a nonsense time is refused", rejected?.ok === false);
 
+  /* --------------------------------------- a field nobody sent is not a field cleared */
+
+  /**
+   * The patch used to be built unconditionally, so a POST carrying only the
+   * reference wrote null over all three answers. That is not a hypothetical
+   * shape: it is every partial form and anyone poking at the endpoint, and the
+   * traveller's flight number was gone with nothing to say it had been given.
+   */
+  console.log("\nan absent field leaves what is stored alone");
+
+  const timeOnly = new FormData();
+  timeOnly.set("ref", booking.ref);
+  timeOnly.set("pickupTime", "07:15");
+  await updateTripDetails(timeOnly);
+
+  const [kept] = await db
+    .select()
+    .from(bookings)
+    .where(eq(bookings.id, booking.id));
+
+  check(
+    "THE RULE: a form without the flight number does not erase it",
+    kept.flightNumber === "SA 074",
+    String(kept.flightNumber),
+  );
+  check(
+    "nor the pick-up detail",
+    kept.pickupDetail === "Reception, past the cattle grid",
+    String(kept.pickupDetail),
+  );
+  check("nor the note", kept.travellerNotes === "Two carry-ons and a backpack.");
+
+  // Sent and empty is a traveller taking something back, and still works.
+  const cleared = new FormData();
+  cleared.set("ref", booking.ref);
+  cleared.set("travellerNotes", "");
+  await updateTripDetails(cleared);
+
+  const [blanked] = await db
+    .select()
+    .from(bookings)
+    .where(eq(bookings.id, booking.id));
+  check("but sending it empty still clears it", blanked.travellerNotes === null);
+  check(
+    "and clearing one field leaves the others",
+    blanked.flightNumber === "SA 074",
+    String(blanked.flightNumber),
+  );
+
   console.log("\nbookings it will not touch");
 
   const missing = new FormData();

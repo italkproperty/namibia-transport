@@ -5,6 +5,7 @@ import {
   AlertTriangleIcon,
   CalendarPlusIcon,
   CheckIcon,
+  ClockIcon,
   MapPinIcon,
   MessageCircleIcon,
   ShieldCheckIcon,
@@ -19,6 +20,7 @@ import { SiteHeader } from "@/components/marketing/site-header";
 import { Button } from "@/components/ui/button";
 import { isAirportLeg } from "@/lib/booking/details";
 import { getBookingByRef } from "@/lib/booking/queries";
+import { quoteValidity } from "@/lib/booking/validity";
 import { getCompanyInfo, whatsappLink } from "@/lib/company";
 import { fxNote, indicativeUsd } from "@/lib/fx";
 import { formatDateTime } from "@/lib/format";
@@ -90,15 +92,23 @@ export default async function BookingConfirmationPage({ params }: PageProps) {
   // booking has no payments row, which happens if the gateway was unreachable
   // at booking time. Requiring a row meant the one case that most needed a
   // retry button was the one case that never showed one.
+  // An unpaid quote at a public URL is a live price, and it has to stop being
+  // one. The page stays readable so a traveller can see what they were told;
+  // what goes is the way to pay yesterday's fare.
+  const validity = quoteValidity(booking);
   const canPayNow =
     !isPaid &&
     isLiveGatewayConfigured() &&
     payment?.provider !== "stub" &&
-    booking.status !== "cancelled";
+    booking.status !== "cancelled" &&
+    !validity.expired;
   // Bank transfer stands on its own rather than behind a "card failed" branch:
   // an EFT is how most Namibian business money moves, and while PayToday is
   // refusing our account it is the only way anyone can pay us at all.
-  const bank = booking.status === "cancelled" ? null : getBankDetails();
+  const bank =
+    booking.status === "cancelled" || validity.expired
+      ? null
+      : getBankDetails();
   const transfer = await getTransferState(booking.id);
 
   const company = getCompanyInfo();
@@ -281,6 +291,38 @@ export default async function BookingConfirmationPage({ params }: PageProps) {
                       }
                     />
                   </div>
+                )}
+              </div>
+            </div>
+          )}
+
+          {validity.expired && booking.status !== "cancelled" && (
+            <div className="border-warning/40 bg-warning/10 mt-4 flex gap-3 rounded-xl border p-4">
+              <ClockIcon
+                className="text-warning mt-0.5 size-5 shrink-0"
+                aria-hidden
+              />
+              <div className="min-w-0">
+                <p className="text-sm font-medium">
+                  {validity.reason === "travelled"
+                    ? "This date has passed"
+                    : "This fare is out of date"}
+                </p>
+                <p className="text-muted-foreground mt-1 text-sm leading-snug text-pretty">
+                  {validity.message}
+                </p>
+                {company.whatsapp && (
+                  <a
+                    href={whatsappLink(
+                      company.whatsapp,
+                      `Hi — booking ${booking.ref}. Could you re-price it?`,
+                    )}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="focus-ring mt-3 inline-flex items-center gap-1.5 rounded-sm text-sm font-medium underline underline-offset-4"
+                  >
+                    Ask us to re-price it on WhatsApp
+                  </a>
                 )}
               </div>
             </div>

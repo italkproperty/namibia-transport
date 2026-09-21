@@ -92,7 +92,19 @@ export async function setReviewPublished(
   }
 }
 
+/**
+ * Every review, published or not, for the admin table.
+ *
+ * `"use server"` makes each export in this file a public endpoint, and this one
+ * had no gate — so the unpublished pile, which is where a complaint naming a
+ * driver sits before anyone has decided what to do about it, was readable by
+ * anyone who could call the action. The page it feeds is password-gated; the
+ * function has to be too, because the page is not what stands between them.
+ */
 export async function listAllReviews() {
+  const gate = await getAdminGateState();
+  if (gate.state !== "signed-in") return [];
+
   if (!isDatabaseConfigured()) return [];
   try {
     return await getDb()

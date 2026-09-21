@@ -60,6 +60,10 @@ export type PricedLeg = {
   toSlug: string;
   fromLabel: string;
   toLabel: string;
+  /** Index into the caller's `stops` this leg departs from. */
+  fromStop: number;
+  /** Index into the caller's `stops` this leg arrives at. */
+  toStop: number;
   km: number;
   minutes: number;
   gravelKm: number;
@@ -101,8 +105,8 @@ export function priceItinerary(stops: QuoteStop[]): ItineraryQuote | null {
   );
   if (!itinerary) return null;
 
-  const labelFor = (slug: string, index: number): string => {
-    const stop = stops[index];
+  const labelFor = (slug: string, stopIndex: number): string => {
+    const stop = stops[stopIndex];
     const node = findNode(slug);
     if (!node) return slug;
     return displayName(node, stop?.slug === slug ? stop.label : undefined);
@@ -124,11 +128,17 @@ export function priceItinerary(stops: QuoteStop[]): ItineraryQuote | null {
       : Math.round((total * leg.minutes) / Math.max(1, totalMinutes));
     allocated += share;
 
+    // Which stops this leg actually runs between — not `index` and `index + 1`,
+    // because a pair of stops at the same place produces no leg at all.
+    const { from: fromStop, to: toStop } = itinerary.legStops[index];
+
     legs.push({
       fromSlug: leg.origin.slug,
       toSlug: leg.destination.slug,
-      fromLabel: labelFor(leg.origin.slug, index),
-      toLabel: labelFor(leg.destination.slug, index + 1),
+      fromLabel: labelFor(leg.origin.slug, fromStop),
+      toLabel: labelFor(leg.destination.slug, toStop),
+      fromStop,
+      toStop,
       km: leg.km,
       minutes: leg.minutes,
       gravelKm: leg.gravelKm,
@@ -188,6 +198,45 @@ function generateGroupRef(): string {
   return generateBookingRef().replace("NT-", "NT-G-");
 }
 
+/**
+ * Minutes after the first departure that leg `index` leaves.
+ *
+ * Not the leg index times a day. A stop with no nights is a lunch stop, not an
+ * overnight, so it adds no day — the party drives on the same afternoon, which
+ * is how "Solitaire for the apple pie, then Sesriem before the gate shuts"
+ * actually runs, and is also what the pricing assumes (`days = nights + 1`).
+ * And two stops at the same place produce no leg at all, so their nights would
+ * otherwise go uncounted and the whole back half of the trip would be
+ * scheduled early.
+ *
+ * So: every stop between where the previous leg arrived and where this one
+ * departs contributes its nights. Legs sharing a day are spaced by the driving
+ * time of the ones before them plus an hour on the ground, so dispatch never
+ * sees one car in two places at once.
+ */
+const GROUND_TIME_MIN = 60;
+
+export function departureOffset(
+  stops: QuoteStop[],
+  legs: PricedLeg[],
+  index: number,
+): number {
+  let minutes = 0;
+  for (let i = 0; i < index; i += 1) {
+    let nights = 0;
+    // Normally one stop; more when same-place stops were collapsed into a stay.
+    for (let stop = legs[i].toStop; stop <= legs[i + 1].fromStop; stop += 1) {
+      nights += Math.max(0, Math.floor(stops[stop]?.nights ?? 0));
+    }
+    minutes += nights > 0
+      ? // Sleeping resets the clock: the next leg leaves at the same hour, n
+        // days later, rather than drifting later and later down the itinerary.
+        nights * 1440 - (minutes % 1440)
+      : legs[i].minutes + GROUND_TIME_MIN;
+  }
+  return minutes;
+}
+
 export async function saveItineraryQuote(
   input: SaveItineraryInput,
 ): Promise<SaveResult> {
@@ -210,88 +259,89 @@ export async function saveItineraryQuote(
   const scale = total / quote.total;
 
   const db = getDb();
+  const groupRef = generateGroupRef();
+  const start = namibianLocalToInstant(input.startDate, input.startTime);
 
   try {
-    const [existing] = await db
-      .select()
-      .from(customers)
-      .where(eq(customers.whatsapp, input.whatsapp))
-      .limit(1);
+    // One transaction for the whole trip. A quote is only ever true as a whole:
+    // legs that survived a failure halfway through would be separately payable,
+    // and the quote page would total them and tell the traveller a smaller
+    // number than the one they agreed.
+    const refs = await db.transaction(async (tx) => {
+      const [existing] = await tx
+        .select()
+        .from(customers)
+        .where(eq(customers.whatsapp, input.whatsapp))
+        .limit(1);
 
-    const customer =
-      existing ??
-      (
-        await db
-          .insert(customers)
-          .values({
-            fullName: input.fullName,
-            whatsapp: input.whatsapp,
-            email: input.email || null,
-            customerType: "tourist",
-          })
-          .returning()
-      )[0];
-
-    const groupRef = generateGroupRef();
-    const refs: string[] = [];
-
-    // Each leg departs the morning after the previous stop's nights are up.
-    let dayOffset = 0;
-    let allocated = 0;
-
-    for (const [index, leg] of quote.legs.entries()) {
-      const isLast = index === quote.legs.length - 1;
-      const price = isLast ? total - allocated : Math.round(leg.price * scale);
-      allocated += price;
-
-      const payout = Math.round(price * (quote.totalPayout / quote.total));
-
-      const departure = new Date(
-        namibianLocalToInstant(input.startDate, input.startTime).getTime() +
-          dayOffset * 86_400_000,
-      );
-
-      // Nights at the stop this leg arrives at push the next departure out.
-      const arrivingStop = input.stops[index + 1];
-      dayOffset += Math.max(1, arrivingStop?.nights ?? 1);
-
-      let row;
-      for (let attempt = 0; attempt < 5; attempt += 1) {
-        try {
-          [row] = await db
-            .insert(bookings)
+      const customer =
+        existing ??
+        (
+          await tx
+            .insert(customers)
             .values({
-              ref: generateBookingRef(),
-              groupRef,
-              customerId: customer.id,
-              journeySlug: journeySlug(leg.fromSlug, leg.toSlug),
-              pickupLabel: leg.fromLabel,
-              dropoffLabel: leg.toLabel,
-              scheduledAt: departure,
-              passengers: Math.max(1, input.passengers),
-              luggageCount: Math.max(0, input.luggageCount),
-              customerPrice: price.toFixed(2),
-              driverPayout: payout.toFixed(2),
-              contribution: (price - payout).toFixed(2),
-              distanceKm: leg.km.toFixed(2),
-              durationMin: leg.minutes,
-              acquisitionSource: "admin-itinerary",
-              status: "pending_payment",
-              notes: index === 0 ? (input.notes ?? null) : null,
+              fullName: input.fullName,
+              whatsapp: input.whatsapp,
+              email: input.email || null,
+              customerType: "tourist",
             })
-            .returning();
-          break;
-        } catch (error) {
-          const duplicate =
-            error instanceof Error && /bookings_ref_key/.test(error.message);
-          if (!duplicate || attempt === 4) throw error;
+            .returning()
+        )[0];
+
+      const saved: string[] = [];
+      let allocated = 0;
+
+      for (const [index, leg] of quote.legs.entries()) {
+        const isLast = index === quote.legs.length - 1;
+        const price = isLast ? total - allocated : Math.round(leg.price * scale);
+        allocated += price;
+
+        const payout = Math.round(price * (quote.totalPayout / quote.total));
+
+        const departure = new Date(
+          start.getTime() +
+            departureOffset(input.stops, quote.legs, index) * 60_000,
+        );
+
+        let row;
+        for (let attempt = 0; attempt < 5; attempt += 1) {
+          try {
+            [row] = await tx
+              .insert(bookings)
+              .values({
+                ref: generateBookingRef(),
+                groupRef,
+                customerId: customer.id,
+                journeySlug: journeySlug(leg.fromSlug, leg.toSlug),
+                pickupLabel: leg.fromLabel,
+                dropoffLabel: leg.toLabel,
+                scheduledAt: departure,
+                passengers: Math.max(1, input.passengers),
+                luggageCount: Math.max(0, input.luggageCount),
+                customerPrice: price.toFixed(2),
+                driverPayout: payout.toFixed(2),
+                contribution: (price - payout).toFixed(2),
+                distanceKm: leg.km.toFixed(2),
+                durationMin: leg.minutes,
+                acquisitionSource: "admin-itinerary",
+                status: "pending_payment",
+                notes: index === 0 ? (input.notes ?? null) : null,
+              })
+              .returning();
+            break;
+          } catch (error) {
+            const duplicate =
+              error instanceof Error && /bookings_ref_key/.test(error.message);
+            if (!duplicate || attempt === 4) throw error;
+          }
         }
+
+        if (!row) throw new Error("Could not allocate a booking reference.");
+        saved.push(row.ref);
       }
 
-      if (!row)
-        return { ok: false, message: "Could not allocate a reference." };
-      refs.push(row.ref);
-    }
+      return saved;
+    });
 
     return { ok: true, groupRef, refs, total };
   } catch (error) {

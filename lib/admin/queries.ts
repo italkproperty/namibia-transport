@@ -1,6 +1,6 @@
 import "server-only";
 
-import { and, asc, desc, eq, gte, sql, type SQL } from "drizzle-orm";
+import { and, asc, desc, eq, gte, ilike, or, sql, type SQL } from "drizzle-orm";
 
 import { getDb, isDatabaseConfigured } from "@/db";
 import {
@@ -29,9 +29,16 @@ export const SORTABLE_COLUMNS = {
 
 export type SortKey = keyof typeof SORTABLE_COLUMNS;
 
+/** Rows an operator can hold in their head at once, and a query can serve. */
+export const BOOKINGS_PER_PAGE = 50;
+
 export type BookingFilters = {
   status?: BookingStatus;
   category?: RouteCategory;
+  /** A reference, a traveller's name, a phone number, or a place. */
+  query?: string;
+  /** Zero-based. */
+  page?: number;
   sort: SortKey;
   direction: "asc" | "desc";
 };
@@ -40,6 +47,26 @@ function buildWhere(filters: BookingFilters): SQL | undefined {
   const clauses: SQL[] = [];
   if (filters.status) clauses.push(eq(bookings.status, filters.status));
   if (filters.category) clauses.push(eq(routes.category, filters.category));
+
+  const term = filters.query?.trim();
+  if (term) {
+    // What an operator actually has in front of them when they need a booking:
+    // a reference off a bank statement, a name from a WhatsApp message, the
+    // number that called, or the place the traveller said.
+    const like = `%${term.replace(/[%_\\]/g, (c) => `\\${c}`)}%`;
+    const found = or(
+      ilike(bookings.ref, like),
+      ilike(bookings.groupRef, like),
+      ilike(customers.fullName, like),
+      ilike(customers.whatsapp, like),
+      ilike(customers.email, like),
+      ilike(bookings.pickupLabel, like),
+      ilike(bookings.dropoffLabel, like),
+      ilike(bookings.flightNumber, like),
+    );
+    if (found) clauses.push(found);
+  }
+
   return clauses.length > 0 ? and(...clauses) : undefined;
 }
 
@@ -54,6 +81,7 @@ export async function listBookings(filters: BookingFilters) {
       .select({
         id: bookings.id,
         ref: bookings.ref,
+      groupRef: bookings.groupRef,
         scheduledAt: bookings.scheduledAt,
         createdAt: bookings.createdAt,
         passengers: bookings.passengers,
@@ -89,11 +117,40 @@ export async function listBookings(filters: BookingFilters) {
       .leftJoin(customers, eq(bookings.customerId, customers.id))
       .leftJoin(vehicleClasses, eq(bookings.vehicleClassId, vehicleClasses.id))
       .where(buildWhere(filters))
-      .orderBy(order)
-      .limit(500);
+      // A second key, so a page boundary never lands inside a group of rows
+      // that sort equal — without it, paging by status could show the same
+      // booking on two pages and skip another entirely.
+      .orderBy(order, desc(bookings.id))
+      .limit(BOOKINGS_PER_PAGE)
+      .offset(Math.max(0, filters.page ?? 0) * BOOKINGS_PER_PAGE);
   } catch (error) {
     console.error("[admin] booking list failed", error);
     return [];
+  }
+}
+
+/**
+ * How many bookings match, so the page can say where it is.
+ *
+ * The list used to stop at 500 rows with nothing to say it had. Assigning a
+ * driver only exists on that page, so at fifty bookings a day the tenth day
+ * put a real trip somewhere no operator could reach it — and the page looked
+ * complete the whole time.
+ */
+export async function countBookings(filters: BookingFilters): Promise<number> {
+  if (!isDatabaseConfigured()) return 0;
+
+  try {
+    const [row] = await getDb()
+      .select({ total: sql<number>`count(*)::int` })
+      .from(bookings)
+      .leftJoin(routes, eq(bookings.routeId, routes.id))
+      .leftJoin(customers, eq(bookings.customerId, customers.id))
+      .where(buildWhere(filters));
+    return row?.total ?? 0;
+  } catch (error) {
+    console.error("[admin] booking count failed", error);
+    return 0;
   }
 }
 

@@ -11,7 +11,11 @@
  * bare sum of its legs. A driver who is away for six nights is paid for six
  * nights, and per-leg pricing loses that silently.
  */
-import { priceItinerary, type QuoteStop } from "@/lib/admin/itinerary-quote";
+import {
+  departureOffset,
+  priceItinerary,
+  type QuoteStop,
+} from "@/lib/admin/itinerary-quote";
 import { modelJourney } from "@/lib/network/journey";
 
 let passed = 0;
@@ -162,6 +166,107 @@ check(
   "a display label cannot move the fare",
   labelled !== null && plain !== null && labelled.total === plain.total,
   `${labelled?.total} vs ${plain?.total}`,
+);
+
+/* ------------------------------------------- which stop a leg actually runs between */
+
+/**
+ * Two stops at the same place are a longer stay, not a drive, so they produce
+ * no leg — and every leg after them shifts. Reading a stop off the leg index
+ * then takes the wrong one: the trip below was scheduled two days early from
+ * the second leg onward, and departed from the lodge the party had already
+ * checked out of.
+ */
+console.log("\ncollapsed same-place stops");
+
+const collapsed: QuoteStop[] = [
+  { slug: "hosea-kutako", nights: 0 },
+  { slug: "swakopmund", nights: 2, label: "Strand Hotel" },
+  { slug: "swakopmund", nights: 3, label: "Cornerstone Guesthouse" },
+  { slug: "etosha-okaukuejo", nights: 2 },
+  { slug: "windhoek", nights: 0 },
+];
+const stay = priceItinerary(collapsed);
+
+check(
+  "five stops with a split stay make three legs, not four",
+  stay !== null && stay.legs.length === 3,
+  `${stay?.legs.length}`,
+);
+check(
+  "the second leg departs from the second lodge, not the first",
+  stay?.legs[1].fromLabel === "Cornerstone Guesthouse",
+  stay?.legs[1].fromLabel ?? "none",
+);
+check(
+  "a leg records the stops it runs between",
+  stay?.legs[1].fromStop === 2 && stay?.legs[1].toStop === 3,
+  `${stay?.legs[1].fromStop}->${stay?.legs[1].toStop}`,
+);
+check(
+  "both halves of the stay are counted: five nights before the next leg",
+  stay !== null && departureOffset(collapsed, stay.legs, 1) === 5 * 1440,
+  `${stay && departureOffset(collapsed, stay.legs, 1) / 1440} days`,
+);
+check(
+  "a driver paid for seven nights is a trip of seven nights",
+  stay?.nights === 7,
+  `${stay?.nights}`,
+);
+
+/* ------------------------------------------------- a stop with no nights */
+
+/**
+ * A stop with no nights is lunch, not an overnight — the pricing already knows
+ * that (`days = nights + 1`), so the schedule has to agree. Scheduling it on
+ * its own calendar day billed the traveller for a driver day nobody quoted.
+ */
+console.log("\nzero-night stops share a day");
+
+const lunch: QuoteStop[] = [
+  { slug: "windhoek", nights: 0 },
+  { slug: "solitaire", nights: 0 },
+  { slug: "sossusvlei", nights: 2 },
+  { slug: "windhoek", nights: 0 },
+];
+const day = priceItinerary(lunch);
+
+check(
+  "three driver days for two nights on the ground",
+  day?.days === 3 && day?.nights === 2,
+  `${day?.days} days, ${day?.nights} nights`,
+);
+check(
+  "the leg after a lunch stop leaves the same day",
+  day !== null && departureOffset(lunch, day.legs, 1) < 1440,
+  `${day && departureOffset(lunch, day.legs, 1)} min`,
+);
+check(
+  "and leaves after the first leg has arrived, not alongside it",
+  day !== null && departureOffset(lunch, day.legs, 1) > day.legs[0].minutes,
+  `${day && departureOffset(lunch, day.legs, 1)} min vs ${day?.legs[0].minutes} driving`,
+);
+check(
+  "sleeping resets the clock rather than drifting later each day",
+  day !== null && departureOffset(lunch, day.legs, 2) % 1440 === 0,
+  `${day && departureOffset(lunch, day.legs, 2) % 1440} min past the hour`,
+);
+check(
+  "an ordinary overnight itinerary still moves one stop per day",
+  (() => {
+    const stops: QuoteStop[] = [
+      { slug: "hosea-kutako", nights: 0 },
+      { slug: "sossusvlei", nights: 2 },
+      { slug: "swakopmund", nights: 2 },
+      { slug: "windhoek", nights: 0 },
+    ];
+    const q = priceItinerary(stops);
+    return (
+      q !== null &&
+      departureOffset(stops, q.legs, 1) === 2 * 1440 &&
+      departureOffset(stops, q.legs, 2) === 4 * 1440
+    );
+  })(),
 );
 
 console.log(`\n${passed} passed, ${failed} failed`);

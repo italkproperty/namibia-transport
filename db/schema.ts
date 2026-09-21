@@ -14,6 +14,7 @@ import {
   uniqueIndex,
   uuid,
 } from "drizzle-orm/pg-core";
+import { sql } from "drizzle-orm";
 
 /**
  * Namibia Transport is a demand-aggregation platform, not a single product.
@@ -489,6 +490,9 @@ export const bookings = pgTable(
     index("bookings_status_idx").on(t.status),
     index("bookings_scheduled_at_idx").on(t.scheduledAt),
     index("bookings_created_at_idx").on(t.createdAt),
+    // /admin/bookings pages by date within a status filter.
+    index("bookings_status_scheduled_idx").on(t.status, t.scheduledAt.desc()),
+    index("bookings_details_updated_at_idx").on(t.detailsUpdatedAt.desc()),
   ],
 );
 
@@ -544,6 +548,24 @@ export const payments = pgTable(
   (t) => [
     index("payments_booking_idx").on(t.bookingId),
     index("payments_provider_reference_idx").on(t.providerReference),
+    /**
+     * There is only ever one bank transfer per booking — a traveller pressing
+     * "I have made the transfer" twice is one person being unsure, not two
+     * payments. Two concurrent presses used to write two rows and queue the
+     * same money twice for the operator.
+     *
+     * Partial rather than unique on (booking_id, provider): a card payment
+     * that failed and was retried is a legitimate second row.
+     */
+    uniqueIndex("payments_one_bank_transfer_idx")
+      .on(t.bookingId)
+      .where(sql`${t.provider} = 'bank_transfer'`),
+    index("payments_booking_provider_idx").on(
+      t.bookingId,
+      t.provider,
+      t.createdAt.desc(),
+    ),
+    index("payments_provider_status_idx").on(t.provider, t.status),
   ],
 );
 
@@ -573,6 +595,7 @@ export const dispatchAssignments = pgTable(
   (t) => [
     index("dispatch_assignments_booking_idx").on(t.bookingId),
     index("dispatch_assignments_driver_idx").on(t.driverId),
+    index("dispatch_assignments_assigned_at_idx").on(t.assignedAt.desc()),
   ],
 );
 

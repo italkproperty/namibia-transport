@@ -225,19 +225,46 @@ export async function createCustomQuote(
   }
 }
 
+export type ConfirmTransferState = { ok: boolean; message?: string } | null;
+
 /**
  * Marks a bank transfer as received. Separate from the quote form but the same
  * authorisation story: a server action re-checks the gate itself.
+ *
+ * It used to return void, which meant an admin session that had quietly lapsed
+ * looked exactly like a success — the press did nothing, the row stayed where
+ * it was, and the honest reading of that is "the button is broken", so the
+ * next thing an operator does is press it again. Confirming money is the one
+ * action on the page that must say whether it happened.
  */
-export async function confirmTransferAction(formData: FormData): Promise<void> {
+export async function confirmTransferAction(
+  _prev: ConfirmTransferState,
+  formData: FormData,
+): Promise<ConfirmTransferState> {
   const gate = await getAdminGateState();
-  if (gate.state !== "signed-in") return;
+  if (gate.state !== "signed-in") {
+    return {
+      ok: false,
+      message: "Your session has expired — sign in again, then confirm it.",
+    };
+  }
 
   const bookingId = String(formData.get("bookingId") ?? "").trim();
-  if (!bookingId) return;
+  if (!bookingId) return { ok: false, message: "No booking was named." };
 
-  const { confirmTransfer } = await import("@/lib/payments/transfer");
-  await confirmTransfer(bookingId);
+  try {
+    const { confirmTransfer } = await import("@/lib/payments/transfer");
+    const result = await confirmTransfer(bookingId);
+    if ("error" in result) return { ok: false, message: result.error };
+  } catch (error) {
+    console.error("[admin] confirming a transfer failed", error);
+    return {
+      ok: false,
+      message:
+        "The database refused that. Nothing has been marked paid — check the logs.",
+    };
+  }
 
   revalidatePath("/admin/bookings");
+  return { ok: true };
 }

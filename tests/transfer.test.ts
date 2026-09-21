@@ -309,6 +309,221 @@ async function main() {
     stillCancelled?.status === "cancelled",
   );
 
+  /* ------------------------------------------------ two presses at once */
+
+  /**
+   * One impatient traveller on a bad connection is not two payments. The
+   * declare path reads, then writes, so two presses a moment apart both saw no
+   * row and both inserted — and the operator's queue showed the same money
+   * twice, which is the one thing that makes a person confirm something they
+   * have not actually seen on a statement.
+   *
+   * The guarantee is the partial unique index in db/manual/RUN-ME.sql. A
+   * failure here usually means that migration has not been run.
+   */
+  console.log("\nten presses at once");
+
+  const [impatient] = await db
+    .insert(bookings)
+    .values({
+      ref: `${ref.slice(0, 6)}P7`.slice(0, 9),
+      customerId: customer.id,
+      pickupLabel: "Impatient",
+      dropoffLabel: "Traveller",
+      scheduledAt: new Date(Date.now() + 5 * 86_400_000),
+      customerPrice: "6500.00",
+      driverPayout: "4550.00",
+      contribution: "1950.00",
+      status: "pending_payment",
+    })
+    .returning();
+
+  const presses = await Promise.allSettled(
+    Array.from({ length: 10 }, (_, i) =>
+      declareTransfer(impatient.ref, `press ${i}`),
+    ),
+  );
+  const threw = presses.filter((p) => p.status === "rejected");
+  check(
+    "ten simultaneous presses all succeed",
+    threw.length === 0,
+    threw.length
+      ? String((threw[0] as PromiseRejectedResult).reason?.message)
+      : "",
+  );
+
+  const raced = await db
+    .select()
+    .from(payments)
+    .where(
+      and(
+        eq(payments.bookingId, impatient.id),
+        eq(payments.provider, BANK_TRANSFER_PROVIDER),
+      ),
+    );
+  check(
+    "THE RULE: they leave exactly one row, not ten",
+    raced.length === 1,
+    `${raced.length} rows — has db/manual/RUN-ME.sql been run?`,
+  );
+  check("and it is still pending", raced[0]?.status === "pending");
+
+  // A press landing while an operator confirms must lose, not un-pay it.
+  await confirmTransfer(impatient.id);
+  await Promise.allSettled(
+    Array.from({ length: 5 }, () => declareTransfer(impatient.ref, "again")),
+  );
+  const [stillPaid] = await db
+    .select()
+    .from(payments)
+    .where(eq(payments.bookingId, impatient.id));
+  check(
+    "THE RULE: a press racing a confirmation cannot un-pay it",
+    stillPaid?.status === "paid",
+    `status was ${stillPaid?.status}`,
+  );
+
+  await db.delete(payments).where(eq(payments.bookingId, impatient.id));
+  await db.delete(bookings).where(eq(bookings.id, impatient.id));
+
+  /* ---------------------------------------------- a trip, not a single leg */
+
+  /**
+   * An itinerary is quoted as one figure and paid as one transfer, but it is
+   * stored as one booking per driving job. The reference the traveller quotes
+   * is the first leg's, so a transfer read off that leg alone recorded a
+   * fraction of what they actually sent — and confirming it dispatched the
+   * first car while the rest of the trip sat unpaid on a page that still said
+   * so. Both halves of that are what these guard.
+   */
+  console.log("\na multi-leg trip pays as one");
+
+  const groupRef = `NT-G-${suffix.toUpperCase().replace(/[^ABCDEFGHJKLMNPQRTUVWXY2346789]/g, "3").slice(0, 6)}`;
+  const legPrices = ["5786.00", "5312.00", "4952.00"];
+  const tripTotal = "16050.00";
+
+  const legs = [];
+  for (const [index, price] of legPrices.entries()) {
+    const [leg] = await db
+      .insert(bookings)
+      .values({
+        ref: `${ref.slice(0, 6)}${"GHJ"[index]}${index}`.slice(0, 9),
+        groupRef,
+        customerId: customer.id,
+        pickupLabel: `Stop ${index}`,
+        dropoffLabel: `Stop ${index + 1}`,
+        scheduledAt: new Date(Date.now() + (index + 2) * 86_400_000),
+        customerPrice: price,
+        driverPayout: (Number(price) * 0.7).toFixed(2),
+        contribution: (Number(price) * 0.3).toFixed(2),
+        status: "pending_payment",
+      })
+      .returning();
+    legs.push(leg);
+  }
+
+  const first = legs[0];
+
+  await declareTransfer(first.ref, "Paid the whole trip");
+  const [groupDeclared] = await db
+    .select()
+    .from(payments)
+    .where(
+      and(
+        eq(payments.bookingId, first.id),
+        eq(payments.provider, BANK_TRANSFER_PROVIDER),
+      ),
+    );
+  check(
+    "THE RULE: a declaration records the trip total, not the first leg",
+    groupDeclared?.amount === tripTotal,
+    `recorded ${groupDeclared?.amount}, the traveller was told ${tripTotal}`,
+  );
+  check(
+    "declaring against a leg still does not pay it",
+    groupDeclared?.status === "pending",
+  );
+
+  await confirmTransfer(first.id);
+
+  const groupAfter = await db
+    .select({ ref: bookings.ref, status: bookings.status })
+    .from(bookings)
+    .where(eq(bookings.groupRef, groupRef));
+  check(
+    "THE RULE: confirming the money confirms every leg of the trip",
+    groupAfter.length === 3 && groupAfter.every((leg) => leg.status === "confirmed"),
+    groupAfter.map((leg) => `${leg.ref}=${leg.status}`).join(", "),
+  );
+
+  const [groupPaid] = await db
+    .select()
+    .from(payments)
+    .where(eq(payments.bookingId, first.id));
+  check(
+    "the paid amount is still the trip total",
+    groupPaid?.amount === tripTotal,
+    `${groupPaid?.amount}`,
+  );
+
+  /**
+   * A leg cancelled before payment is not money owed. If it still counted, the
+   * traveller would be asked for a trip they are no longer taking.
+   */
+  const [shrunk] = await db
+    .insert(bookings)
+    .values({
+      ref: `${ref.slice(0, 6)}K9`.slice(0, 9),
+      groupRef,
+      customerId: customer.id,
+      pickupLabel: "Dropped",
+      dropoffLabel: "Leg",
+      scheduledAt: new Date(Date.now() + 9 * 86_400_000),
+      customerPrice: "3000.00",
+      driverPayout: "2100.00",
+      contribution: "900.00",
+      status: "cancelled",
+    })
+    .returning();
+
+  const [reopened] = await db
+    .insert(bookings)
+    .values({
+      ref: `${ref.slice(0, 6)}L8`.slice(0, 9),
+      groupRef: `${groupRef.slice(0, 7)}Z`,
+      customerId: customer.id,
+      pickupLabel: "Other",
+      dropoffLabel: "Trip",
+      scheduledAt: new Date(Date.now() + 3 * 86_400_000),
+      customerPrice: "2000.00",
+      driverPayout: "1400.00",
+      contribution: "600.00",
+      status: "pending_payment",
+    })
+    .returning();
+
+  await declareTransfer(reopened.ref);
+  const [lone] = await db
+    .select()
+    .from(payments)
+    .where(
+      and(
+        eq(payments.bookingId, reopened.id),
+        eq(payments.provider, BANK_TRANSFER_PROVIDER),
+      ),
+    );
+  check(
+    "a one-leg group is charged its own fare, not a sum of strangers",
+    lone?.amount === "2000.00",
+    `${lone?.amount}`,
+  );
+
+  await db.delete(payments).where(eq(payments.bookingId, first.id));
+  await db.delete(payments).where(eq(payments.bookingId, reopened.id));
+  for (const leg of [...legs, shrunk, reopened]) {
+    await db.delete(bookings).where(eq(bookings.id, leg.id));
+  }
+
   // Clean up so a re-run starts from nothing.
   await db.delete(payments).where(eq(payments.bookingId, booking.id));
   await db.delete(payments).where(eq(payments.bookingId, cancelled.id));

@@ -1,6 +1,6 @@
 import "server-only";
 
-import { and, desc, eq } from "drizzle-orm";
+import { and, desc, eq, ne } from "drizzle-orm";
 
 import { getDb, isDatabaseConfigured } from "@/db";
 import { bookings, customers, payments, routes } from "@/db/schema";
@@ -10,6 +10,7 @@ import { parseMoney } from "@/lib/money";
 import { INTENT_TTL_MS } from "./paytoday/config";
 import { defaultReturnUrl } from "./paytoday/provider";
 import { getPaymentProvider } from "./index";
+import { BANK_TRANSFER_PROVIDER } from "./transfer";
 import type { PaymentProvider } from "./types";
 
 /**
@@ -46,6 +47,37 @@ export async function getLatestPayment(
     .select()
     .from(payments)
     .where(eq(payments.bookingId, bookingId))
+    .orderBy(desc(payments.createdAt))
+    .limit(1);
+
+  return row ?? null;
+}
+
+/**
+ * The most recent attempt a gateway can actually be asked about.
+ *
+ * A bank transfer is a row with no provider reference, because there is no
+ * remote object to query — an operator reads a statement. Reconciliation used
+ * to take the latest row of any kind, so the moment a traveller pressed "I
+ * have made the transfer" their declaration became the latest payment, had no
+ * provider reference, and every later reconciliation returned early. A card
+ * payment made afterwards was then never re-read from the gateway: the money
+ * arrived and the booking stayed unpaid until someone noticed by hand.
+ */
+async function latestGatewayPayment(
+  bookingId: string
+): Promise<Payment | null> {
+  if (!isDatabaseConfigured()) return null;
+
+  const [row] = await getDb()
+    .select()
+    .from(payments)
+    .where(
+      and(
+        eq(payments.bookingId, bookingId),
+        ne(payments.provider, BANK_TRANSFER_PROVIDER)
+      )
+    )
     .orderBy(desc(payments.createdAt))
     .limit(1);
 
@@ -107,8 +139,8 @@ export async function reconcileBookingPayment(
 
   if (!booking) return { payment: null, changed: false };
 
-  const payment = await getLatestPayment(booking.id);
-  if (!payment) return { payment: null, changed: false };
+  const payment = await latestGatewayPayment(booking.id);
+  if (!payment) return { payment: await getLatestPayment(booking.id), changed: false };
 
   // Already settled, or nothing the gateway can tell us about.
   if (isTerminal(payment.status)) return { payment, changed: false };

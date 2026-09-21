@@ -37,12 +37,21 @@ function buildDb() {
     postgres(connectionString, {
       // Supabase's transaction pooler cannot prepare statements.
       prepare: false,
-      max: 10,
+      // Per serverless instance, not per deployment. Vercel runs many of these
+      // at once and they all share one pooler, so a generous number here is
+      // multiplied by however many instances are warm.
+      max: 4,
+      // Without this, postgres.js holds every socket it ever opened. A warm
+      // instance that served one booking at 06:00 was still holding four
+      // connections at noon, and the pooler counts them against the limit all
+      // day. Twenty seconds is longer than any request here takes.
+      idle_timeout: 20,
+      // The pooler recycles server-side; a client that never retires a socket
+      // eventually hands a query to one that has already gone.
+      max_lifetime: 60 * 30,
     });
 
-  if (process.env.NODE_ENV !== "production") {
-    globalForDb.__transferSql = client;
-  }
+  globalForDb.__transferSql = client;
 
   return drizzle(client, { schema });
 }
@@ -52,12 +61,21 @@ export function isDatabaseConfigured(): boolean {
   return Boolean(process.env.DATABASE_URL);
 }
 
-/** Throws when no database is configured — use for writes, which need one. */
+/**
+ * Throws when no database is configured — use for writes, which need one.
+ *
+ * The cache is not a development convenience. It used to be written only when
+ * `NODE_ENV !== "production"`, which is the Next.js hot-reload idiom applied
+ * backwards: in production every one of the forty-odd call sites built its own
+ * pool, so a single request could open several and a warm instance never
+ * closed them. The pooler's connection limit is per project and shared, and
+ * the symptom of exhausting it is not an error page — queries fail, the
+ * catalogue fallback renders, and an operator sees an admin table that is
+ * simply empty. One pool per instance, in both environments.
+ */
 export function getDb() {
   const db = globalForDb.__transferDb ?? buildDb();
-  if (process.env.NODE_ENV !== "production") {
-    globalForDb.__transferDb = db;
-  }
+  globalForDb.__transferDb = db;
   return db;
 }
 
