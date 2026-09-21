@@ -143,7 +143,7 @@ person running it is in the Supabase SQL editor, not in the repository.
 - Comments explain reasoning and non-obvious constraints, not mechanics.
 
 ## Where we are
-*Updated 6 September 2026. Keep this honest — it is the first thing a new session reads.*
+*Updated 21 September 2026. Keep this honest — it is the first thing a new session reads.*
 
 Live and working: the booking flow end to end on Supabase, server-computed per-vehicle
 fares, the map-pin drop, the corporate quotation engine, the reviews admin, route maps,
@@ -159,8 +159,9 @@ The road model is the moat, and most of the platform now derives from it: 49 pla
 price list (`/journey`). On top of it sit the dispatch calendar (`/admin/calendar`) with
 the fleet timeline and marginal-offer engine, the self-drive cost planner
 (`/self-drive`), park-gate feasibility warnings computed from sunrise/sunset, and
-rain-season notes on the passes that close. Twelve test suites, ~374 checks, including
-the model against published distances, times and fares.
+rain-season notes on the passes that close. Eighteen test suites, 698 checks, including
+the model against published distances, times and fares. `npm test` runs all of them; the
+few that need a real Postgres skip themselves without `DATABASE_URL`.
 
 Content: four arrival guides and seven self-drive decision guides, each carrying at least
 one number only the road model can produce, plus `/methodology`, which stands behind
@@ -212,6 +213,29 @@ them (`lib/fx.ts`, `USD_RATE` and `USD_RATE_AS_AT`). It is never the amount
 owed: we bank in NAD and a foreign bank converts at its own rate on the day, so
 the figure is dated, rounded to whole dollars, and captioned as approximate. An
 implausible rate is ignored rather than trusted.
+
+Audited in September as an operations problem rather than a code one — what breaks at
+fifty bookings a day, then five hundred — and the findings are fixed:
+
+- **A trip is paid as a trip.** An itinerary is quoted as one figure and stored as one
+  booking per driving job, and a transfer read off the first leg recorded a fraction of
+  what the traveller sent — N$5,786 against N$16,050 on a real three-leg quote — then
+  dispatched one car while the rest stayed unpaid. `payableSet` in `lib/payments/transfer.ts`
+  resolves the group; cancelled legs are excluded.
+- **Itinerary scheduling.** `planItinerary` drops a leg when consecutive stops are the same
+  place, so indexing stops by leg index put the back half of a trip two days early and
+  departing from a lodge the party had left. Legs carry `fromStop`/`toStop` now. A
+  zero-night stop shares a day with the next leg, which is what the pricing already
+  assumed. Saving a quote is one transaction.
+- **The pool.** `db/index.ts` cached the client only outside production, so each of the
+  forty-odd `getDb()` sites built its own. Exhausting Supabase's pooler shows up as an
+  admin table that is silently empty, not as an error.
+- **Quotes expire** (`lib/booking/validity.ts`): 45 days, or the travel date passing.
+  Derived, not stored. Enforced in `declareTransfer`, not only in the page.
+- **Dead ends closed.** Cancel and reinstate (`lib/admin/booking-actions.ts`), `completed`
+  reachable at last, `/admin/bookings` paginated and searchable — assigning a driver
+  exists only on that page, and it used to stop at 500 rows without saying so. A real 404
+  that leads with recovering a lost booking link.
 
 In flight: PayToday returns 403 at initialize() — their endpoint answers
 `{"status":"unauthorized","error":"Authorization error:"}` with the reason left blank
