@@ -80,6 +80,18 @@ export function RouteMenu({ routes }: { routes: NavRoute[] }) {
           <ArrowRightIcon className="size-3.5" aria-hidden />
         </Link>
 
+        {/* A traveller usually has a destination before they have a pair —
+            they know they are going to Sossusvlei, not that they want the
+            Swakopmund leg — and every route above is expressed as a pair. */}
+        <Link
+          href="/destinations"
+          onClick={() => setOpen(false)}
+          className="text-muted-foreground hover:text-foreground focus-ring flex items-center justify-between border-t px-4 py-2.5 text-xs transition-colors"
+        >
+          Getting to a place — what each destination costs to reach
+          <ArrowRightIcon className="size-3.5" aria-hidden />
+        </Link>
+
         {/* The eight routes above all begin at the airport or in Windhoek.
             Most Namibian itineraries are loops, so the leg someone is actually
             looking for is often not one of them. */}

@@ -2,6 +2,7 @@ import type { MetadataRoute } from "next";
 
 import { GUIDES } from "@/lib/guides";
 import { listRoutes } from "@/lib/maps";
+import { DESTINATIONS } from "@/lib/network/destinations";
 import { LEGS } from "@/lib/network/legs";
 import { SITE } from "@/lib/site";
 
@@ -20,6 +21,15 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     priority: 0.7,
   }));
 
+  // One page per place people are going, as opposed to one per pair. These
+  // answer a broader question than a leg page and sit above them, just under
+  // the curated routes that sell the journey outright.
+  const destinationPages = DESTINATIONS.map((destination) => ({
+    url: `${SITE.url}/destinations/${destination.slug}`,
+    changeFrequency: "monthly" as const,
+    priority: 0.8,
+  }));
+
   // One page per leg people actually drive. Below the curated routes and the
   // guides in priority: these answer a narrower question and should not
   // outrank the pages that sell the journey.
@@ -33,8 +43,14 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     { url: SITE.url, changeFrequency: "daily", priority: 1 },
     ...routePages,
     ...guidePages,
+    ...destinationPages,
     ...legPages,
     { url: `${SITE.url}/drive`, changeFrequency: "weekly", priority: 0.8 },
+    {
+      url: `${SITE.url}/destinations`,
+      changeFrequency: "weekly",
+      priority: 0.9,
+    },
     { url: `${SITE.url}/transfers`, changeFrequency: "weekly", priority: 0.9 },
     { url: `${SITE.url}/journey`, changeFrequency: "weekly", priority: 0.8 },
     {

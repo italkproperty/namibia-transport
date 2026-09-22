@@ -109,6 +109,14 @@ export function MobileMenu({
                 Every route and price
               </Link>
             </li>
+            <li>
+              <Link
+                href="/destinations"
+                className="text-muted-foreground hover:text-foreground focus-ring block rounded-lg px-3 py-2 text-sm underline underline-offset-2"
+              >
+                Getting to a place
+              </Link>
+            </li>
           </ul>
 
           <GuideGroup title="Arriving in Namibia" items={ARRIVAL_GUIDES} />
