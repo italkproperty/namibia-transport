@@ -1,8 +1,10 @@
 import type { Metadata } from "next";
 import { Archivo, IBM_Plex_Mono } from "next/font/google";
 
+import { CurrencyProvider } from "@/components/currency/currency-provider";
 import { Toaster } from "@/components/ui/sonner";
 import { SiteSchema } from "@/components/marketing/site-schema";
+import { getRates } from "@/lib/currency-rates";
 import { SITE } from "@/lib/site";
 import "./globals.css";
 
@@ -62,6 +64,11 @@ export default function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  // Read once on the server and handed down, so a rate can never differ
+  // between two prices on the same page. Not secret — it is printed beside
+  // the fare — but server-read so an operator sets it in one place.
+  const rates = getRates();
+
   return (
     <html lang="en">
       <head>
@@ -88,7 +95,7 @@ export default function RootLayout({
         >
           Skip to content
         </a>
-        {children}
+        <CurrencyProvider rates={rates}>{children}</CurrencyProvider>
         <Toaster />
               <SiteSchema />
       </body>

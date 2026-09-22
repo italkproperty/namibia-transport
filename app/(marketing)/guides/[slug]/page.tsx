@@ -13,7 +13,7 @@ import { SiteHeader } from "@/components/marketing/site-header";
 import { formatDuration, shortPlace } from "@/lib/format";
 import { GUIDES, GUIDES_BY_SLUG } from "@/lib/guides";
 import { getRouteBySlug, listRoutes } from "@/lib/maps";
-import { formatNad } from "@/lib/money";
+import { Fare } from "@/components/currency/fare";
 import { modelJourneyBySlug, type Journey } from "@/lib/network/journey";
 import { pricingUnitLabel } from "@/lib/pricing";
 import { SITE } from "@/lib/site";
@@ -241,7 +241,7 @@ export default async function GuidePage({ params }: PageProps) {
                       </span>
                       <span className="flex shrink-0 items-center gap-2">
                         <span className="tabular text-brand text-lg font-semibold">
-                          {formatNad(route!.fixedPrice)}
+                          <Fare nad={route!.fixedPrice} />
                           <span className="text-muted-foreground text-xs font-normal">
                             {" "}
                             {pricingUnitLabel(route!)}
@@ -287,7 +287,7 @@ export default async function GuidePage({ params }: PageProps) {
                         </span>
                         <span className="flex shrink-0 items-center gap-2">
                           <span className="tabular text-brand text-lg font-semibold">
-                            {formatNad(journey.route.fixedPrice)}
+                            <Fare nad={journey.route.fixedPrice} />
                             <span className="text-muted-foreground text-xs font-normal">
                               {" "}
                               {pricingUnitLabel(journey.route)}

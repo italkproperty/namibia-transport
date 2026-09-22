@@ -3,7 +3,7 @@ import { ArrowRightIcon } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
 import { formatDistance, formatDuration, shortPlace } from "@/lib/format";
-import { formatNad } from "@/lib/money";
+import { Fare } from "@/components/currency/fare";
 import type { RouteView } from "@/lib/maps";
 
 const CATEGORY_LABEL: Record<RouteView["category"], string> = {
@@ -49,7 +49,7 @@ export function RouteCard({ route }: { route: RouteView }) {
             From
           </p>
           <p className="tabular mt-1 text-2xl font-semibold tracking-tight">
-            {formatNad(route.fixedPrice)}
+            <Fare nad={route.fixedPrice} />
           </p>
           <p className="text-muted-foreground mt-0.5 text-xs">
             per vehicle, fixed

@@ -8,6 +8,7 @@ import { SiteFooter } from "@/components/marketing/site-footer";
 import { SiteHeader } from "@/components/marketing/site-header";
 import { formatDuration } from "@/lib/format";
 import { listRoutes } from "@/lib/maps";
+import { Fare } from "@/components/currency/fare";
 import { formatNad } from "@/lib/money";
 import { modelJourney, type Journey } from "@/lib/network/journey";
 import { findLeg, LEGS, type Leg } from "@/lib/network/legs";
@@ -309,7 +310,7 @@ export default async function LegPage({ params }: PageProps) {
                       {name(journey.road.destination)}
                     </span>
                     <span className="tabular text-brand mt-1 block text-xl font-semibold">
-                      {formatNad(journey.route.fixedPrice)}
+                      <Fare nad={journey.route.fixedPrice} />
                       <span className="text-muted-foreground text-xs font-normal">
                         {" "}
                         per vehicle

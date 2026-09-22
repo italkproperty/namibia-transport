@@ -11,7 +11,7 @@ import { useTrip } from "@/components/booking/use-trip";
 import type { TripParams } from "@/lib/booking/trip-params";
 import { formatDuration, shortPlace } from "@/lib/format";
 import type { RouteView, VehicleClassView } from "@/lib/maps";
-import { formatNad } from "@/lib/money";
+import { Fare } from "@/components/currency/fare";
 import { pricingUnitLabel, unitFare } from "@/lib/pricing";
 
 /**
@@ -103,7 +103,7 @@ export function HomeQuote({
                   </span>
                   <span className="mt-1.5 flex items-baseline gap-2">
                     <span className="tabular text-brand text-lg font-semibold">
-                      {formatNad(routeFare)}
+                      <Fare nad={routeFare} />
                       <span className="text-muted-foreground text-xs font-normal">
                         {" "}
                         {unitLabel}

@@ -19,10 +19,10 @@ import { SiteFooter } from "@/components/marketing/site-footer";
 import { SiteHeader } from "@/components/marketing/site-header";
 import { Button } from "@/components/ui/button";
 import { isAirportLeg } from "@/lib/booking/details";
+import { Fare, FareNote } from "@/components/currency/fare";
 import { getBookingByRef } from "@/lib/booking/queries";
 import { quoteValidity } from "@/lib/booking/validity";
 import { getCompanyInfo, whatsappLink } from "@/lib/company";
-import { fxNote, indicativeUsd } from "@/lib/fx";
 import { formatDateTime } from "@/lib/format";
 import { mapsLink } from "@/lib/maps/bounds";
 import { formatNad } from "@/lib/money";
@@ -222,15 +222,9 @@ export default async function BookingConfirmationPage({ params }: PageProps) {
                   Total fare
                 </p>
                 <p className="tabular text-brand text-3xl leading-none font-semibold tracking-tight">
-                  {formatNad(booking.customerPrice)}
+                  <Fare nad={booking.customerPrice} block />
                 </p>
-                {indicativeUsd(booking.customerPrice) && (
-                  <p className="text-muted-foreground mt-1 text-xs leading-snug">
-                    about {indicativeUsd(booking.customerPrice)}
-                    {fxNote() ? ` — ${fxNote()}` : ""}. Charged in Namibian
-                    dollars.
-                  </p>
-                )}
+                <FareNote className="text-muted-foreground mt-1 block text-xs leading-snug" />
               </div>
               <PaymentBadge status={payment?.status ?? null} />
             </div>

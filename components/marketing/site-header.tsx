@@ -6,6 +6,7 @@ import { NAV_LINKS, type NavRoute } from "@/components/marketing/nav-data";
 import { NavLink } from "@/components/marketing/nav-link";
 import { PlanMenu } from "@/components/marketing/plan-menu";
 import { RouteMenu } from "@/components/marketing/route-menu";
+import { CurrencyPicker } from "@/components/currency/currency-picker";
 import { Button } from "@/components/ui/button";
 import { MessageCircleIcon } from "lucide-react";
 import { getCompanyInfo, whatsappLink } from "@/lib/company";
@@ -69,7 +70,12 @@ export async function SiteHeader() {
           ))}
         </nav>
 
-        <div className="ml-auto flex items-center gap-2 lg:ml-0">
+        <div className="ml-auto flex items-center gap-1 lg:ml-0 lg:gap-2">
+          {/* Beside the price controls rather than buried in the footer: the
+              visitor who needs it is the one who cannot read a Namibian
+              dollar, and they need it before they decide, not after. */}
+          <CurrencyPicker className="max-sm:hidden" />
+
           {/* WhatsApp is the main customer channel, and the desktop header
               computed this href and then threw it away — phones got the real
               channel, desktop got a link to a contact page. */}

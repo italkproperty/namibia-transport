@@ -20,7 +20,6 @@ import { eq } from "drizzle-orm";
 import { getDb, isDatabaseConfigured } from "@/db";
 import { bookings, customers } from "@/db/schema";
 import { isAirportLeg, updateTripDetails } from "@/lib/booking/details";
-import { fxNote, getFxRate, indicativeUsd } from "@/lib/fx";
 
 let passed = 0;
 let failed = 0;
@@ -34,43 +33,6 @@ function check(name: string, condition: boolean, detail = "") {
     console.log(`  FAIL ${name}${detail ? ` — ${detail}` : ""}`);
   }
 }
-
-/* ------------------------------------------------------ the dollar figure */
-
-console.log("the indicative dollar figure");
-
-const RATE = { nadPerUsd: 18.2, asAt: "2026-09-21" };
-
-check(
-  "converts at the configured rate",
-  indicativeUsd("6000.00", RATE) === "US$330",
-  String(indicativeUsd("6000.00", RATE)),
-);
-check(
-  "rounds to whole dollars — cents imply a precision it does not have",
-  !(indicativeUsd("6000.00", RATE) ?? "").includes("."),
-);
-check("nothing without a rate", indicativeUsd("6000.00", null) === null);
-check("nothing for a zero fare", indicativeUsd("0.00", RATE) === null);
-check(
-  "the note shows the working and the date",
-  (fxNote(RATE) ?? "").includes("N$18.20") &&
-    (fxNote(RATE) ?? "").includes("21 September 2026"),
-  String(fxNote(RATE)),
-);
-check("no note without a rate", fxNote(null) === null);
-
-// A misplaced decimal point would misquote every foreign traveller by 10x, so
-// an implausible rate is ignored rather than trusted.
-const saved = process.env.USD_RATE;
-for (const bad of ["1.82", "182", "0", "-18", "not a number"]) {
-  process.env.USD_RATE = bad;
-  check(`refuses an implausible rate "${bad}"`, getFxRate() === null);
-}
-process.env.USD_RATE = "18.20";
-check("accepts a plausible one", getFxRate()?.nadPerUsd === 18.2);
-if (saved === undefined) delete process.env.USD_RATE;
-else process.env.USD_RATE = saved;
 
 /* ------------------------------------------------------ who gets asked a flight */
 

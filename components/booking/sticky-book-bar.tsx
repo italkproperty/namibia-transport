@@ -5,7 +5,7 @@ import Link from "next/link";
 
 import { Button } from "@/components/ui/button";
 import { useCountUp } from "@/components/booking/use-count-up";
-import { formatNad } from "@/lib/money";
+import { Fare } from "@/components/currency/fare";
 
 /**
  * Mobile-only persistent price + action.
@@ -71,7 +71,7 @@ export function StickyBookBar({
               className="tabular price-slot text-brand text-xl leading-tight font-semibold"
               aria-live="polite"
             >
-              {formatNad(animated)}
+              <Fare nad={animated} bare />
             </p>
           </div>
 

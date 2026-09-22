@@ -17,6 +17,7 @@ import { useCountUp } from "@/components/booking/use-count-up";
 import { VehicleImage } from "@/components/vehicles/vehicle-image";
 import type { TripState } from "@/components/booking/use-trip";
 import { formatDuration } from "@/lib/format";
+import { Fare } from "@/components/currency/fare";
 import { formatNad } from "@/lib/money";
 import { routeTitle } from "@/lib/route-content";
 import { specFor } from "@/lib/vehicles";
@@ -156,7 +157,7 @@ export function QuoteWidget({
             className="tabular price-slot text-brand text-3xl leading-none font-semibold tracking-tight sm:text-4xl"
             aria-live="polite"
           >
-            {formatNad(animatedPrice)}
+            <Fare nad={animatedPrice} block />
           </p>
           <p className="text-muted-foreground mt-1 text-xs">
             {`per vehicle, up to ${trip.vehicleClass.capacity} passengers`}
@@ -286,7 +287,7 @@ export function VehicleToggle({ trip }: { trip: TripState }) {
                 {name}
               </span>
               <span className="tabular mt-0.5 block text-xs font-semibold">
-                {formatNad(trip.unitFares.get(id) ?? fare)}
+                <Fare nad={trip.unitFares.get(id) ?? fare} bare />
                 <span className="text-muted-foreground font-normal">
                   {" "}
                   {trip.unitLabel}

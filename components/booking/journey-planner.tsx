@@ -16,7 +16,7 @@ import {
 } from "@/components/ui/select";
 import { formatDuration } from "@/lib/format";
 import type { RouteView, VehicleClassView } from "@/lib/maps";
-import { formatNad } from "@/lib/money";
+import { Fare } from "@/components/currency/fare";
 import {
   journeyTitle,
   modelJourney,
@@ -256,7 +256,7 @@ function ReverseNote({
       <span className="text-foreground font-medium">{title}</span>{" "}
       — is{" "}
       <span className="tabular text-foreground font-medium">
-        {formatNad(back)}
+        <Fare nad={back} />
       </span>
       . Not a special offer: on the way out the car comes back empty, and on the
       way back it comes home to where the next booking is.

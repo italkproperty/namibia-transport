@@ -6,11 +6,11 @@ import { BankTransfer } from "@/components/booking/bank-transfer";
 import { TripDetailsForm } from "@/components/booking/trip-details-form";
 import { SiteFooter } from "@/components/marketing/site-footer";
 import { SiteHeader } from "@/components/marketing/site-header";
+import { Fare, FareNote } from "@/components/currency/fare";
 import { getQuoteGroup } from "@/lib/booking/group-queries";
 import { isAirportLeg } from "@/lib/booking/details";
 import { groupValidity } from "@/lib/booking/validity";
 import { getCompanyInfo, SUPPORT, whatsappLink } from "@/lib/company";
-import { fxNote, indicativeUsd } from "@/lib/fx";
 import { formatDateTime, formatDuration } from "@/lib/format";
 import { listRoutes } from "@/lib/maps";
 import { formatNad } from "@/lib/money";
@@ -38,8 +38,6 @@ export default async function QuoteGroupPage({ params }: PageProps) {
   if (!quote) notFound();
 
   const { routes } = await listRoutes({ activeOnly: true });
-  const usd = indicativeUsd(quote.total);
-  const rateNote = fxNote();
   const company = getCompanyInfo();
 
   // A quote at a public URL is a live price. One sent in September and opened
@@ -178,15 +176,9 @@ export default async function QuoteGroupPage({ params }: PageProps) {
                   Total for the trip, all in
                 </p>
                 <p className="tabular text-brand mt-1 text-3xl leading-none font-semibold">
-                  {formatNad(quote.total)}
+                  <Fare nad={quote.total} block />
                 </p>
-                {usd && (
-                  <p className="text-muted-foreground mt-1 text-sm">
-                    about {usd}
-                    {rateNote ? ` — ${rateNote}` : ""}. We are paid in Namibian
-                    dollars; your bank converts at its own rate on the day.
-                  </p>
-                )}
+                <FareNote className="text-muted-foreground mt-1 block text-sm" />
               </div>
             </div>
             <p className="text-muted-foreground mt-2 text-sm leading-snug text-pretty">

@@ -6,7 +6,7 @@ import { SiteFooter } from "@/components/marketing/site-footer";
 import { SiteHeader } from "@/components/marketing/site-header";
 import { formatDuration, shortPlace } from "@/lib/format";
 import { listRoutes } from "@/lib/maps";
-import { formatNad } from "@/lib/money";
+import { Fare } from "@/components/currency/fare";
 import { pricingUnitLabel } from "@/lib/pricing";
 import { SITE } from "@/lib/site";
 
@@ -129,7 +129,7 @@ function RouteGroup({
                       .join(" · ")}
                   </span>
                   <span className="tabular text-brand mt-2 block text-lg font-semibold">
-                    {formatNad(route.fixedPrice)}
+                    <Fare nad={route.fixedPrice} />
                     <span className="text-muted-foreground text-xs font-normal">
                       {" "}
                       {pricingUnitLabel(route)}

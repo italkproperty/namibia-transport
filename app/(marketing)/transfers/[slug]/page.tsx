@@ -15,7 +15,7 @@ import {
   listVehicleClasses,
   withRouteGeometry,
 } from "@/lib/maps";
-import { formatNad } from "@/lib/money";
+import { Fare } from "@/components/currency/fare";
 import { routeFaqs, routeTitle } from "@/lib/route-content";
 import { GUIDES } from "@/lib/guides";
 import { INCLUSIONS, SITE } from "@/lib/site";
@@ -147,7 +147,7 @@ export default async function RoutePage({ params }: PageProps) {
                   .join(" · ")}
                 {" · from "}
                 <span className="text-brand font-semibold">
-                  {formatNad(route.fixedPrice)}
+                  <Fare nad={route.fixedPrice} block />
                 </span>
               </p>
 
@@ -229,7 +229,7 @@ export default async function RoutePage({ params }: PageProps) {
                         >
                           {routeTitle(other)}
                           <span className="tabular text-brand font-semibold">
-                            {formatNad(other.fixedPrice)}
+                            <Fare nad={other.fixedPrice} />
                           </span>
                         </Link>
                       </li>

@@ -14,6 +14,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { formatDuration } from "@/lib/format";
+import { Fare } from "@/components/currency/fare";
 import { formatNad } from "@/lib/money";
 import {
   ITINERARY_PRESETS,
@@ -310,7 +311,7 @@ export function SelfDrivePlanner({ whatsappHref }: { whatsappHref: string | null
           <div className="mt-3 border-t pt-3">
             <p className="text-muted-foreground text-xs font-medium">You pay</p>
             <p className="tabular text-3xl leading-none font-semibold tracking-tight">
-              {formatNad(self.total)}
+              <Fare nad={self.total} block />
             </p>
             <p className="text-muted-foreground mt-2 text-xs leading-relaxed">
               And you still carry{" "}
@@ -345,7 +346,7 @@ export function SelfDrivePlanner({ whatsappHref }: { whatsappHref: string | null
           <div className="mt-3 border-t pt-3">
             <p className="text-muted-foreground text-xs font-medium">You pay</p>
             <p className="tabular text-brand text-3xl leading-none font-semibold tracking-tight">
-              {formatNad(ours)}
+              <Fare nad={ours} block />
             </p>
             <p className="text-muted-foreground mt-2 text-xs leading-relaxed">
               {difference > 0 ? (
