@@ -28,7 +28,9 @@ shuttle, which does not exist yet.
   either way would waste real money, break live bookings, or be hard to reverse.
 - **Verify before claiming.** Run it, look at it, read the logs, look at the rendered
   page. "Should work" is not a result. If something is untested, say which part and why.
-  A test that passes against a schema production does not have has verified nothing.
+  A suite that passes against a schema production does not have has verified nothing.
+  Green locally and 404 in production is the shape failure takes here, so the last step
+  is loading the page.
 - **Craft is measured, not asserted.** Contrast ratios computed, not eyeballed. Layouts
   checked at 360px. Figures traced to the function that produced them. "Looks
   professional" is not a standard; "a reader can check this and we survive the check" is.
@@ -115,7 +117,12 @@ landed yet, and one unearned claim discredits the rest.
   currency is an indicative conversion shown beside the fare, dated, rounded, and never
   instead of it. A traveller who cannot tell whether N$6,000 is fifty dollars or five
   hundred is a lost booking, so the conversion belongs wherever a price is shown — above
-  all before they decide, not only on the confirmation page.
+  all before they decide, not only on the confirmation page. Every fare renders through
+  `<Fare>`, so a conversion cannot exist on one page and not another, and the NAD figure
+  is server-rendered so the static pages stay static. Rates are operator-set
+  (`USD_RATE`, `EUR_RATE`, `GBP_RATE`, `FX_RATE_AS_AT`), each bounded to its own
+  plausible band, and baked in at build — so a rate change lands on the next build
+  rather than instantly, which is why it is dated on screen.
 - **WhatsApp is preferred, never required.** It is how dispatch and driver coordination
   actually work, and it is the best channel we have. It is not universal among inbound
   travellers, so it must never be the thing that blocks a booking: require *a* contact
@@ -194,8 +201,15 @@ assignment and cancellation and cannot be trusted to remember.
 49 places and 62 road segments, so any of 2,352 ordered pairs can be priced from cost
 rather than a price list. It is the moat, and most of the platform derives from it: the
 `/journey` quote surface, the dispatch calendar and its marginal-offer engine, the
-self-drive planner, park-gate feasibility from sunrise/sunset, rain-season closures, and
-160 leg pages at `/drive/<a>-to-<b>`.
+self-drive planner, park-gate feasibility from sunrise/sunset, rain-season closures,
+160 leg pages at `/drive/<a>-to-<b>`, and 24 destination pages at `/destinations/<place>`.
+
+A leg page answers a pair; a destination page answers "I am going to Sossusvlei, how do
+I get there and what does it cost", which is the question a traveller actually has before
+they have a pair. Both are generated, neither describes anybody's lodge — we can state
+what it takes to reach a place, not whether the rooms are nice — and
+`tests/destinations.test.ts` enforces that against the page source rather than trusting
+it.
 
 Two rules protect it. A figure shown to a traveller is produced by the model, not typed
 beside it — which is why the homepage hero draws the network itself from `PLACE_NODES`
@@ -230,8 +244,9 @@ next. The archaeology belongs in git, not here.*
 **Works.** Server-computed per-vehicle fares across 2,352 pairs. The road model and
 everything derived from it. The admin quote engine, including multi-leg itineraries priced
 as trips. Bank transfer, with confirmation gated behind the admin password. Dispatch,
-the fleet calendar, corporate quotations, the reviews admin. 160 leg pages, 11 guides and
-`/methodology`. Eighteen test suites.
+the fleet calendar, corporate quotations, the reviews admin. 160 leg pages at `/drive`,
+24 destination pages at `/destinations`, 11 guides and `/methodology`. Fares in the
+reader's own currency on every surface that shows one. Twenty test suites, 793 checks.
 
 **Broken, in order of cost.**
 1. `db/manual/RUN-ME.sql` has never been run against production. `bookings.pickup_detail`
@@ -246,9 +261,10 @@ the fleet calendar, corporate quotations, the reviews admin. 160 leg pages, 11 g
    The unique index also means a couple, or a PA booking for an executive, collide.
 5. `SUPPORT.travelDay` says "Reachable throughout your journey, whatever the hour" on the
    homepage and contact page. That is the 24/7 claim this file forbids.
-6. Foreign-currency conversion exists only on `/booking/[ref]` and `/quote/[group]` — the
-   two pages a traveller reaches *after* deciding. No EUR, and no ZAR despite the peg
-   making it exact.
+6. `GATE_RULES` covers Etosha twice, Waterberg and Fish River — but not Sossusvlei, which
+   is the most gate-critical destination in the country. Its page carries no gate warning
+   because we have no coordinates for the Sesriem gate, and guessing them would put a
+   made-up number behind a real-looking deadline.
 
 **Human-only.** Running the SQL. Fixing `MAIL_FROM`. The PayToday domain registration.
 Rotating the database password and PayToday keys exposed in chat in an earlier session —
