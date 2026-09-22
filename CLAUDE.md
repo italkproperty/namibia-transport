@@ -17,52 +17,21 @@ multiply the fare. Per-person pricing returns only with a genuine scheduled shar
 shuttle, which does not exist yet.
 
 ## The bar
+- **The money path outranks everything.** A traveller must be able to get a price, book,
+  pay, and find their booking again. Work that does not serve that comes after work that
+  does — and a new surface while the money path is broken is the wrong trade, however
+  good the surface. This is the rule most often honoured in the wrong direction.
 - **Finish what you start.** A feature that is half-built is worse than one not started —
   it looks like a promise. Ship whole, working units.
 - **Decide, then say so.** When something is ambiguous, choose the reading a careful
   colleague would, state the assumption, and keep building. Stop only when proceeding
   either way would waste real money, break live bookings, or be hard to reverse.
-- **Depth over breadth.** One surface that is genuinely excellent beats four that are
-  adequate. "Silicon Valley tech company level and feel" is the standard.
-- **Verify before claiming.** Run it, look at it, read the logs. "Should work" is not a
-  result. If something is untested, say which part and why.
-
-## Non-negotiable: Namibian reality
-- **Payments.** Stripe and Paddle do not serve Namibian entities — never add them, or any
-  subscription-billing library. The live gateway is **PayToday** (Nedbank Namibia:
-  international cards, NAD settlement) behind the `PaymentProvider` adapter. The stub stays
-  the default; PayToday is selected explicitly with `PAYMENT_PROVIDER=paytoday`.
-- **PayToday keys are server-only.** Shop Key, Shop Handle and Private Key never take a
-  `NEXT_PUBLIC_` prefix and never reach a browser bundle. Their guide §3.3 forbids keys in
-  client code even though their own React sample does it; we follow the disclaimer and run
-  the SDK server-side. We send an Origin and Referer for the site because their API is
-  browser-shaped, but note that nothing in their guide documents an origin or domain
-  check — that was a guess from an earlier session, and it is not a documented
-  requirement. Credentials are issued by their support desk on request (§3.1, §6.6),
-  though §1.6 says a suspected leak is regenerated in the Merchant Portal; the guide
-  contradicts itself on which.
-- **PayToday has no sandbox.** Every transaction is live and charged in real currency
-  (refunded in 3–5 business days; immediately for Nedbank accounts). Never wire real
-  payment intents into an automated test.
-- **Address data is sparse.** Never make free-text street-address autocomplete the primary
-  input. A curated pick-list of known destinations, plus an optional dropped pin, plus a
-  free-text landmark note. A landmark helps a Namibian driver more than a street name.
-- **WhatsApp-first.** WhatsApp is the main customer channel; email is secondary. Behind the
-  `Messenger` adapter — still stubbed until the Meta Cloud API lands.
-- Currency is N$ with thousands separators. Namibia is **UTC+02:00 all year** — no DST
-  since 2017, so the offset is fixed, never inferred from the runtime.
-
-## Non-negotiable: credibility
-This has cost more rework than anything else. The site sells trust to people who have not
-landed yet, and one unearned claim discredits the rest.
-- **Never state a capability we do not have.** No "24/7" until someone answers at 03:00.
-  No "licensed" or "vetted" drivers until there is a document on file. No invented
-  registration numbers, addresses, review counts or years in business.
-- **Say what we do, not that we are trustworthy.** "Quote your reference and we can see
-  your trip, your driver and your flight" beats "a real person on WhatsApp" — describing a
-  floor reads as insecurity.
-- Support hours, prices and inclusions are stated in exactly one place and read from there,
-  so they cannot drift apart across pages.
+- **Verify before claiming.** Run it, look at it, read the logs, look at the rendered
+  page. "Should work" is not a result. If something is untested, say which part and why.
+  A test that passes against a schema production does not have has verified nothing.
+- **Craft is measured, not asserted.** Contrast ratios computed, not eyeballed. Layouts
+  checked at 360px. Figures traced to the function that produced them. "Looks
+  professional" is not a standard; "a reader can check this and we survive the check" is.
 
 ## Non-negotiable: money and correctness
 - **Pricing is always computed server-side.** The client sends no price, ever. The resolved
@@ -73,19 +42,107 @@ landed yet, and one unearned claim discredits the rest.
 - **Never trust a gateway redirect.** A `?status=` in a return URL is attacker-controlled.
   Payment status is only ever re-read from the gateway, and only marked paid when the
   amount matches what we recorded.
-- Server Actions are public endpoints. Anything privileged re-checks authorisation itself.
+- **A trip is paid as a trip.** An itinerary is one agreed figure stored as one booking per
+  driving job. Anything that records or confirms payment resolves the whole `group_ref`,
+  never the leg whose reference happens to be on the transfer.
+- **Only a human marks money received.** A traveller can declare a transfer; only an
+  operator behind the admin gate can confirm one. Nothing a traveller clicks may ever
+  set a booking to paid.
+- **Quotes expire.** An unpaid booking at a public URL is a live price. It dies 45 days
+  after it was struck, or when its travel date passes. Enforced server-side, not by
+  hiding a button.
+- Server Actions are public endpoints. Anything privileged re-checks authorisation itself,
+  and every export in a `"use server"` file is a public endpoint whether or not a page
+  calls it.
+
+## Non-negotiable: schema and code ship together
+This is the rule the project learned the hard way, and it is the one most likely to be
+broken again, because nothing enforces it automatically.
+
+Code deploys on `git push`. Schema deploys when a human pastes SQL into Supabase. Those
+are two different clocks, and when they drift production breaks in a way that looks like
+nothing: the query throws, the catch swallows it, and a booking page returns 404 while
+the build is green and every test passes.
+
+- **"`main` is deployable" means it works against the real database**, not that it
+  compiles. A commit that adds a column is not done until the column exists in production.
+- **A change needing SQL is not finished when it is merged.** It is finished when the
+  migration has been run and the affected page has been loaded and seen to work.
+- **Degrade loudly, not silently.** A `catch` that turns a missing column into a 404 hides
+  exactly the failure an operator needs to see. Log what actually broke, and where a page
+  can say "this needs a migration", let it.
+
+**There is one migration file: `db/manual/RUN-ME.sql`.** It is cumulative, idempotent and
+wrapped in a single transaction, so pasting the whole thing is always correct whatever
+state the database is in. Add new changes to the bottom of it rather than starting
+another file. **Always paste the SQL itself into the reply**, never a file path: the
+person running it is in the Supabase SQL editor, not in the repository.
+
+## Non-negotiable: credibility
+This has cost more rework than anything else. The site sells trust to people who have not
+landed yet, and one unearned claim discredits the rest.
+- **Never state a capability we do not have.** No "24/7" until someone answers at 03:00.
+  No "licensed" or "vetted" drivers until there is a document on file. No invented
+  registration numbers, addresses, review counts or years in business.
+- **A claim reworded is still the claim.** "Reachable whatever the hour" is "24/7" with
+  the number filed off. Test the sentence against what happens at 03:00, not against
+  whether it uses the forbidden words.
+- **Say what we do, not that we are trustworthy.** "Quote your reference and we can see
+  your trip, your driver and your flight" beats "a real person on WhatsApp" — describing a
+  floor reads as insecurity.
+- Support hours, prices and inclusions are stated in exactly one place and read from there,
+  so they cannot drift apart across pages.
+
+## Non-negotiable: Namibian reality
+- **Payments.** Stripe and Paddle do not serve Namibian entities — never add them, or any
+  subscription-billing library. **PayToday is not a settled choice.** It has returned 403
+  at `initialize()` since 27 August 2026 — `{"status":"unauthorized","error":"Authorization
+  error:"}` with the reason blank after the colon, an account-side refusal we cannot fix
+  in code. `/admin/paytoday` shows the live evidence. Until it clears, bank transfer is
+  the only way anyone can pay us, and evaluating an alternative gateway is legitimate
+  work, not disloyalty to a decision. Whatever is chosen sits behind the
+  `PaymentProvider` adapter; the stub stays the default.
+- **PayToday keys are server-only.** Shop Key, Shop Handle and Private Key never take a
+  `NEXT_PUBLIC_` prefix and never reach a browser bundle. Their guide §3.3 forbids keys in
+  client code even though their own React sample does it; we follow the disclaimer and run
+  the SDK server-side. Nothing in their guide documents an origin or domain check — that
+  was a guess from an earlier session, and it is not a documented requirement.
+- **PayToday has no sandbox.** Every transaction is live and charged in real currency
+  (refunded in 3–5 business days; immediately for Nedbank accounts). Never wire real
+  payment intents into an automated test.
+- **Currency.** NAD is the amount owed, always, because we bank in it. The Namibian dollar
+  is pegged at par to the rand, so a ZAR figure is exact and needs no hedging. Every other
+  currency is an indicative conversion shown beside the fare, dated, rounded, and never
+  instead of it. A traveller who cannot tell whether N$6,000 is fifty dollars or five
+  hundred is a lost booking, so the conversion belongs wherever a price is shown — above
+  all before they decide, not only on the confirmation page.
+- **WhatsApp is preferred, never required.** It is how dispatch and driver coordination
+  actually work, and it is the best channel we have. It is not universal among inbound
+  travellers, so it must never be the thing that blocks a booking: require *a* contact
+  channel, ask for WhatsApp first, accept email instead. An operating truth is not an
+  acquisition rule.
+- **Address data is sparse.** Never make free-text street-address autocomplete the primary
+  input. A curated pick-list of known destinations, plus an optional dropped pin, plus a
+  free-text landmark note. A landmark helps a Namibian driver more than a street name.
+- Currency is N$ with thousands separators. Namibia is **UTC+02:00 all year** — no DST
+  since 2017, so the offset is fixed, never inferred from the runtime.
 
 ## Tech stack
 - Next.js 15 (App Router) · React 19 · TypeScript strict · Tailwind v4 · shadcn/ui (Radix)
 - Supabase Postgres via Drizzle ORM · `@supabase/ssr` for auth/storage
 - Vercel — every push to `main` auto-deploys. `DATABASE_URL` must be Supabase's
   **transaction pooler** (port 6543, user `postgres.<ref>`); the direct host is IPv6-only
-  and unreachable from Vercel functions.
-- Live behind adapters: **PayToday** (payments), **Mapbox** (route maps, Directions).
-  `mapbox-gl` powers the interactive map and is ~230KB, so it is never in the
-  initial bundle — the static image renders first and the library loads only
+  and unreachable from Vercel functions. One connection pool per instance, cached on
+  `globalThis` in production as well as development — the usual Next.js idiom is written
+  the other way round and exhausts the pooler.
+- Live behind adapters: **Mapbox** (route maps, Directions). `mapbox-gl` is ~230KB and is
+  never in the initial bundle — the static image renders first and the library loads only
   when a map scrolls into view.
-- Planned behind adapters: Meta WhatsApp Cloud API, Resend, a flight-status API.
+- Planned behind adapters: a working card gateway, Meta WhatsApp Cloud API, Resend, a
+  flight-status API.
+- `scripts/cutout.py` lifts a vehicle photograph off its studio backdrop. Run by hand when
+  a photograph arrives; needs `pillow numpy scipy`, which are deliberately not project
+  dependencies.
 
 **Adding a dependency is your call** when it is the right tool and earns its weight — say
 what you added and why. **Replacing a pillar** (framework, ORM, database, host, payment
@@ -98,6 +155,9 @@ gateway) is a conversation first.
   - `app/(dashboard)/` — internal admin and dispatch, password-gated
   - `app/driver/` — driver PWA, not yet built
   - `app/api/` — route handlers and gateway returns
+- A route group needs its own `layout.tsx` to be a boundary Next will render `not-found`
+  or `error` from. Without one, `notFound()` falls past the group's file *and* the root's,
+  to Next's bare default.
 - **Every external service sits behind a thin interface in `lib/`**, with a stub
   implementation, so it can be swapped or fail without touching business logic:
   `lib/payments/` (`PaymentProvider`), `lib/messaging/` (`Messenger`), `lib/maps/`
@@ -112,7 +172,8 @@ gateway) is a conversation first.
   favicons — read `lib/brand-colors.ts`, which holds the same values as literals.
   Those two files are the only place a colour is written down.
 - Secrets live in `.env.local` (gitignored) and Vercel. `.env.example` carries placeholders
-  and the reasoning. Never commit a real secret.
+  and the reasoning. This repository is public: anything that would invite invoice fraud
+  or drain an account is server-only and never takes `NEXT_PUBLIC_`.
 
 ## Data model
 Postgres via Drizzle, defined in full even where the UI uses part of it — growth should be
@@ -124,126 +185,73 @@ corporate_quote_items, reviews.
 Every booking records the full economics — customer price, driver payout, contribution — so
 route profitability is queryable from day one. `routes` carries a slug, fixed price, SEO
 fields and coordinates, powering fixed pricing, the programmatic SEO pages and route maps.
-Migrations are generated with `drizzle-kit`, and applied via Supabase's SQL editor when a
-local Postgres is not to hand.
 
-**There is one migration file: `db/manual/RUN-ME.sql`.** It is cumulative, idempotent and
-wrapped in a single transaction, so pasting the whole thing is always correct whatever
-state the database is in. Add new changes to the bottom of it rather than starting
-another file — an operator should never have to work out which of several scripts they
-are missing. **Always paste the SQL itself into the reply**, never a file path: the
-person running it is in the Supabase SQL editor, not in the repository.
+A booking's state is never inferred from what a screen last did. Whether money arrived is
+read from the `payments` table, because a booking's own status is overwritten by
+assignment and cancellation and cannot be trusted to remember.
+
+## The road model
+49 places and 62 road segments, so any of 2,352 ordered pairs can be priced from cost
+rather than a price list. It is the moat, and most of the platform derives from it: the
+`/journey` quote surface, the dispatch calendar and its marginal-offer engine, the
+self-drive planner, park-gate feasibility from sunrise/sunset, rain-season closures, and
+160 leg pages at `/drive/<a>-to-<b>`.
+
+Two rules protect it. A figure shown to a traveller is produced by the model, not typed
+beside it — which is why the homepage hero draws the network itself from `PLACE_NODES`
+and `ROAD_EDGES` and cannot drift from the thing that prices the trips. And a judgement
+is written down as a judgement: `LEG_DESTINATIONS` is a hand-kept list because dressing
+it up as a derived score would encode a confidence the arithmetic does not support.
+
+Page-set filters in `lib/network/legs.ts` exist to stop two of *our own* pages competing
+for one query — that is cannibalisation, not caution about rivals. Nothing here avoids
+competing with other operators; the whole model exists to beat them on 2,352 routes they
+price off a list.
 
 ## Working style
 - Small, reviewable commits. Explain *why* in the message; the diff already shows what.
-- `main` is always deployable and always deploying — never leave it broken.
 - TypeScript strict, no `any` without a comment justifying it.
 - Accessible by default: labels, focus states, keyboard nav, AA contrast measured rather
   than assumed.
-- Comments explain reasoning and non-obvious constraints, not mechanics.
+- Comments explain reasoning and non-obvious constraints, not mechanics. When a fix cost
+  three attempts, the two that failed belong in the comment — they are why the third
+  looks strange.
+- `npm test` runs every suite; the few needing a real Postgres skip themselves without
+  `DATABASE_URL`. A guarantee about rows is tested against rows, not against a return
+  value.
+- **Do not ship a check that can pass a broken result.** If a quality heuristic cannot
+  distinguish good from bad, say so and tell a human where to look instead. A green light
+  on a ruined output is worse than no light.
 
 ## Where we are
-*Updated 21 September 2026. Keep this honest — it is the first thing a new session reads.*
+*Keep this short and current. Three questions only: what works, what is broken, what is
+next. The archaeology belongs in git, not here.*
 
-Live and working: the booking flow end to end on Supabase, server-computed per-vehicle
-fares, the map-pin drop, the corporate quotation engine, the reviews admin, route maps,
-the custom domain and Spacemail.
+**Works.** Server-computed per-vehicle fares across 2,352 pairs. The road model and
+everything derived from it. The admin quote engine, including multi-leg itineraries priced
+as trips. Bank transfer, with confirmation gated behind the admin password. Dispatch,
+the fleet calendar, corporate quotations, the reviews admin. 160 leg pages, 11 guides and
+`/methodology`. Eighteen test suites.
 
-The identity is tar, cool paper and route-marker blue, set in Archivo with IBM Plex Mono
-for figures — replacing a cream-and-terracotta palette in Geist that read as generated.
-The homepage hero draws the road network itself from `PLACE_NODES` and `ROAD_EDGES`, so
-the graphic cannot drift from the model that prices the trips.
+**Broken, in order of cost.**
+1. `db/manual/RUN-ME.sql` has never been run against production. `bookings.pickup_detail`
+   does not exist there, so every `/booking/REF` page 404s. Only the migration fixes it.
+2. No working card gateway. PayToday has 403'd for a month; bank transfer is the only
+   channel.
+3. `MAIL_FROM` in Vercel is missing its angle brackets, so Spacemail rejected every
+   confirmation email with `553 Sender address rejected`. The code now repairs a malformed
+   value at runtime, but the variable is still wrong.
+4. A booking cannot be made without a WhatsApp number — `customers.whatsapp` is `NOT NULL`
+   and uniquely indexed, and `lib/booking/schema.ts` requires it while email is optional.
+   The unique index also means a couple, or a PA booking for an executive, collide.
+5. `SUPPORT.travelDay` says "Reachable throughout your journey, whatever the hour" on the
+   homepage and contact page. That is the 24/7 claim this file forbids.
+6. Foreign-currency conversion exists only on `/booking/[ref]` and `/quote/[group]` — the
+   two pages a traveller reaches *after* deciding. No EUR, and no ZAR despite the peg
+   making it exact.
 
-The road model is the moat, and most of the platform now derives from it: 49 places and
-62 road segments, so any of 2,352 ordered pairs can be priced from cost rather than a
-price list (`/journey`). On top of it sit the dispatch calendar (`/admin/calendar`) with
-the fleet timeline and marginal-offer engine, the self-drive cost planner
-(`/self-drive`), park-gate feasibility warnings computed from sunrise/sunset, and
-rain-season notes on the passes that close. Eighteen test suites, 698 checks, including
-the model against published distances, times and fares. `npm test` runs all of them; the
-few that need a real Postgres skip themselves without `DATABASE_URL`.
+**Human-only.** Running the SQL. Fixing `MAIL_FROM`. The PayToday domain registration.
+Rotating the database password and PayToday keys exposed in chat in an earlier session —
+still unconfirmed, and a leaked credential is either rotated or it is live.
 
-Content: four arrival guides and seven self-drive decision guides, each carrying at least
-one number only the road model can produce, plus `/methodology`, which stands behind
-every figure and is our substitute for the reviews and photography we do not have.
-On top of those, 160 leg pages at `/drive/<a>-to-<b>` — one per drive people actually
-make, with roads by number, surface split, honest time, rain closures, gate deadline and
-a fixed price both ways. `lib/network/legs.ts` decides which legs qualify and why; the
-three filters exist to stop a page being published that nobody searches for, and
-`tests/legs.test.ts` enforces them, including that no leg competes with a curated
-`/transfers` page.
-`/self-drive` is the cluster hub and lists every decision guide from the data.
-`tests/guides.test.ts` resolves every slug a guide points at — a mistyped journey renders
-an empty table rather than throwing — and holds guide prose to the same credibility rules
-as the confirmation email.
-
-Taking money: bank transfer is a first-class payment method (`lib/payments/bank.ts`),
-configured by `BANK_ACCOUNT_*` in Vercel and server-only because this repo is public.
-The rule that governs it is in `lib/payments/transfer.ts`: a traveller pressing "I have
-made the transfer" records a claim and can never mark a booking paid — only
-`confirmTransfer`, behind the admin password, does that, and `tests/transfer.test.ts`
-holds the line against a real Postgres. Declared transfers queue at the top of
-`/admin/bookings`. Both payment pages also offer a proof of payment by `mailto:`, with
-the reference already in the subject so an inbox of screenshots can be matched to
-bookings; the address is `NEXT_PUBLIC_SUPPORT_EMAIL` rather than a second thing to
-configure. `/admin/quotes/new` writes a quote by hand for trips the road model
-cannot price and returns a shareable `/booking/REF` link.
-
-Quoting: `/admin/quotes/new` is the booking engine. A trip is an ordered list of
-stops with nights, searchable over all 49 network places, and each stop carries an
-optional display label so a lodge the network does not model ("Namib Desert Lodge") is
-routed through the nearest town it does. `priceItinerary` wraps `planItinerary`, so a
-multi-day driven trip includes the nights the driver is away — which a per-leg sum
-silently loses — and splits the total across legs so the parts reconcile exactly
-(`tests/itinerary-quote.test.ts`). Each leg is saved as its own booking sharing a
-`group_ref`: dispatch sees the driving jobs, the traveller sees one page at
-`/quote/<group_ref>`. Schema reaches production by hand, so `lib/admin/migrations.ts`
-introspects the database and the quote page names the missing column.
-
-The traveller fills in the half only they know — pick-up time, flight number,
-exact spot, a note — from their own page. The booking link is the only
-authorisation, so `lib/booking/details.ts` is deliberately narrow: it cannot
-touch the fare, payout, status, or the place the leg was priced between, and
-`tests/details.test.ts` asserts each of those against a real Postgres. Their
-submissions surface on `/admin/bookings`. Airport legs are identified by node
-slug, never by a display label that may name a lodge instead.
-
-Fares are quoted in NAD and may carry an indicative US dollar figure beside
-them (`lib/fx.ts`, `USD_RATE` and `USD_RATE_AS_AT`). It is never the amount
-owed: we bank in NAD and a foreign bank converts at its own rate on the day, so
-the figure is dated, rounded to whole dollars, and captioned as approximate. An
-implausible rate is ignored rather than trusted.
-
-Audited in September as an operations problem rather than a code one — what breaks at
-fifty bookings a day, then five hundred — and the findings are fixed:
-
-- **A trip is paid as a trip.** An itinerary is quoted as one figure and stored as one
-  booking per driving job, and a transfer read off the first leg recorded a fraction of
-  what the traveller sent — N$5,786 against N$16,050 on a real three-leg quote — then
-  dispatched one car while the rest stayed unpaid. `payableSet` in `lib/payments/transfer.ts`
-  resolves the group; cancelled legs are excluded.
-- **Itinerary scheduling.** `planItinerary` drops a leg when consecutive stops are the same
-  place, so indexing stops by leg index put the back half of a trip two days early and
-  departing from a lodge the party had left. Legs carry `fromStop`/`toStop` now. A
-  zero-night stop shares a day with the next leg, which is what the pricing already
-  assumed. Saving a quote is one transaction.
-- **The pool.** `db/index.ts` cached the client only outside production, so each of the
-  forty-odd `getDb()` sites built its own. Exhausting Supabase's pooler shows up as an
-  admin table that is silently empty, not as an error.
-- **Quotes expire** (`lib/booking/validity.ts`): 45 days, or the travel date passing.
-  Derived, not stored. Enforced in `declareTransfer`, not only in the page.
-- **Dead ends closed.** Cancel and reinstate (`lib/admin/booking-actions.ts`), `completed`
-  reachable at last, `/admin/bookings` paginated and searchable — assigning a driver
-  exists only on that page, and it used to stop at 500 rows without saying so. A real 404
-  that leads with recovering a lost booking link.
-
-In flight: PayToday returns 403 at initialize() — their endpoint answers
-`{"status":"unauthorized","error":"Authorization error:"}` with the reason left blank
-after the colon, which is an account-side refusal we cannot fix in code. `/admin/paytoday`
-shows the live evidence. Next up:
-WhatsApp via the Meta Cloud API — the messaging adapter is stubbed and waiting — then a
-German translation of `/self-drive`, which is the highest-return content follow-up.
-Guides 5 and 6 are deliberately gated on 60/90-day measurement of the first four.
-
-Outstanding and human-only: the PayToday domain registration, and rotating the database
-password and PayToday keys that were exposed in chat in an earlier session.
+**Next.** Whatever unblocks the money path, in the order above.
