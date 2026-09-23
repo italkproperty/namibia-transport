@@ -1,13 +1,14 @@
 import "server-only";
 
-import { SITE } from "@/lib/site";
-
 import { getPayTodayConfig, selectedPaymentProvider } from "./config";
+import { activeVariant, headerVariants } from "./headers";
 import {
   getPayTodaySdk,
   lastPayTodayFailure,
+  probeVariant,
   resetPayTodaySdk,
   type PayTodayFailure,
+  type ProbeResult,
 } from "./sdk";
 
 /**
@@ -34,8 +35,8 @@ export type PayTodayDiagnosis = {
   configured: boolean;
   /** Which credentials are present. Never their values. */
   keys: { shopKey: boolean; shopHandle: boolean; privateKey: boolean };
-  /** The Origin and Referer the server presents to PayToday. */
-  origin: string;
+  /** The header variant the live payment path is using. */
+  variant: { id: string; label: string };
   sdkUrl: string;
   /** Did the SDK source load and evaluate at all? */
   sdkLoaded: boolean;
@@ -64,7 +65,7 @@ export async function diagnosePayToday(): Promise<PayTodayDiagnosis> {
       shopHandle: Boolean(process.env.PAYTODAY_SHOP_HANDLE?.trim()),
       privateKey: Boolean(process.env.PAYTODAY_PRIVATE_KEY?.trim()),
     },
-    origin: SITE.url.replace(/\/+$/, ""),
+    variant: { id: activeVariant().id, label: activeVariant().label },
     sdkUrl: config?.sdkUrl ?? "",
   };
 
@@ -119,4 +120,72 @@ export async function diagnosePayToday(): Promise<PayTodayDiagnosis> {
         : message,
     };
   }
+}
+
+/**
+ * Every header variant, tried once, so the answer comes from evidence rather
+ * than from another guess.
+ *
+ * The 403 has stood for a month against credentials PayToday's own support
+ * says are correct on their side. Both things can be true: the merchant
+ * account is fine *and* the request is being refused, if the request announces
+ * a domain their edge does not recognise. We invented that Origin header —
+ * nothing in their guide asks for it — so the first thing worth knowing is
+ * whether sending nothing at all is what works.
+ *
+ * Sequential rather than parallel. Five simultaneous failed authentications
+ * from one IP is what rate limiting is for, and a throttled probe would answer
+ * a different question from the one asked.
+ *
+ * Creates nothing and charges nothing: `initialize()` only authenticates.
+ */
+export type PayTodayProbeMatrix = {
+  ran: boolean;
+  reason: string;
+  results: ProbeResult[];
+  /** The first variant that authenticated, if any. */
+  winner: ProbeResult | null;
+  /**
+   * True when at least one attempt actually reached PayToday. If nothing did,
+   * the run says nothing about headers and the operator should be told that
+   * rather than shown five apparent refusals.
+   */
+  anyReached: boolean;
+  active: string;
+};
+
+export async function probeHeaderVariants(): Promise<PayTodayProbeMatrix> {
+  const config = getPayTodayConfig();
+  if (!config) {
+    return {
+      ran: false,
+      reason:
+        "PayToday is not configured on this deployment, so there is nothing to probe.",
+      results: [],
+      winner: null,
+      anyReached: false,
+      active: activeVariant().id,
+    };
+  }
+
+  const results: ProbeResult[] = [];
+  for (const variant of headerVariants()) {
+    results.push(await probeVariant(variant));
+    // A winning variant answers the question; the rest would only add failed
+    // authentications against a live merchant account.
+    if (results[results.length - 1].ok) break;
+  }
+
+  // Whatever the probes did to the module-level caches, the payment path must
+  // start clean afterwards.
+  resetPayTodaySdk();
+
+  return {
+    ran: true,
+    reason: "",
+    results,
+    winner: results.find((r) => r.ok) ?? null,
+    anyReached: results.some((r) => r.reached),
+    active: activeVariant().id,
+  };
 }

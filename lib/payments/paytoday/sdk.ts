@@ -4,9 +4,8 @@ import { createHash } from "node:crypto";
 import { readFile } from "node:fs/promises";
 import { createContext, runInContext } from "node:vm";
 
-import { SITE } from "@/lib/site";
-
 import { getPayTodayConfig, type PayTodayConfig } from "./config";
+import { activeVariant, applyVariant, type HeaderVariant } from "./headers";
 import type {
   CreateIntentInput,
   CreateIntentResponse,
@@ -112,22 +111,20 @@ async function getSource(config: PayTodayConfig): Promise<string> {
 /**
  * The SDK's network calls, wrapped for two reasons.
  *
- * PayToday's API is built for browser callers, so requests normally arrive
- * carrying an Origin and Referer for the merchant's own site. Driving the SDK
- * from a server sends neither, and their auth endpoint answers 403 — which
- * looks identical to bad credentials. We present the site's own origin.
+ * Which headers we present is a variant rather than a constant — see
+ * `headers.ts`. The short version: an earlier session guessed that the 403 was
+ * a missing Origin and started inventing one, that guess is undocumented, and
+ * announcing an unregistered domain is itself a way to earn a 403. The default
+ * now sends nothing we were not asked for.
  *
  * And when a call does fail, the SDK reports only the status code. Logging the
  * response body turns "HTTP error! Status: 403" into something diagnosable.
  * Request bodies are never logged: they carry the keys.
  */
-function instrumentedFetch(): typeof fetch {
-  const origin = SITE.url.replace(/\/+$/, "");
-
+function instrumentedFetch(variant: HeaderVariant): typeof fetch {
   return async (input: RequestInfo | URL, init: RequestInit = {}) => {
     const headers = new Headers(init.headers ?? {});
-    if (!headers.has("origin")) headers.set("Origin", origin);
-    if (!headers.has("referer")) headers.set("Referer", `${origin}/`);
+    applyVariant(headers, variant);
 
     const response = await fetch(input, { ...init, headers });
 
@@ -165,8 +162,8 @@ function instrumentedFetch(): typeof fetch {
  * anything the SDK reaches for that is not here should fail loudly rather than
  * silently behave differently from a real browser.
  */
-function buildSandbox(): Record<string, unknown> {
-  const netFetch = instrumentedFetch();
+function buildSandbox(variant: HeaderVariant): Record<string, unknown> {
+  const netFetch = instrumentedFetch(variant);
 
   const sandbox: Record<string, unknown> = {
     console,
@@ -314,9 +311,12 @@ function makeAxiosShim(netFetch: typeof fetch) {
   return axios;
 }
 
-async function loadConstructor(config: PayTodayConfig): Promise<SdkConstructor> {
+async function loadConstructor(
+  config: PayTodayConfig,
+  variant: HeaderVariant,
+): Promise<SdkConstructor> {
   const source = await getSource(config);
-  const sandbox = buildSandbox();
+  const sandbox = buildSandbox(variant);
   const context = createContext(sandbox);
 
   runInContext(source, context, {
@@ -359,7 +359,8 @@ export async function getPayTodaySdk(): Promise<SdkInstance> {
     return session.instance;
   }
 
-  globalForSdk.__payTodayCtor ??= loadConstructor(config);
+  const variant = activeVariant();
+  globalForSdk.__payTodayCtor ??= loadConstructor(config, variant);
 
   let PayToday: SdkConstructor;
   try {
@@ -385,6 +386,101 @@ export async function getPayTodaySdk(): Promise<SdkInstance> {
 
   globalForSdk.__payTodaySession = { instance, createdAt: Date.now() };
   return instance;
+}
+
+/**
+ * One authentication attempt under a named header variant, built from scratch.
+ *
+ * Deliberately bypasses every cache: a probe that reuses the constructor would
+ * reuse the fetch baked into its sandbox, and every variant would silently
+ * test the same headers. Nothing here is cached afterwards either, so probing
+ * cannot leave a half-built session behind for the payment path to find.
+ *
+ * `initialize()` is the call that has been failing and it creates nothing —
+ * which matters, because PayToday has no sandbox and every payment intent is
+ * live money.
+ */
+export type ProbeResult = {
+  variant: HeaderVariant;
+  ok: boolean;
+  /**
+   * Whether PayToday answered at all.
+   *
+   * False means the request never landed — DNS, TLS, a dropped socket. That is
+   * not the same as a refusal and must not be reported as one: telling an
+   * operator "PayToday rejects this variant" when the packet never arrived
+   * sends them to argue with a support desk about a network blip.
+   */
+  reached: boolean;
+  /** What came back, when it was a refusal. */
+  failure: PayTodayFailure | null;
+  detail: string;
+  ms: number;
+};
+
+export async function probeVariant(
+  variant: HeaderVariant,
+): Promise<ProbeResult> {
+  const config = getPayTodayConfig();
+  const started = Date.now();
+
+  if (!config) {
+    return {
+      variant,
+      ok: false,
+      reached: false,
+      failure: null,
+      detail: "PayToday is not configured on this deployment.",
+      ms: 0,
+    };
+  }
+
+  const before = globalForSdk.__payTodayLastFailure;
+  globalForSdk.__payTodayLastFailure = undefined;
+
+  try {
+    const PayToday = await loadConstructor(config, variant);
+    const instance = new PayToday({
+      shopKey: config.shopKey,
+      shopHandle: config.shopHandle,
+      privateKey: config.privateKey,
+      environment: config.environment,
+    });
+
+    const ok = await instance.initialize();
+    const failure = globalForSdk.__payTodayLastFailure ?? null;
+
+    return {
+      variant,
+      ok,
+      reached: ok || failure !== null,
+      failure,
+      detail: ok
+        ? "Authenticated."
+        : failure
+          ? "initialize() returned false — PayToday refused these headers."
+          : "initialize() returned false and PayToday never answered. The " +
+            "request did not land, so this says nothing about the headers.",
+      ms: Date.now() - started,
+    };
+  } catch (error) {
+    const failure = globalForSdk.__payTodayLastFailure ?? null;
+    const message = error instanceof Error ? error.message : String(error);
+    return {
+      variant,
+      ok: false,
+      reached: failure !== null,
+      failure,
+      detail: failure
+        ? message
+        : `The request never reached PayToday, so this says nothing about the headers: ${message}`,
+      ms: Date.now() - started,
+    };
+  } finally {
+    // Leave the shared state exactly as found. A probe must not change what
+    // the payment path does next.
+    globalForSdk.__payTodayLastFailure = before;
+  }
 }
 
 /** What PayToday last refused, if anything, for the admin diagnostic. */
