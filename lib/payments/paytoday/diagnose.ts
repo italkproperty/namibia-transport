@@ -5,6 +5,7 @@ import { activeVariant, headerVariants } from "./headers";
 import {
   getPayTodaySdk,
   lastPayTodayFailure,
+  loadPayTodayConstructor,
   probeVariant,
   resetPayTodaySdk,
   type PayTodayFailure,
@@ -83,10 +84,21 @@ export async function diagnosePayToday(): Promise<PayTodayDiagnosis> {
   // A stale cached instance would report yesterday's outcome.
   resetPayTodaySdk();
 
+  // Answered before authentication is attempted, because those are separate
+  // failures and only one of them is PayToday's script. `getPayTodaySdk()`
+  // throws on a refused initialize(), so setting this after it returned meant
+  // a 403 was reported as "SDK loaded: no" — about an SDK that had loaded and
+  // made the very request that came back 403.
   let sdkLoaded = false;
   try {
-    const sdk = await getPayTodaySdk();
+    await loadPayTodayConstructor();
     sdkLoaded = true;
+  } catch {
+    // Left false, and the real message comes out of the attempt below.
+  }
+
+  try {
+    const sdk = await getPayTodaySdk();
 
     await sdk.queryPaymentIntent(IMPOSSIBLE_TOKEN);
 

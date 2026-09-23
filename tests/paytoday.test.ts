@@ -307,6 +307,44 @@ async function main() {
     dead.results.every((r) => r.failure === null),
   );
 
+  /* ------------------------------ a refusal is not a broken script */
+
+  /**
+   * The page's whole job is explaining a 403 to PayToday's support desk, and
+   * an operator screenshots it. It used to set `sdkLoaded` after
+   * `getPayTodaySdk()` returned — which it never does while initialize() is
+   * refused — so it reported "SDK loaded: no" about a script that had loaded,
+   * run, and made the request that came back 403. That starts the wrong
+   * conversation: their script is not the problem, their answer is.
+   */
+  console.log("\na 403 is not their script failing to load");
+
+  const refusesAuth = startFake(() => false);
+  configure(refusesAuth.port);
+  await new Promise<void>((r) =>
+    refusesAuth.server.listen(refusesAuth.port, "127.0.0.1", r),
+  );
+
+  const { diagnosePayToday } = await import("@/lib/payments/paytoday/diagnose");
+  const refused = await diagnosePayToday();
+  refusesAuth.server.close();
+
+  check("the diagnosis reports the failure", refused.outcome === "failed", refused.detail);
+  check(
+    "THE RULE: their SDK is reported as having loaded, because it did",
+    refused.sdkLoaded,
+  );
+  check(
+    "and the refusal itself is captured for the support conversation",
+    refused.failure?.status === 403,
+    String(refused.failure?.status),
+  );
+
+  // The other direction: a script that genuinely cannot be fetched.
+  configure(39991); // nothing listening
+  const noScript = await diagnosePayToday();
+  check("a script that cannot be fetched reports the opposite", !noScript.sdkLoaded);
+
   /* ----------------------------------------------- refusing to guess */
 
   console.log("\nwithout credentials it says so rather than probing");

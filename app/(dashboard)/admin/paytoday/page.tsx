@@ -122,7 +122,12 @@ export default async function AdminPayTodayPage() {
             <Row label="Private key">
               {d.keys.privateKey ? "present" : "missing"}
             </Row>
-            <Row label="SDK loaded">{d.sdkLoaded ? "yes" : "no"}</Row>
+            {/* Their script loading is a separate fact from our credentials
+                being accepted, and a page explaining a 403 must not imply
+                their SDK is broken. */}
+            <Row label="Their SDK script">
+              {d.sdkLoaded ? "loaded and ran" : "did not load"}
+            </Row>
           </dl>
           <p className="text-muted-foreground mt-3 text-xs text-pretty">
             Set <code>PAYTODAY_HEADER_VARIANT</code> to whichever variant the

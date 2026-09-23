@@ -101,14 +101,15 @@ landed yet, and one unearned claim discredits the rest.
   at `initialize()` since 27 August 2026 — `{"status":"unauthorized","error":"Authorization
   error:"}` with the reason blank after the colon. PayToday say their side is correct, and
   that is probably true *and* the 403 real: the refusal echoes our shop handle back, so
-  they know who we are and are refusing anyway. Do not call it account-side until the
-  header probe at `/admin/paytoday` has run — we invented the `Origin` header this
-  integration sends, an Origin is what makes a server call look like a cross-origin
-  browser call, and announcing a domain they do not hold on file is its own way to earn a
-  403. The probe tries every variant and names the one that authenticates; set
-  `PAYTODAY_HEADER_VARIANT` to it. Until it clears, bank transfer is
-  the only way anyone can pay us, and evaluating an alternative gateway is legitimate
-  work, not disloyalty to a decision. Whatever is chosen sits behind the
+  they know who we are and are refusing anyway. The header theory is now dead, with
+  evidence: the probe at `/admin/paytoday` ran against live credentials on 23 September
+  and every variant was refused identically — no Origin, apex, www, browser User-Agent.
+  We invented that `Origin` header, and it turned out to be neither the cause nor the
+  cure. So the 403 does not depend on the shape of our request, `PAYTODAY_HEADER_VARIANT`
+  stays unset, and re-running the probe or inventing a sixth variant is not progress —
+  the open question is theirs and is with their support desk. Until it clears, bank
+  transfer is the only way anyone can pay us, and evaluating an alternative gateway is
+  legitimate work, not disloyalty to a decision. Whatever is chosen sits behind the
   `PaymentProvider` adapter; the stub stays the default.
 - **PayToday keys are server-only.** Shop Key, Shop Handle and Private Key never take a
   `NEXT_PUBLIC_` prefix and never reach a browser bundle. Their guide §3.3 forbids keys in
@@ -252,16 +253,20 @@ everything derived from it. The admin quote engine, including multi-leg itinerar
 as trips. Bank transfer, with confirmation gated behind the admin password. Dispatch,
 the fleet calendar, corporate quotations, the reviews admin. 160 leg pages at `/drive`,
 24 destination pages at `/destinations`, 11 guides and `/methodology`. Fares in the
-reader's own currency on every surface that shows one. Twenty test suites, 793 checks.
+reader's own currency on every surface that shows one. Twenty-one test suites, 826 checks.
 
 **Broken, in order of cost.**
 1. `db/manual/RUN-ME.sql` has never been run against production. `bookings.pickup_detail`
    does not exist there, so every `/booking/REF` page 404s. Only the migration fixes it.
 2. No working card gateway. PayToday has 403'd for a month; bank transfer is the only
-   channel. Next step is one click: run the header probe on `/admin/paytoday`. If a
-   variant authenticates, set `PAYTODAY_HEADER_VARIANT` and redeploy. If none does, that
-   finally rules out our request and the question becomes theirs — send them the decoded
-   bodies the page shows.
+   channel. The header probe ran in production on 23 September and **every variant was
+   refused identically** — no Origin, apex, www, browser User-Agent. That retires the
+   header theory: the 403 does not depend on anything in the shape of our request, so
+   nothing on our side is left to change and `PAYTODAY_HEADER_VARIANT` stays unset. It is
+   now their question, and it is with them: the evidence went to
+   `PayTodaySupport@nedbank.com.na` asking what check fails in their logs, what
+   "Authorization error:" with an empty reason means, and whether API access is
+   provisioned separately from the portal and plugin. Do not re-litigate the headers.
 3. `MAIL_FROM` in Vercel is missing its angle brackets, so Spacemail rejected every
    confirmation email with `553 Sender address rejected`. The code now repairs a malformed
    value at runtime, but the variable is still wrong.

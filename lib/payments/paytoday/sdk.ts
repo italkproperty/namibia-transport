@@ -345,6 +345,38 @@ async function loadConstructor(
   return candidate as SdkConstructor;
 }
 
+/**
+ * Loads and evaluates PayToday's script and hands back its constructor,
+ * without authenticating.
+ *
+ * Exists so the diagnostic can tell two very different failures apart. The
+ * admin page used to set `sdkLoaded` after `getPayTodaySdk()` returned, which
+ * it never does while initialize() is being refused — so a page whose whole
+ * job is explaining a 403 reported "SDK loaded: no" about an SDK that had
+ * loaded, run, and made the request that came back 403. That reads as "their
+ * script is broken" to anyone shown a screenshot of it, which is the wrong
+ * conversation to start with a support desk.
+ *
+ * Shares the cached constructor with getPayTodaySdk(), so asking this first
+ * costs no extra fetch.
+ */
+export async function loadPayTodayConstructor(): Promise<SdkConstructor> {
+  const config = getPayTodayConfig();
+  if (!config) {
+    throw new Error(
+      "PayToday is not configured — set PAYTODAY_SHOP_KEY, PAYTODAY_SHOP_HANDLE and PAYTODAY_PRIVATE_KEY."
+    );
+  }
+
+  globalForSdk.__payTodayCtor ??= loadConstructor(config, activeVariant());
+  try {
+    return await globalForSdk.__payTodayCtor;
+  } catch (error) {
+    globalForSdk.__payTodayCtor = undefined;
+    throw error;
+  }
+}
+
 /** An initialised SDK instance, reused until its session is close to expiry. */
 export async function getPayTodaySdk(): Promise<SdkInstance> {
   const config = getPayTodayConfig();
@@ -359,16 +391,7 @@ export async function getPayTodaySdk(): Promise<SdkInstance> {
     return session.instance;
   }
 
-  const variant = activeVariant();
-  globalForSdk.__payTodayCtor ??= loadConstructor(config, variant);
-
-  let PayToday: SdkConstructor;
-  try {
-    PayToday = await globalForSdk.__payTodayCtor;
-  } catch (error) {
-    globalForSdk.__payTodayCtor = undefined;
-    throw error;
-  }
+  const PayToday = await loadPayTodayConstructor();
 
   const instance = new PayToday({
     shopKey: config.shopKey,
