@@ -99,8 +99,14 @@ landed yet, and one unearned claim discredits the rest.
 - **Payments.** Stripe and Paddle do not serve Namibian entities — never add them, or any
   subscription-billing library. **PayToday is not a settled choice.** It has returned 403
   at `initialize()` since 27 August 2026 — `{"status":"unauthorized","error":"Authorization
-  error:"}` with the reason blank after the colon, an account-side refusal we cannot fix
-  in code. `/admin/paytoday` shows the live evidence. Until it clears, bank transfer is
+  error:"}` with the reason blank after the colon. PayToday say their side is correct, and
+  that is probably true *and* the 403 real: the refusal echoes our shop handle back, so
+  they know who we are and are refusing anyway. Do not call it account-side until the
+  header probe at `/admin/paytoday` has run — we invented the `Origin` header this
+  integration sends, an Origin is what makes a server call look like a cross-origin
+  browser call, and announcing a domain they do not hold on file is its own way to earn a
+  403. The probe tries every variant and names the one that authenticates; set
+  `PAYTODAY_HEADER_VARIANT` to it. Until it clears, bank transfer is
   the only way anyone can pay us, and evaluating an alternative gateway is legitimate
   work, not disloyalty to a decision. Whatever is chosen sits behind the
   `PaymentProvider` adapter; the stub stays the default.
@@ -252,7 +258,10 @@ reader's own currency on every surface that shows one. Twenty test suites, 793 c
 1. `db/manual/RUN-ME.sql` has never been run against production. `bookings.pickup_detail`
    does not exist there, so every `/booking/REF` page 404s. Only the migration fixes it.
 2. No working card gateway. PayToday has 403'd for a month; bank transfer is the only
-   channel.
+   channel. Next step is one click: run the header probe on `/admin/paytoday`. If a
+   variant authenticates, set `PAYTODAY_HEADER_VARIANT` and redeploy. If none does, that
+   finally rules out our request and the question becomes theirs — send them the decoded
+   bodies the page shows.
 3. `MAIL_FROM` in Vercel is missing its angle brackets, so Spacemail rejected every
    confirmation email with `553 Sender address rejected`. The code now repairs a malformed
    value at runtime, but the variable is still wrong.
