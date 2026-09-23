@@ -40,6 +40,7 @@ import {
   reconcileBookingPayment,
   toPaymentView,
 } from "@/lib/payments/reconcile";
+import { PAYMENT_POLICY } from "@/lib/booking/payment-policy";
 
 export const metadata: Metadata = {
   title: "Booking confirmed",
@@ -267,14 +268,14 @@ export default async function BookingConfirmationPage({ params }: PageProps) {
                 </p>
                 <p className="text-muted-foreground mt-1 text-sm leading-snug">
                   {payment?.status === "failed"
-                    ? "Nothing was charged. Your booking and your fare are held — try again with another card."
+                    ? "Nothing was charged. Your fare is still held — try again with another card."
                     : canPayNow
-                      ? "Your booking is held. Pay now to have your driver assigned, or we will message you a link."
+                      ? PAYMENT_POLICY.awaitingPaymentOnline
                       : bank
-                        ? "Nothing has been charged yet. You can settle it by bank transfer below."
-                        : "Nothing has been charged. We will message you payment details before your travel date."}{" "}
-                  Your fare is locked in at {formatNad(booking.customerPrice)}{" "}
-                  either way.
+                        ? PAYMENT_POLICY.awaitingPaymentBank
+                        : PAYMENT_POLICY.awaitingPaymentLink}{" "}
+                  Your fare is fixed at {formatNad(booking.customerPrice)} and
+                  will not change.
                 </p>
                 {canPayNow && (
                   <div className="mt-3">

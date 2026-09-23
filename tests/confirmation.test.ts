@@ -15,6 +15,7 @@ import {
   type ConfirmationDetails,
 } from "@/lib/messaging/templates";
 import { normaliseFrom } from "@/lib/messaging/smtp";
+import { PAYMENT_POLICY } from "@/lib/booking/payment-policy";
 
 let passed = 0;
 let failed = 0;
@@ -149,9 +150,15 @@ for (const claim of [
     !everything.toLowerCase().includes(claim),
   );
 }
+// This used to assert the confirmation said "nothing has been charged yet".
+// That was true and it was the whole problem: it told a traveller what had
+// not happened and never said that paying is what confirms the vehicle, so a
+// customer who was later sent a payment link quoted it back at us. The
+// confirmation now carries the policy itself, from one source.
 check(
-  "says nothing is charged when there is no checkout url",
-  text.includes("nothing has been charged yet"),
+  "says what payment actually buys, not merely that nothing was taken",
+  text.includes(PAYMENT_POLICY.messageLine),
+  text.slice(0, 0) || "messageLine missing",
 );
 check(
   "points an unpaid traveller at a way to actually pay",

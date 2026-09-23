@@ -5,6 +5,7 @@ import { SiteHeader } from "@/components/marketing/site-header";
 import { getCompanyInfo } from "@/lib/company";
 import { listRoutes } from "@/lib/maps";
 import { SITE } from "@/lib/site";
+import { PAYMENT_POLICY } from "@/lib/booking/payment-policy";
 
 export const metadata: Metadata = {
   title: "Booking terms & cancellation policy",
@@ -53,11 +54,7 @@ export default async function TermsPage() {
 
             <Section title="Payment">
               <p>
-                Nothing is charged when you book. We confirm your booking and
-                send payment instructions on WhatsApp before your travel date.
-                Your fare is locked at the quoted amount from the moment you
-                receive your booking reference, whether you have paid yet or
-                not.
+                {PAYMENT_POLICY.terms}
               </p>
             </Section>
 

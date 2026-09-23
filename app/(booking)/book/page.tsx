@@ -24,6 +24,7 @@ import { computeFare } from "@/lib/pricing";
 import { dropoffPlaces, pickupPlaces } from "@/lib/places";
 import { routeTitle } from "@/lib/route-content";
 import { SITE } from "@/lib/site";
+import { PAYMENT_POLICY } from "@/lib/booking/payment-policy";
 
 export const metadata: Metadata = {
   title: "Confirm your booking",
@@ -132,7 +133,7 @@ export default async function BookPage({ searchParams }: PageProps) {
         <div className="mx-auto max-w-5xl px-4 py-6 sm:px-6 sm:py-8">
           <h1 className="text-xl sm:text-2xl">Confirm your booking</h1>
           <p className="text-muted-foreground mt-1 text-sm">
-            One step. Nothing is charged today.
+            One step. {PAYMENT_POLICY.noCardOnSite}
           </p>
 
           <div className="mt-5 grid gap-5 lg:grid-cols-[20rem_1fr] lg:items-start">

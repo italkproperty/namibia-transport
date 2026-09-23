@@ -30,6 +30,7 @@ import {
   type BookingFormValues,
 } from "./schema";
 import { namibianLocalToInstant } from "./time";
+import { PAYMENT_POLICY } from "./payment-policy";
 
 /**
  * Attribution arrives from the browser, so it is untrusted text that ends up
@@ -363,9 +364,12 @@ async function sendConfirmations({
         `Thanks ${customer.fullName} — we have your booking ${booking.ref}. ` +
         `${routeLabel} on ${formatDateTime(scheduledAt)}, ` +
         `${formatNad(fare.customerPrice)} for a ${vehicleClass.name}. ` +
-        (checkoutUrl
-          ? `Once payment clears we will confirm your driver.`
-          : `We will send payment details and confirm your driver shortly.`),
+        PAYMENT_POLICY.messageLine +
+        // WhatsApp is the channel travellers actually read, and payment is now
+        // what confirms the vehicle — so the link belongs here, not only in the
+        // email. Previously this message said payment was coming and gave them
+        // no way to make it.
+        (checkoutUrl ? ` Pay here: ${checkoutUrl}` : ""),
     });
   } catch (error) {
     console.error("[booking] WhatsApp confirmation failed", error);

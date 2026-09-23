@@ -92,8 +92,12 @@ landed yet, and one unearned claim discredits the rest.
 - **Say what we do, not that we are trustworthy.** "Quote your reference and we can see
   your trip, your driver and your flight" beats "a real person on WhatsApp" — describing a
   floor reads as insecurity.
-- Support hours, prices and inclusions are stated in exactly one place and read from there,
-  so they cannot drift apart across pages.
+- Support hours, prices, inclusions **and payment timing** are stated in exactly one place
+  and read from there, so they cannot drift apart across pages. Payment timing was the
+  gap: seven surfaces each phrased it differently, none of them said payment is what
+  confirms the vehicle, and a traveller quoted our own page back at us to argue they
+  should not have to pay in advance. It now lives in `lib/booking/payment-policy.ts` and
+  `tests/payment-policy.test.ts` holds the retired sentences out of the source.
 
 ## Non-negotiable: Namibian reality
 - **Payments.** Stripe and Paddle do not serve Namibian entities — never add them, or any
@@ -248,12 +252,14 @@ price off a list.
 *Keep this short and current. Three questions only: what works, what is broken, what is
 next. The archaeology belongs in git, not here.*
 
-**Works.** Server-computed per-vehicle fares across 2,352 pairs. The road model and
+**Works.** Payment confirms the vehicle; booking holds the fare. Those are different
+promises and the site says so in one voice, from one file.
+Server-computed per-vehicle fares across 2,352 pairs. The road model and
 everything derived from it. The admin quote engine, including multi-leg itineraries priced
 as trips. Bank transfer, with confirmation gated behind the admin password. Dispatch,
 the fleet calendar, corporate quotations, the reviews admin. 160 leg pages at `/drive`,
 24 destination pages at `/destinations`, 11 guides and `/methodology`. Fares in the
-reader's own currency on every surface that shows one. Twenty-one test suites, 826 checks.
+reader's own currency on every surface that shows one. Twenty-two test suites, 884 checks.
 
 **Broken, in order of cost.**
 1. `db/manual/RUN-ME.sql` has never been run against production. `bookings.pickup_detail`

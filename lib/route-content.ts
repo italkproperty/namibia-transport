@@ -1,6 +1,7 @@
 import { formatDuration, shortPlace } from "@/lib/format";
 import { formatNad } from "@/lib/money";
 import type { RouteView } from "@/lib/maps";
+import { PAYMENT_POLICY } from "@/lib/booking/payment-policy";
 
 /** Human title for a route, used in H1s, meta and the booking summary. */
 export function routeTitle(route: RouteView): string {
@@ -62,7 +63,7 @@ export function routeFaqs(route: RouteView): Faq[] {
   faqs.push({
     question: "How and when do I pay?",
     answer:
-      "You book now and confirm payment afterwards. We will send payment details and your confirmation on WhatsApp; your fare is locked in the moment you book.",
+      PAYMENT_POLICY.faqAnswer,
   });
 
   return faqs;

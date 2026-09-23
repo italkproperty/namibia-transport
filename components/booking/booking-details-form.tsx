@@ -37,6 +37,7 @@ import { TIME_SLOTS, type TripParams } from "@/lib/booking/trip-params";
 import { namibianToday } from "@/lib/booking/time";
 import type { RouteView } from "@/lib/maps";
 import { gateCheck } from "@/lib/parks/gates";
+import { PAYMENT_POLICY } from "@/lib/booking/payment-policy";
 
 type Props = {
   trip: TripParams;
@@ -629,8 +630,8 @@ export function BookingDetailsForm({
         </Button>
 
         <p className="text-muted-foreground text-center text-xs">
-          Nothing is charged here. Your fare and how to pay are on the next
-          screen, and we confirm your driver on WhatsApp.
+          No card details here — your fare and how to pay are on the next
+          screen. {PAYMENT_POLICY.short}
         </p>
       </form>
     </Form>
