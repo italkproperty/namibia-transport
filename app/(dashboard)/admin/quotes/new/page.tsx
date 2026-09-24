@@ -97,6 +97,7 @@ export default async function NewQuotePage() {
           </summary>
           <div className="mt-4">
             <QuoteForm
+              places={places}
               vehicleClasses={vehicleClasses.map((vc) => ({
                 id: vc.id,
                 name: vc.name,

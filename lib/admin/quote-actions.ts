@@ -78,11 +78,16 @@ export async function createCustomQuote(
   const notes = field(formData, "notes");
 
   if (!fullName) return { ok: false, message: "The traveller needs a name." };
-  if (!whatsapp) {
+  // One channel, not a specific one. This used to demand WhatsApp because the
+  // customer row could not exist without it; that column is nullable now, and
+  // the requirement was turning an operating truth into a reason to refuse an
+  // enquiry — a London traveller who sent a UK mobile and an email address
+  // could not be quoted at all.
+  if (!whatsapp && !email) {
     return {
       ok: false,
       message:
-        "A WhatsApp number is required — it is how the quote reaches them, and the customer record cannot exist without one.",
+        "Give a WhatsApp number or an email address — one of the two, so the quote can reach them.",
     };
   }
   if (!pickupLabel || !dropoffLabel) {

@@ -12,6 +12,8 @@ import {
   type QuoteFormState,
 } from "@/lib/admin/quote-actions";
 import { whatsappLink } from "@/lib/company";
+import { FareReference } from "@/components/admin/fare-reference";
+import type { PlaceOption } from "@/components/admin/place-search";
 
 /**
  * The form an operator fills in while still on the phone.
@@ -24,8 +26,10 @@ import { whatsappLink } from "@/lib/company";
  */
 export function QuoteForm({
   vehicleClasses,
+  places,
 }: {
   vehicleClasses: { id: string; name: string }[];
+  places: PlaceOption[];
 }) {
   const [state, action, pending] = React.useActionState<
     QuoteFormState,
@@ -34,6 +38,9 @@ export function QuoteForm({
 
   const [copied, setCopied] = React.useState(false);
   const [whatsapp, setWhatsapp] = React.useState("");
+  // Controlled so the reference panel can fill it. Typing still wins — the
+  // panel offers a number, it never takes one back.
+  const [price, setPrice] = React.useState("");
 
   if (state?.ok) {
     const message = `Hi — here is your quote from Namibia Transport. You can see the full details, confirm, and pay by bank transfer here: ${state.url}`;
@@ -111,9 +118,8 @@ export function QuoteForm({
           <Field
             label="WhatsApp number"
             name="whatsapp"
-            required
             placeholder="+264 81 123 4567"
-            hint="With the country code. This is how the quote reaches them."
+            hint="With the country code. Preferred, but an email will do."
             value={whatsapp}
             onChange={setWhatsapp}
           />
@@ -122,7 +128,7 @@ export function QuoteForm({
             name="email"
             type="email"
             className="sm:col-span-2"
-            hint="Optional."
+            hint="Use this when they have no WhatsApp — one of the two is enough."
           />
         </div>
       </fieldset>
@@ -197,6 +203,8 @@ export function QuoteForm({
             inputMode="decimal"
             placeholder="6000"
             hint="The whole vehicle, and the whole trip including any return."
+            value={price}
+            onChange={setPrice}
           />
           <Field
             label="Driver payout (N$)"
@@ -212,6 +220,10 @@ export function QuoteForm({
           />
         </div>
       </fieldset>
+
+      {/* Beneath the money, because it answers the question the operator is
+          already stuck on rather than interrupting the one before it. */}
+      <FareReference places={places} onUse={(amount) => setPrice(String(amount))} />
 
       {state && !state.ok && (
         <p className="text-destructive text-sm">{state.message}</p>

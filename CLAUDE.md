@@ -280,6 +280,11 @@ the fleet calendar, corporate quotations, the reviews admin. 160 leg pages at `/
 reader's own currency on every surface that shows one. Twenty-six test suites, 991 checks.
 
 **Broken, in order of cost.**
+0. A quote cannot be edited once created — the only recourse is to void and re-send, which
+   confuses a traveller mid-conversation. The manual quote form also still stores a return
+   as a sentence in the notes rather than a second leg sharing a `group_ref`, which is what
+   made a real client email to ask whether his return was included. The model-priced
+   itinerary builder does both correctly; the manual form is the one to bring up to it.
 1. `db/manual/RUN-ME.sql` has two unrun blocks at the bottom (both 24 September): the
    `customers` change, without which an email-only booking is accepted by the code and
    refused by the database; and `pricing_settings` plus the vehicle-class cost columns,
