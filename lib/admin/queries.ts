@@ -3,6 +3,7 @@ import "server-only";
 import { and, asc, desc, eq, gte, ilike, or, sql, type SQL } from "drizzle-orm";
 
 import { getDb, isDatabaseConfigured } from "@/db";
+import { foldChannels, type ChannelTotal } from "@/lib/admin/channels";
 import {
   bookings,
   corporateEnquiries,
@@ -177,6 +178,14 @@ export type AdminSummary = {
     contribution: string;
     revenue: string;
   }>;
+  /**
+   * Where the business comes from, folded from the raw acquisition_source
+   * strings. Aggregated by source in Postgres and collapsed into channels in
+   * `foldChannels`, because the mapping is a judgement — four Google
+   * hostnames are one channel — and a judgement belongs somewhere testable
+   * rather than in a SQL CASE.
+   */
+  byChannel: ChannelTotal[];
 };
 
 export async function getAdminSummary(): Promise<AdminSummary | null> {
@@ -217,7 +226,21 @@ export async function getAdminSummary(): Promise<AdminSummary | null> {
       .groupBy(routes.slug, routes.originLabel, routes.destinationLabel)
       .orderBy(desc(sql`sum(${bookings.contribution})`));
 
+    // Grouped by the raw string; the folding into channels happens in TS.
+    // Distinct sources stay in the dozens even with thousands of bookings,
+    // so this is a small result set however the business grows.
+    const bySource = await db
+      .select({
+        source: bookings.acquisitionSource,
+        bookings: sql<number>`count(*)::int`,
+        revenue: sql<string>`coalesce(sum(${bookings.customerPrice}), 0)::text`,
+      })
+      .from(bookings)
+      .where(earning)
+      .groupBy(bookings.acquisitionSource);
+
     return {
+      byChannel: foldChannels(bySource),
       bookingsThisMonth: thisMonth?.count ?? 0,
       contributionThisMonth: thisMonth?.contribution ?? "0",
       contributionAllTime: allTime?.contribution ?? "0",

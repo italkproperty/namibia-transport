@@ -252,14 +252,17 @@ price off a list.
 *Keep this short and current. Three questions only: what works, what is broken, what is
 next. The archaeology belongs in git, not here.*
 
-**Works.** Payment confirms the vehicle; booking holds the fare. Those are different
+**Works.** Where bookings come from, on `/admin/bookings` — `acquisition_source` folded
+into channels by `lib/admin/channels.ts`, with the share we genuinely know stated rather
+than a clean chart drawn over the gaps. Vercel Analytics is wired into the root layout.
+Payment confirms the vehicle; booking holds the fare. Those are different
 promises and the site says so in one voice, from one file.
 Server-computed per-vehicle fares across 2,352 pairs. The road model and
 everything derived from it. The admin quote engine, including multi-leg itineraries priced
 as trips. Bank transfer, with confirmation gated behind the admin password. Dispatch,
 the fleet calendar, corporate quotations, the reviews admin. 160 leg pages at `/drive`,
 24 destination pages at `/destinations`, 11 guides and `/methodology`. Fares in the
-reader's own currency on every surface that shows one. Twenty-two test suites, 884 checks.
+reader's own currency on every surface that shows one. Twenty-three test suites, 922 checks.
 
 **Broken, in order of cost.**
 1. `db/manual/RUN-ME.sql` has never been run against production. `bookings.pickup_detail`
@@ -286,7 +289,10 @@ reader's own currency on every surface that shows one. Twenty-two test suites, 8
    because we have no coordinates for the Sesriem gate, and guessing them would put a
    made-up number behind a real-looking deadline.
 
-**Human-only.** Running the SQL. Fixing `MAIL_FROM`. The PayToday domain registration.
+**Human-only.** Running the SQL. Enabling Web Analytics in the Vercel project settings —
+the code is deployed but the beacon 404s until the dashboard toggle is on. Verifying
+namibiatransport.com in Google Search Console, which is the only thing that will ever
+answer "which queries found us". Fixing `MAIL_FROM`. The PayToday domain registration.
 Rotating the database password and PayToday keys exposed in chat in an earlier session —
 still unconfirmed, and a leaked credential is either rotated or it is live.
 

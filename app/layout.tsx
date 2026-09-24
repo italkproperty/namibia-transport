@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Archivo, IBM_Plex_Mono } from "next/font/google";
+import { Analytics } from "@vercel/analytics/next";
 
 import { CurrencyProvider } from "@/components/currency/currency-provider";
 import { Toaster } from "@/components/ui/sonner";
@@ -97,7 +98,20 @@ export default function RootLayout({
         </a>
         <CurrencyProvider rates={rates}>{children}</CurrencyProvider>
         <Toaster />
-              <SiteSchema />
+        <SiteSchema />
+        {/* The site had no analytics of any kind, which meant the whole
+            long-tail strategy — 160 leg pages, 24 destination pages, the
+            guides — was unmeasurable: we could see the source of anyone who
+            booked and nothing at all about anyone who did not. A booking is a
+            rare event and a landing is not, so the pages that are working
+            could not be told from the pages nobody has ever opened.
+
+            Vercel's is the one that costs nothing to run here: it is already
+            the host, so there is no third-party script, no extra domain to
+            preconnect to, and nothing to keep alive. It sets no cookie and
+            stores no identifier, which is why there is no consent banner on
+            a site whose whole job is to be trusted before anyone lands. */}
+        <Analytics />
       </body>
     </html>
   );

@@ -35,8 +35,9 @@
     "test:currency": "tsx --conditions=react-server tests/currency.test.ts",
     "test:destinations": "tsx --conditions=react-server tests/destinations.test.ts",
     "test:paytoday": "tsx --conditions=react-server tests/paytoday.test.ts",
-    "test": "tsc --noEmit && npm run test:payments && npm run test:maps && npm run test:geometry && npm run test:polyline && npm run test:pins && npm run test:confirmation && npm run test:network && npm run test:fleet && npm run test:plan && npm run test:itinerary && npm run test:gates && npm run test:pricing && npm run test:guides && npm run test:legs && npm run test:transfer && npm run test:itinerary-quote && npm run test:details && npm run test:validity && npm run test:currency && npm run test:destinations && npm run test:payment-policy && npm run test:paytoday",
-    "test:payment-policy": "tsx --conditions=react-server tests/payment-policy.test.ts"
+    "test": "tsc --noEmit && npm run test:payments && npm run test:maps && npm run test:geometry && npm run test:polyline && npm run test:pins && npm run test:confirmation && npm run test:network && npm run test:fleet && npm run test:plan && npm run test:itinerary && npm run test:gates && npm run test:pricing && npm run test:guides && npm run test:legs && npm run test:transfer && npm run test:itinerary-quote && npm run test:details && npm run test:validity && npm run test:currency && npm run test:destinations && npm run test:channels && npm run test:payment-policy && npm run test:paytoday",
+    "test:payment-policy": "tsx --conditions=react-server tests/payment-policy.test.ts",
+    "test:channels": "tsx --conditions=react-server tests/channels.test.ts"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.9.1",
@@ -48,6 +49,7 @@
     "@radix-ui/react-slot": "^1.3.3",
     "@supabase/ssr": "^0.12.4",
     "@supabase/supabase-js": "^2.112.3",
+    "@vercel/analytics": "^2.0.1",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "date-fns": "^4.4.0",

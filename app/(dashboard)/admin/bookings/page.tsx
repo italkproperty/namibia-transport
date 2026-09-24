@@ -22,6 +22,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { attributionConfidence } from "@/lib/admin/channels";
 import {
   BOOKINGS_PER_PAGE,
   countBookings,
@@ -267,6 +268,77 @@ export default async function AdminBookingsPage({ searchParams }: PageProps) {
                 </ul>
               </div>
             )}
+
+            {/* ------------------------------------------- where it comes from */}
+            {summary.byChannel.length > 0 &&
+              (() => {
+                const confidence = attributionConfidence(summary.byChannel);
+                const busiest = summary.byChannel[0]?.bookings ?? 0;
+                return (
+                  <div className="border-border/70 bg-card rounded-xl border p-4">
+                    <h3 className="text-muted-foreground text-xs font-medium tracking-wider uppercase">
+                      Where bookings come from
+                    </h3>
+                    <p className="text-muted-foreground mt-1 text-xs text-pretty">
+                      {/* Stated rather than hidden: a referrer goes missing
+                          whenever a link is opened from WhatsApp or an email
+                          client, so a clean-looking chart here would be the
+                          most misleading thing on the page. */}
+                      {confidence.attributed} of {confidence.total}{" "}
+                      {confidence.total === 1 ? "booking" : "bookings"} through
+                      the site name a channel (
+                      {confidence.percent.toFixed(0)}%). The rest arrived
+                      without one — a link opened from WhatsApp or an email
+                      client usually does.
+                      {confidence.internal > 0 &&
+                        ` ${confidence.internal} more were quoted by us and never came through the site at all.`}
+                    </p>
+                    <ul className="mt-4 space-y-3">
+                      {summary.byChannel.map((total) => {
+                        const share =
+                          busiest > 0 ? (total.bookings / busiest) * 100 : 0;
+                        return (
+                          <li key={total.channel.id}>
+                            <div className="flex items-baseline justify-between gap-4 text-sm">
+                              <span className="flex min-w-0 items-baseline gap-2">
+                                <span className="truncate">
+                                  {total.channel.label}
+                                </span>
+                                {total.channel.kind === "internal" && (
+                                  <span className="text-muted-foreground shrink-0 text-xs">
+                                    not the site
+                                  </span>
+                                )}
+                              </span>
+                              <span className="tabular shrink-0 font-medium">
+                                {total.bookings}
+                                <span className="text-muted-foreground ml-2 font-normal">
+                                  {formatNad(total.revenue)}
+                                </span>
+                              </span>
+                            </div>
+                            <div
+                              className="bg-muted mt-1.5 h-1.5 overflow-hidden rounded-full"
+                              role="img"
+                              aria-label={`${total.bookings} of ${confidence.total} bookings`}
+                            >
+                              <div
+                                className={
+                                  total.channel.kind === "unknown" ||
+                                  total.channel.kind === "internal"
+                                    ? "bg-muted-foreground/40 h-full rounded-full"
+                                    : "bg-brand h-full rounded-full"
+                                }
+                                style={{ width: `${Math.max(share, 2)}%` }}
+                              />
+                            </div>
+                          </li>
+                        );
+                      })}
+                    </ul>
+                  </div>
+                );
+              })()}
           </section>
         )}
 
