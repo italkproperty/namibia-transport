@@ -256,7 +256,12 @@ price off a list.
 *Keep this short and current. Three questions only: what works, what is broken, what is
 next. The archaeology belongs in git, not here.*
 
-**Works.** Sossusvlei finally carries a gate deadline — the Sesriem coordinate came off a
+**Works.** A quote can be corrected in place at `/admin/bookings/<REF>/edit`, keeping the
+reference and the link so a traveller reading the email you sent an hour ago sees the
+correction rather than a dead page and a second email. Refused once money has arrived
+against any leg of the trip, and on a cancelled or completed row. Editing does not restart
+the 45-day clock, and the form says so on a lapsed quote.
+Sossusvlei finally carries a gate deadline — the Sesriem coordinate came off a
 GPS-referenced map, paired to its label by position on the page rather than reading order,
 which is what had put Sossusvlei a hundred kilometres into the Kalahari on the first try.
 Fares are built from per-kilometre cost, per vehicle class, with the constants
@@ -277,14 +282,13 @@ everything derived from it. The admin quote engine, including multi-leg itinerar
 as trips. Bank transfer, with confirmation gated behind the admin password. Dispatch,
 the fleet calendar, corporate quotations, the reviews admin. 160 leg pages at `/drive`,
 24 destination pages at `/destinations`, 11 guides and `/methodology`. Fares in the
-reader's own currency on every surface that shows one. Twenty-seven test suites, 1,011 checks.
+reader's own currency on every surface that shows one. Twenty-eight test suites, 1,022 checks.
 
 **Broken, in order of cost.**
-0. A quote cannot be edited once created — the only recourse is to void and re-send, which
-   confuses a traveller mid-conversation. The manual quote form also still stores a return
-   as a sentence in the notes rather than a second leg sharing a `group_ref`, which is what
-   made a real client email to ask whether his return was included. The model-priced
-   itinerary builder does both correctly; the manual form is the one to bring up to it.
+0. The manual quote form still stores a return as a sentence in the notes rather than a
+   second leg sharing a `group_ref`, which is what made a real client email to ask whether
+   his return was included. The model-priced itinerary builder does it correctly; the
+   manual form is the one to bring up to it.
 1. `db/manual/RUN-ME.sql` has two unrun blocks at the bottom (both 24 September): the
    `customers` change, without which an email-only booking is accepted by the code and
    refused by the database; and `pricing_settings` plus the vehicle-class cost columns,

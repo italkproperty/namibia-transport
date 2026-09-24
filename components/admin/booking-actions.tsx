@@ -1,7 +1,8 @@
 "use client";
 
 import * as React from "react";
-import { CheckIcon, RotateCcwIcon, XIcon } from "lucide-react";
+import Link from "next/link";
+import { CheckIcon, PencilIcon, RotateCcwIcon, XIcon } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -22,6 +23,7 @@ import {
  */
 export function BookingRowActions({
   bookingId,
+  bookingRef,
   isCancelled,
   isCompleted,
   /** Sold, departed, and not yet marked as run. */
@@ -29,6 +31,7 @@ export function BookingRowActions({
   isGroup,
 }: {
   bookingId: string;
+  bookingRef: string;
   isCancelled: boolean;
   isCompleted: boolean;
   canComplete: boolean;
@@ -75,6 +78,21 @@ export function BookingRowActions({
   if (!confirming) {
     return (
       <div className="grid justify-items-start gap-0.5">
+        {/* First, because it is the one an operator reaches for most: a quote
+            with the wrong date or a renegotiated fare used to mean voiding it
+            and sending a second link, while the traveller was still reading
+            the first. Editing keeps the reference. */}
+        <Button
+          asChild
+          size="sm"
+          variant="ghost"
+          className="press text-muted-foreground hover:text-foreground h-8 gap-1.5 text-xs"
+        >
+          <Link href={`/admin/bookings/${bookingRef}/edit`}>
+            <PencilIcon className="size-3.5" aria-hidden />
+            Edit
+          </Link>
+        </Button>
         {/* Only offered once the trip has actually departed — marking a future
             trip run is always a mis-click, and the server refuses it anyway. */}
         {canComplete && (

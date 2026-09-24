@@ -23,3 +23,17 @@ export function namibianToday(): string {
     timeZone: "Africa/Windhoek",
   }).format(new Date());
 }
+
+/**
+ * The inverse: an instant as the `yyyy-MM-ddTHH:mm` a `datetime-local` input
+ * wants, in Namibian local time.
+ *
+ * Needed because editing a booking has to put the stored instant back into a
+ * form field, and `toISOString().slice(0, 16)` would put UTC there — two hours
+ * early, every time, silently, on a field an operator then saves. The same
+ * fixed offset as above, for the same reason.
+ */
+export function instantToNamibianLocal(instant: Date): string {
+  const shifted = new Date(instant.getTime() + 2 * 60 * 60 * 1000);
+  return shifted.toISOString().slice(0, 16);
+}

@@ -149,7 +149,7 @@ export async function reinstateBooking(
 }
 
 /** Whether money has landed for this booking, or for the trip it belongs to. */
-async function isSettled(
+export async function isSettled(
   db: ReturnType<typeof getDb>,
   booking: { id: string; groupRef: string | null },
 ): Promise<boolean> {

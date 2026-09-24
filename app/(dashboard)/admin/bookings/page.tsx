@@ -633,6 +633,7 @@ export default async function AdminBookingsPage({ searchParams }: PageProps) {
                     <TableCell className="text-right">
                       <BookingRowActions
                         bookingId={row.id}
+                        bookingRef={row.ref}
                         isCancelled={row.status === "cancelled"}
                         isCompleted={row.status === "completed"}
                         canComplete={
