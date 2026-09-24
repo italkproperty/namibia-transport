@@ -377,11 +377,52 @@ export function BookingDetailsForm({
                       {...field}
                     />
                   </FormControl>
-                  <FormDescription>Include your country code.</FormDescription>
+                  <FormDescription>
+                    Include your country code. This is how your driver reaches
+                    you on the day.
+                  </FormDescription>
                   <FormMessage />
                 </FormItem>
               )}
             />
+          </div>
+
+          {/* Email sat 130 lines below WhatsApp, under a heading of its own,
+              which made "either one will do" impossible to read as a rule.
+              WhatsApp is still asked for first — it is how dispatch and driver
+              coordination actually work — but it is not universal among
+              inbound travellers, and requiring it turned an operating truth
+              into a reason to turn a booking away. */}
+          <div className="grid gap-4 sm:grid-cols-2">
+            <FormField
+              control={form.control}
+              name="email"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Email address</FormLabel>
+                  <FormControl>
+                    <Input
+                      className="h-11"
+                      type="email"
+                      inputMode="email"
+                      placeholder="you@example.com"
+                      autoComplete="email"
+                      {...field}
+                    />
+                  </FormControl>
+                  <FormDescription>
+                    Use this instead if you do not have WhatsApp — we will send
+                    your confirmation here.
+                  </FormDescription>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <p className="text-muted-foreground self-end pb-2 text-xs text-pretty">
+              We need one of the two. WhatsApp is quicker on the day; either is
+              fine for the booking.
+            </p>
           </div>
 
           {/* Curated pick-list, never free-text: Namibian addresses are sparse. */}
@@ -493,30 +534,6 @@ export function BookingDetailsForm({
               />
             )}
           </div>
-
-          <FormField
-            control={form.control}
-            name="email"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Email (optional)</FormLabel>
-                <FormControl>
-                  <Input
-                    className="h-11"
-                    type="email"
-                    inputMode="email"
-                    placeholder="you@example.com"
-                    autoComplete="email"
-                    {...field}
-                  />
-                </FormControl>
-                <FormDescription>
-                  For a written copy of your confirmation.
-                </FormDescription>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
 
           <FormField
             control={form.control}

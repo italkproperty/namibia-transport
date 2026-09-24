@@ -15,6 +15,7 @@ import {
 } from "@/lib/network/itinerary";
 import { findNode, type PlaceNode } from "@/lib/network/nodes";
 import { journeySlug } from "@/lib/network/journey";
+import { resolveCustomer } from "@/lib/booking/customer";
 
 /**
  * Quoting a whole trip, not a single leg.
@@ -268,25 +269,11 @@ export async function saveItineraryQuote(
     // and the quote page would total them and tell the traveller a smaller
     // number than the one they agreed.
     const refs = await db.transaction(async (tx) => {
-      const [existing] = await tx
-        .select()
-        .from(customers)
-        .where(eq(customers.whatsapp, input.whatsapp))
-        .limit(1);
-
-      const customer =
-        existing ??
-        (
-          await tx
-            .insert(customers)
-            .values({
-              fullName: input.fullName,
-              whatsapp: input.whatsapp,
-              email: input.email || null,
-              customerType: "tourist",
-            })
-            .returning()
-        )[0];
+      const { customer } = await resolveCustomer(tx, {
+        fullName: input.fullName,
+        whatsapp: input.whatsapp || null,
+        email: input.email || null,
+      });
 
       const saved: string[] = [];
       let allocated = 0;

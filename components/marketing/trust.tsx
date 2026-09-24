@@ -26,7 +26,11 @@ const CONTINGENCIES = [
   {
     question: "What if I land late at night?",
     answer:
-      "Pickups are coordinated to your confirmed flight, whatever the hour. Late arrivals are normal for us, not an exception.",
+      // "whatever the hour" was true about the pickup and false about us: a
+      // driver does meet a 02:00 flight, but a traveller reads that phrase as
+      // a promise that somebody answers at 02:00. The claim survives, the
+      // ambiguity does not.
+      "Pickups are scheduled to your confirmed flight, including overnight arrivals. Landing at 02:00 is normal for us, not an exception.",
   },
   {
     question: "What if I need to change my booking?",
@@ -90,9 +94,9 @@ export function SupportStrip() {
             Need help with a booking?
           </h2>
           <p className="text-primary-foreground/70 mt-1 max-w-md text-sm leading-snug">
-            Coordination from {company.location}, {SUPPORT.officeHours}. On your
-            travel day we are reachable throughout your journey — quote your
-            reference and we can see the whole trip.
+            Coordination from {company.location}, {SUPPORT.officeHours}. Quote
+            your reference and we can see your trip, your driver and your
+            flight.
           </p>
         </div>
 
@@ -159,8 +163,7 @@ export function OperationsSection() {
             changes.&rdquo;
           </p>
           <p className="text-muted-foreground mt-3 text-xs">
-            Coordination {SUPPORT.officeHours} ·{" "}
-            {SUPPORT.travelDay.toLowerCase()}
+            Coordination {SUPPORT.officeHours}
           </p>
         </div>
 

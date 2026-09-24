@@ -170,8 +170,8 @@ export function SiteFooter({ routes = [] }: { routes?: RouteView[] }) {
               )}
               <li className="text-muted-foreground">{company.location}</li>
               <li className="text-muted-foreground text-xs leading-snug">
-                Coordination {SUPPORT.officeHoursShort} · travel-day support
-                throughout your journey
+                Coordination {SUPPORT.officeHoursShort} · your driver holds
+                your flight number
               </li>
             </ul>
           </div>

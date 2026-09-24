@@ -8,7 +8,8 @@ import { bookings, customers } from "@/db/schema";
 export type QuoteGroup = {
   groupRef: string;
   customerName: string;
-  customerWhatsapp: string;
+  /** Null when the traveller gave us an email instead. */
+  customerWhatsapp: string | null;
   notes: string | null;
   legs: {
     /** Row id, for looking up the payment against this leg. */

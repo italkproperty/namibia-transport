@@ -10,6 +10,7 @@ import { generateBookingRef } from "@/lib/booking/ref";
 import { namibianLocalToInstant } from "@/lib/booking/time";
 import { modelPayout } from "@/lib/network/fare-model";
 import { SITE } from "@/lib/site";
+import { resolveCustomer } from "@/lib/booking/customer";
 
 /**
  * Quotes an operator writes by hand, for the trips the model cannot price.
@@ -132,25 +133,11 @@ export async function createCustomQuote(
   try {
     // Reuse a customer we already know, matched on whatsapp then email, so a
     // repeat traveller does not become a second row.
-    const [existing] = await db
-      .select()
-      .from(customers)
-      .where(eq(customers.whatsapp, whatsapp))
-      .limit(1);
-
-    const customer =
-      existing ??
-      (
-        await db
-          .insert(customers)
-          .values({
-            fullName,
-            whatsapp,
-            email: email || null,
-            customerType: "tourist",
-          })
-          .returning()
-      )[0];
+    const { customer } = await resolveCustomer(db, {
+      fullName,
+      whatsapp: whatsapp || null,
+      email: email || null,
+    });
 
     // A vehicle class is optional on a booking, but picking one keeps the
     // dispatch board able to say what car is needed.

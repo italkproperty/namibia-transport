@@ -298,8 +298,16 @@ export const customers = pgTable(
     id: uuid("id").primaryKey().defaultRandom(),
     fullName: text("full_name").notNull(),
     email: text("email"),
-    /** E.164, the primary contact channel. */
-    whatsapp: text("whatsapp").notNull(),
+    /**
+     * E.164. The channel we prefer and ask for first, but not a requirement:
+     * WhatsApp is not universal among inbound travellers, and this column
+     * being NOT NULL meant a traveller without it could not book at all.
+     * A booking requires one channel — this or `email` — which is enforced in
+     * `lib/booking/schema.ts`, because "at least one of two columns" is not a
+     * constraint Postgres expresses without a CHECK that would also have to
+     * know about the admin paths.
+     */
+    whatsapp: text("whatsapp"),
     customerType: customerTypeEnum("customer_type")
       .notNull()
       .default("tourist"),
@@ -308,7 +316,14 @@ export const customers = pgTable(
     ...timestamps,
   },
   (t) => [
-    uniqueIndex("customers_whatsapp_key").on(t.whatsapp),
+    /**
+     * Not unique any more. A couple travelling together share a number, and a
+     * PA books for several executives from one handset — under the old unique
+     * index the second of those simply failed, with an error neither of them
+     * could act on. Deduplication is a judgement about who someone is, not
+     * something to enforce by making the booking fail.
+     */
+    index("customers_whatsapp_idx").on(t.whatsapp),
     index("customers_email_idx").on(t.email),
     index("customers_type_idx").on(t.customerType),
   ],

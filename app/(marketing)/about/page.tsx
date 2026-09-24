@@ -70,10 +70,9 @@ export default async function AboutPage() {
 
           <h2 className="mt-10 text-lg font-semibold">How we are reachable</h2>
           <p className="text-muted-foreground mt-2 text-sm leading-relaxed">
-            Coordination runs {SUPPORT.officeHours}. On your travel day we are
-            reachable throughout your journey — we would rather promise the
-            hours we actually cover than advertise a round-the-clock desk we do
-            not yet staff.
+            Coordination runs {SUPPORT.officeHours}. {SUPPORT.travelDay}. We
+            would rather state the hours we actually cover than advertise a
+            desk we do not yet staff.
           </p>
 
           <h2 className="mt-8 text-lg font-semibold">What we operate today</h2>

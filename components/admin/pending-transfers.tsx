@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { LandmarkIcon, MessageCircleIcon } from "lucide-react";
+import { LandmarkIcon, MailIcon, MessageCircleIcon } from "lucide-react";
 
 import { ConfirmTransferButton } from "@/components/admin/confirm-transfer";
 import { whatsappLink } from "@/lib/company";
@@ -77,18 +77,31 @@ export function PendingTransfers({
               <span className="tabular text-sm font-semibold">
                 {formatNad(transfer.amount)}
               </span>
-              <a
-                href={whatsappLink(
-                  transfer.customerWhatsapp,
-                  `Hi — about booking ${transfer.ref}.`,
-                )}
-                target="_blank"
-                rel="noopener noreferrer"
-                aria-label={`WhatsApp ${transfer.customerName}`}
-                className="press focus-ring text-muted-foreground hover:text-foreground inline-flex size-9 items-center justify-center rounded-md"
-              >
-                <MessageCircleIcon className="size-4" aria-hidden />
-              </a>
+              {/* Not every traveller has WhatsApp any more, so the contact
+                  button follows the channel they actually gave us. A button
+                  that silently does nothing is worse than an email link. */}
+              {transfer.customerWhatsapp ? (
+                <a
+                  href={whatsappLink(
+                    transfer.customerWhatsapp,
+                    `Hi — about booking ${transfer.ref}.`,
+                  )}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  aria-label={`WhatsApp ${transfer.customerName}`}
+                  className="press focus-ring text-muted-foreground hover:text-foreground inline-flex size-9 items-center justify-center rounded-md"
+                >
+                  <MessageCircleIcon className="size-4" aria-hidden />
+                </a>
+              ) : transfer.customerEmail ? (
+                <a
+                  href={`mailto:${transfer.customerEmail}?subject=${encodeURIComponent(`About booking ${transfer.ref}`)}`}
+                  aria-label={`Email ${transfer.customerName}`}
+                  className="press focus-ring text-muted-foreground hover:text-foreground inline-flex size-9 items-center justify-center rounded-md"
+                >
+                  <MailIcon className="size-4" aria-hidden />
+                </a>
+              ) : null}
               <ConfirmTransferButton
                 bookingId={transfer.bookingId}
                 bookingRef={transfer.ref}

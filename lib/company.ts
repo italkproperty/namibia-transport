@@ -19,14 +19,28 @@ export type CompanyInfo = {
 /**
  * The support promise, stated precisely.
  *
- * We deliberately do NOT claim "24/7". Office-hours coordination plus
- * travel-day cover is what the operation can actually deliver today, and a
- * promise a traveller can verify is worth more than a bigger one they cannot.
- * Widen this only when an overnight desk genuinely exists.
+ * `travelDay` used to read "Reachable throughout your journey, whatever the
+ * hour". That is "24/7" with the number filed off — the exact thing this
+ * project forbids — and it was on the homepage, the contact page, the about
+ * page and the footer. Three of those four had the sentence hard-coded rather
+ * than reading it from here, which is how it survived a rule written against
+ * it: nobody edits five files to weaken a promise.
+ *
+ * The replacement makes no availability claim at all. It says what actually
+ * happens on the day, which is both true and more reassuring than a bigger
+ * promise a traveller cannot verify: the driver holds their flight number and
+ * their contact details, so a delay reaches them directly rather than through
+ * a desk. Coordination hours stay stated plainly beside it.
+ *
+ * Widen this only when someone genuinely answers at 03:00 — and test the new
+ * sentence against what happens at 03:00, not against whether it avoids the
+ * forbidden words. `tests/support-claims.test.ts` bans the phrasings, not just
+ * the digits.
  */
 export const SUPPORT = {
   officeHours: "06:00–22:00 CAT, daily",
-  travelDay: "Reachable throughout your journey, whatever the hour",
+  travelDay:
+    "On the day, your driver holds your flight number and your contact details, so a delay reaches you directly",
   officeHoursShort: "06:00–22:00 CAT",
 } as const;
 

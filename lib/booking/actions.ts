@@ -31,6 +31,7 @@ import {
 } from "./schema";
 import { namibianLocalToInstant } from "./time";
 import { PAYMENT_POLICY } from "./payment-policy";
+import { resolveCustomer } from "./customer";
 
 /**
  * Attribution arrives from the browser, so it is untrusted text that ends up
@@ -126,28 +127,14 @@ export async function createBooking(
 
   try {
     // Reuse the customer if we have seen this WhatsApp number before; that is
-    // also what tells us whether this is a repeat booking.
-    const [existing] = await db
-      .select()
-      .from(customers)
-      .where(eq(customers.whatsapp, values.whatsapp))
-      .limit(1);
-
-    const isRepeatCustomer = Boolean(existing);
-
-    const customer =
-      existing ??
-      (
-        await db
-          .insert(customers)
-          .values({
-            fullName: values.fullName,
-            whatsapp: values.whatsapp,
-            email: emptyToNull(values.email),
-            customerType: values.customerType,
-          })
-          .returning()
-      )[0];
+    // also what tells us whether this is a repeat booking. Matched on
+    // whichever channel the traveller actually gave us — see customer.ts.
+    const { customer, isRepeat: isRepeatCustomer } = await resolveCustomer(db, {
+      fullName: values.fullName,
+      whatsapp: emptyToNull(values.whatsapp),
+      email: emptyToNull(values.email),
+      customerType: values.customerType,
+    });
 
     // Vehicle class rows only exist once seeded; without one the foreign key
     // would fail with a message no traveller could act on.

@@ -94,6 +94,27 @@ CREATE INDEX IF NOT EXISTS "bookings_scheduled_at_idx"
 CREATE INDEX IF NOT EXISTS "bookings_status_scheduled_idx"
   ON "bookings" USING btree ("status", "scheduled_at" DESC);
 
+/* ---------------------------------------------- 24 September 2026 --------- */
+
+-- WhatsApp stops being mandatory, and stops being unique.
+--
+-- Two bookings were impossible before this. A traveller without WhatsApp
+-- could not book at all, because the column was NOT NULL — and WhatsApp being
+-- how dispatch works is an operating truth, not a reason to turn away an
+-- inbound couple who use iMessage. And a couple sharing one number, or a PA
+-- booking for two executives from one handset, collided on the unique index:
+-- the second insert failed with an error nobody in the conversation could act
+-- on.
+--
+-- A booking still requires one channel — WhatsApp or email — but that is
+-- enforced in lib/booking/schema.ts, not here: "at least one of two columns"
+-- needs a CHECK that would also have to know about the admin quote paths,
+-- and a constraint that fails a booking is the failure mode being removed.
+ALTER TABLE "customers" ALTER COLUMN "whatsapp" DROP NOT NULL;
+DROP INDEX IF EXISTS "customers_whatsapp_key";
+CREATE INDEX IF NOT EXISTS "customers_whatsapp_idx"
+  ON "customers" USING btree ("whatsapp");
+
 COMMIT;
 
 /*

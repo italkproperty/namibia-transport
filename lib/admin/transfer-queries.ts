@@ -10,7 +10,10 @@ export type PendingTransfer = {
   bookingId: string;
   ref: string;
   customerName: string;
-  customerWhatsapp: string;
+  /** Null when the traveller gave us an email instead. */
+  customerWhatsapp: string | null;
+  /** The fallback the operator contacts them on when there is no WhatsApp. */
+  customerEmail: string | null;
   amount: string;
   currency: string;
   pickupLabel: string;
@@ -40,6 +43,7 @@ export async function listPendingTransfers(): Promise<PendingTransfer[]> {
       ref: bookings.ref,
       customerName: customers.fullName,
       customerWhatsapp: customers.whatsapp,
+      customerEmail: customers.email,
       amount: payments.amount,
       currency: payments.currency,
       pickupLabel: bookings.pickupLabel,
@@ -70,6 +74,7 @@ export async function listPendingTransfers(): Promise<PendingTransfer[]> {
         ref: row.ref,
         customerName: row.customerName,
         customerWhatsapp: row.customerWhatsapp,
+        customerEmail: row.customerEmail,
         amount: row.amount,
         currency: row.currency,
         pickupLabel: row.pickupLabel,

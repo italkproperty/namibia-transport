@@ -97,7 +97,11 @@ landed yet, and one unearned claim discredits the rest.
   gap: seven surfaces each phrased it differently, none of them said payment is what
   confirms the vehicle, and a traveller quoted our own page back at us to argue they
   should not have to pay in advance. It now lives in `lib/booking/payment-policy.ts` and
-  `tests/payment-policy.test.ts` holds the retired sentences out of the source.
+  `tests/payment-policy.test.ts` holds the retired sentences out of the source. The same
+  happened with the availability promise: "Reachable throughout your journey, whatever the
+  hour" was 24/7 reworded, and it survived a rule written against it because three of four
+  surfaces typed the sentence instead of reading `SUPPORT`. `tests/support-claims.test.ts`
+  now bans the phrasings across every page and component, not the digits.
 
 ## Non-negotiable: Namibian reality
 - **Payments.** Stripe and Paddle do not serve Namibian entities — never add them, or any
@@ -252,7 +256,8 @@ price off a list.
 *Keep this short and current. Three questions only: what works, what is broken, what is
 next. The archaeology belongs in git, not here.*
 
-**Works.** Where bookings come from, on `/admin/bookings` — `acquisition_source` folded
+**Works.** A booking needs one contact channel — WhatsApp or email — not a WhatsApp
+number, and two travellers may share one. Where bookings come from, on `/admin/bookings` — `acquisition_source` folded
 into channels by `lib/admin/channels.ts`, with the share we genuinely know stated rather
 than a clean chart drawn over the gaps. Vercel Analytics is wired into the root layout.
 Payment confirms the vehicle; booking holds the fare. Those are different
@@ -262,11 +267,14 @@ everything derived from it. The admin quote engine, including multi-leg itinerar
 as trips. Bank transfer, with confirmation gated behind the admin password. Dispatch,
 the fleet calendar, corporate quotations, the reviews admin. 160 leg pages at `/drive`,
 24 destination pages at `/destinations`, 11 guides and `/methodology`. Fares in the
-reader's own currency on every surface that shows one. Twenty-three test suites, 922 checks.
+reader's own currency on every surface that shows one. Twenty-five test suites, 946 checks.
 
 **Broken, in order of cost.**
-1. `db/manual/RUN-ME.sql` has never been run against production. `bookings.pickup_detail`
-   does not exist there, so every `/booking/REF` page 404s. Only the migration fixes it.
+1. `db/manual/RUN-ME.sql` has a new block at the bottom (24 September) that has not been
+   run against production: `customers.whatsapp` is still NOT NULL and uniquely indexed
+   there, so the code now accepts an email-only booking that the database will refuse.
+   The September 6–22 blocks were run on 24 September; `/booking/REF` should render, but
+   that has not yet been confirmed against the live page.
 2. No working card gateway. PayToday has 403'd for a month; bank transfer is the only
    channel. The header probe ran in production on 23 September and **every variant was
    refused identically** — no Origin, apex, www, browser User-Agent. That retires the
@@ -279,12 +287,7 @@ reader's own currency on every surface that shows one. Twenty-three test suites,
 3. `MAIL_FROM` in Vercel is missing its angle brackets, so Spacemail rejected every
    confirmation email with `553 Sender address rejected`. The code now repairs a malformed
    value at runtime, but the variable is still wrong.
-4. A booking cannot be made without a WhatsApp number — `customers.whatsapp` is `NOT NULL`
-   and uniquely indexed, and `lib/booking/schema.ts` requires it while email is optional.
-   The unique index also means a couple, or a PA booking for an executive, collide.
-5. `SUPPORT.travelDay` says "Reachable throughout your journey, whatever the hour" on the
-   homepage and contact page. That is the 24/7 claim this file forbids.
-6. `GATE_RULES` covers Etosha twice, Waterberg and Fish River — but not Sossusvlei, which
+4. `GATE_RULES` covers Etosha twice, Waterberg and Fish River — but not Sossusvlei, which
    is the most gate-critical destination in the country. Its page carries no gate warning
    because we have no coordinates for the Sesriem gate, and guessing them would put a
    made-up number behind a real-looking deadline.

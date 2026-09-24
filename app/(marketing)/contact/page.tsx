@@ -117,8 +117,8 @@ export default async function ContactPage() {
               <div>
                 <dt className="text-sm font-medium">Travel-day support</dt>
                 <dd className="text-muted-foreground text-sm leading-snug">
-                  {SUPPORT.travelDay} — if you are flying today, we are
-                  reachable on WhatsApp for your pickup.
+                  {SUPPORT.travelDay}. For anything we need to change,
+                  message us and we pick it up in coordination hours.
                 </dd>
               </div>
             </div>
