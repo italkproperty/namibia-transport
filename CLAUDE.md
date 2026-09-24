@@ -277,7 +277,7 @@ everything derived from it. The admin quote engine, including multi-leg itinerar
 as trips. Bank transfer, with confirmation gated behind the admin password. Dispatch,
 the fleet calendar, corporate quotations, the reviews admin. 160 leg pages at `/drive`,
 24 destination pages at `/destinations`, 11 guides and `/methodology`. Fares in the
-reader's own currency on every surface that shows one. Twenty-six test suites, 991 checks.
+reader's own currency on every surface that shows one. Twenty-seven test suites, 1,011 checks.
 
 **Broken, in order of cost.**
 0. A quote cannot be edited once created — the only recourse is to void and re-send, which

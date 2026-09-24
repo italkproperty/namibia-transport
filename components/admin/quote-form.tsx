@@ -12,7 +12,11 @@ import {
   type QuoteFormState,
 } from "@/lib/admin/quote-actions";
 import { whatsappLink } from "@/lib/company";
-import { FareReference } from "@/components/admin/fare-reference";
+import {
+  FareReference,
+  type QuotableClass,
+} from "@/components/admin/fare-reference";
+import type { PricingConstants } from "@/lib/pricing/cost-model";
 import type { PlaceOption } from "@/components/admin/place-search";
 
 /**
@@ -27,9 +31,14 @@ import type { PlaceOption } from "@/components/admin/place-search";
 export function QuoteForm({
   vehicleClasses,
   places,
+  quotable,
+  constants,
 }: {
   vehicleClasses: { id: string; name: string }[];
   places: PlaceOption[];
+  /** The same classes, with the cost profile needed to price each one. */
+  quotable: QuotableClass[];
+  constants: PricingConstants;
 }) {
   const [state, action, pending] = React.useActionState<
     QuoteFormState,
@@ -41,6 +50,10 @@ export function QuoteForm({
   // Controlled so the reference panel can fill it. Typing still wins — the
   // panel offers a number, it never takes one back.
   const [price, setPrice] = React.useState("");
+  // Controlled so taking a price from the reference also selects the vehicle
+  // it was priced for. These were independent fields, which is how a quote
+  // came to say "Private Car" above a number computed for something else.
+  const [vehicleClassId, setVehicleClassId] = React.useState("");
 
   if (state?.ok) {
     const message = `Hi — here is your quote from Namibia Transport. You can see the full details, confirm, and pay by bank transfer here: ${state.url}`;
@@ -179,7 +192,8 @@ export function QuoteForm({
                 id="vehicleClassId"
                 name="vehicleClassId"
                 className="border-input bg-background focus-ring h-10 rounded-md border px-3 text-sm"
-                defaultValue=""
+                value={vehicleClassId}
+                onChange={(event) => setVehicleClassId(event.target.value)}
               >
                 <option value="">Decide later</option>
                 {vehicleClasses.map((vc) => (
@@ -223,7 +237,15 @@ export function QuoteForm({
 
       {/* Beneath the money, because it answers the question the operator is
           already stuck on rather than interrupting the one before it. */}
-      <FareReference places={places} onUse={(amount) => setPrice(String(amount))} />
+      <FareReference
+        places={places}
+        classes={quotable}
+        constants={constants}
+        onUse={(amount, classId) => {
+          setPrice(String(amount));
+          setVehicleClassId(classId);
+        }}
+      />
 
       {state && !state.ok && (
         <p className="text-destructive text-sm">{state.message}</p>

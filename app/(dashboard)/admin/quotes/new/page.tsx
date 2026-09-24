@@ -7,6 +7,7 @@ import { ItineraryBuilder } from "@/components/admin/itinerary-builder";
 import { QuoteForm } from "@/components/admin/quote-form";
 import { pendingMigrations } from "@/lib/admin/migrations";
 import { listVehicleClasses } from "@/lib/maps";
+import { getPricingConfig, profileFor } from "@/lib/pricing/settings";
 import { REGION_LABELS, PLACE_NODES } from "@/lib/network/nodes";
 import { isBankTransferConfigured } from "@/lib/payments/bank";
 
@@ -18,11 +19,24 @@ export const metadata: Metadata = {
 export const dynamic = "force-dynamic";
 
 export default async function NewQuotePage() {
-  const [vehicleClasses, bankReady, pending] = await Promise.all([
+  const [vehicleClasses, bankReady, pending, pricing] = await Promise.all([
     listVehicleClasses(),
     Promise.resolve(isBankTransferConfigured()),
     pendingMigrations(),
+    getPricingConfig(),
   ]);
+
+  // Each class with the cost profile that prices it, so the quote form can
+  // show a sedan and an SUV side by side rather than one baseline figure an
+  // operator then has to adjust in their head.
+  const quotable = vehicleClasses.map((vehicleClass) => ({
+    id: vehicleClass.id,
+    name: vehicleClass.name,
+    profile: profileFor(pricing, vehicleClass.slug),
+    costed: Boolean(
+      pricing.profiles.has(vehicleClass.slug) && pricing.stored,
+    ),
+  }));
 
   const places = PLACE_NODES.map((node) => ({
     slug: node.slug,
@@ -98,6 +112,8 @@ export default async function NewQuotePage() {
           <div className="mt-4">
             <QuoteForm
               places={places}
+              quotable={quotable}
+              constants={pricing.constants}
               vehicleClasses={vehicleClasses.map((vc) => ({
                 id: vc.id,
                 name: vc.name,

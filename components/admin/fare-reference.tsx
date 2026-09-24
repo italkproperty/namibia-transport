@@ -5,8 +5,9 @@ import * as React from "react";
 import { PlaceSearch, type PlaceOption } from "@/components/admin/place-search";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
-import { modelJourney } from "@/lib/network/journey";
 import { formatNad } from "@/lib/money";
+import type { PricingConstants } from "@/lib/pricing/cost-model";
+import { referenceQuote, type ClassProfile } from "@/lib/pricing/reference";
 
 /**
  * What the road model says this trip is worth, beside the box an operator
@@ -43,42 +44,43 @@ import { formatNad } from "@/lib/money";
  * server-only import. This is a reference shown to staff behind the admin
  * gate, never a price sent to a traveller: the fare that reaches the booking
  * is the one typed into the form and re-read server-side, exactly as before.
+ *
+ * ## Every class at once
+ *
+ * An enquiry is rarely "what does a sedan cost" — it is two people with four
+ * bags asking what their options are, and the operator needs both numbers in
+ * the same breath to answer. Pricing one class at a time also invited the
+ * exact mistake that started this: the fare box and the vehicle dropdown are
+ * separate fields, so a quote could say one class above a price computed for
+ * another. Taking a price here sets the vehicle with it, which is why `onUse`
+ * carries both.
  */
+/**
+ * A class the panel can price. `costed` is false when it has no per-kilometre
+ * costs and is still on the legacy multiplier — worth saying on screen,
+ * because the figure is then an estimate of an estimate.
+ */
+export type QuotableClass = ClassProfile;
+
 export function FareReference({
   places,
+  classes,
+  constants,
   onUse,
 }: {
   places: PlaceOption[];
-  onUse: (amount: number) => void;
+  classes: QuotableClass[];
+  constants: PricingConstants;
+  onUse: (amount: number, vehicleClassId: string) => void;
 }) {
   const [from, setFrom] = React.useState<string | null>("hosea-kutako");
   const [to, setTo] = React.useState<string | null>(null);
   const [returning, setReturning] = React.useState(true);
 
-  const quote = React.useMemo(() => {
-    if (!from || !to || from === to) return null;
-
-    const out = modelJourney(from, to);
-    if (!out) return null;
-
-    // The return is priced as its own leg rather than doubled: the backhaul
-    // differs by direction, so a car going back to Windhoek is not the same
-    // economics as one going out to the desert, and doubling would overcharge
-    // the way home.
-    const back = returning ? modelJourney(to, from) : null;
-
-    const outbound = Number(out.route.fixedPrice);
-    const inbound = back ? Number(back.route.fixedPrice) : 0;
-
-    return {
-      outbound,
-      inbound,
-      total: outbound + inbound,
-      km: out.road.km,
-      gravelKm: out.road.gravelKm,
-      hours: out.road.minutes / 60,
-    };
-  }, [from, to, returning]);
+  const rows = React.useMemo(
+    () => referenceQuote(from, to, returning, classes, constants),
+    [from, to, returning, classes, constants],
+  );
 
   return (
     <div className="border-border/70 bg-muted/30 rounded-xl border p-4">
@@ -115,30 +117,70 @@ export function FareReference({
         Include the return leg
       </label>
 
-      {quote && (
-        <div className="mt-4 space-y-2 border-t pt-3">
-          <Row label="Outbound" value={quote.outbound} />
-          {returning && <Row label="Return" value={quote.inbound} />}
-          <div className="flex items-baseline justify-between gap-4 border-t pt-2 text-sm font-semibold">
-            <span>{returning ? "Both legs" : "One way"}</span>
-            <span className="tabular">{formatNad(String(quote.total))}</span>
+      {rows && rows.rows.length > 0 && (
+        <div className="mt-4 border-t pt-3">
+          <div className="overflow-x-auto">
+            <table className="w-full min-w-[22rem] text-sm">
+              <thead>
+                <tr className="text-muted-foreground text-left text-xs">
+                  <th className="pb-1.5 font-medium">Vehicle</th>
+                  <th className="pb-1.5 text-right font-medium">Out</th>
+                  {returning && (
+                    <th className="pb-1.5 text-right font-medium">Back</th>
+                  )}
+                  <th className="pb-1.5 text-right font-medium">Total</th>
+                  <th className="pb-1.5" />
+                </tr>
+              </thead>
+              <tbody>
+                {rows.rows.map((row) => (
+                  <tr key={row.id} className="border-t">
+                    <td className="py-2 pr-3">
+                      {row.name}
+                      {!row.costed && (
+                        <span className="text-muted-foreground block text-xs">
+                          not costed — from the old multiplier
+                        </span>
+                      )}
+                    </td>
+                    <td className="tabular py-2 text-right">
+                      {formatNad(String(row.outbound))}
+                    </td>
+                    {returning && (
+                      <td className="tabular py-2 text-right">
+                        {formatNad(String(row.inbound))}
+                      </td>
+                    )}
+                    <td className="tabular py-2 text-right font-semibold">
+                      {formatNad(String(row.total))}
+                    </td>
+                    <td className="py-2 pl-3 text-right">
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="secondary"
+                        className="press"
+                        onClick={() => onUse(row.total, row.id)}
+                      >
+                        Use
+                      </Button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           </div>
-          <p className="text-muted-foreground text-xs text-pretty">
-            {Math.round(quote.km)} km each way
-            {quote.gravelKm > 0 &&
-              `, ${Math.round(quote.gravelKm)} km of it gravel`}
-            , about {quote.hours.toFixed(1)} hours driving. Baseline vehicle;
-            a costed class prices higher on the distance, not on the hours.
+
+          <p className="text-muted-foreground mt-2 text-xs text-pretty">
+            {Math.round(rows.km)} km each way
+            {rows.gravelKm > 0 &&
+              `, ${Math.round(rows.gravelKm)} km of it gravel`}
+            , about {rows.hours.toFixed(1)} hours driving
+            {rows.nights > 0 &&
+              `, ${rows.nights} night${rows.nights === 1 ? "" : "s"} away for the driver`}
+            . Pressing Use fills the fare <em>and</em> selects that vehicle, so
+            the quote cannot name one class beside another&rsquo;s price.
           </p>
-          <Button
-            type="button"
-            size="sm"
-            variant="secondary"
-            className="press mt-1"
-            onClick={() => onUse(quote.total)}
-          >
-            Use {formatNad(String(quote.total))} as the fare
-          </Button>
         </div>
       )}
 
@@ -147,15 +189,6 @@ export function FareReference({
           Pick two different places.
         </p>
       )}
-    </div>
-  );
-}
-
-function Row({ label, value }: { label: string; value: number }) {
-  return (
-    <div className="text-muted-foreground flex items-baseline justify-between gap-4 text-sm">
-      <span>{label}</span>
-      <span className="tabular">{formatNad(String(value))}</span>
     </div>
   );
 }
