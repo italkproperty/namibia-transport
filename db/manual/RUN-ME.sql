@@ -115,6 +115,47 @@ DROP INDEX IF EXISTS "customers_whatsapp_key";
 CREATE INDEX IF NOT EXISTS "customers_whatsapp_idx"
   ON "customers" USING btree ("whatsapp");
 
+/* ---------------------------------------------- 24 September 2026 (pricing) */
+
+-- Cost constants an operator can change without a deploy.
+--
+-- These were literals in lib/network/fare-model.ts, so diesel going up was a
+-- code change. One row, pinned to id = 1: two rows would be two answers to
+-- "what does a kilometre cost", and the losing one would surface as a fare
+-- nobody could reproduce.
+--
+-- No history table. A booking already snapshots its own fare, payout and
+-- contribution, so what somebody agreed to is never rewritten by a later
+-- change — which is the only thing a price history would protect.
+CREATE TABLE IF NOT EXISTS "pricing_settings" (
+  "id"                    smallint PRIMARY KEY DEFAULT 1,
+  "driver_hourly"         numeric(10,2) NOT NULL DEFAULT 110.00,
+  "same_day_limit_hours"  numeric(5,2)  NOT NULL DEFAULT 10.00,
+  "overnight_allowance"   numeric(10,2) NOT NULL DEFAULT 450.00,
+  "handling_hours"        numeric(5,2)  NOT NULL DEFAULT 1.00,
+  "contribution_rate"     numeric(4,3)  NOT NULL DEFAULT 0.300,
+  "price_step"            numeric(8,2)  NOT NULL DEFAULT 50.00,
+  "created_at"            timestamptz   NOT NULL DEFAULT now(),
+  "updated_at"            timestamptz   NOT NULL DEFAULT now(),
+  CONSTRAINT "pricing_settings_singleton" CHECK ("id" = 1)
+);
+
+-- Seeded with exactly the values the code shipped with, so running this
+-- changes no price anywhere. The row existing is what lets an operator edit.
+INSERT INTO "pricing_settings" ("id") VALUES (1) ON CONFLICT ("id") DO NOTHING;
+
+-- Per-kilometre running cost, by vehicle class.
+--
+-- price_multiplier multiplied the whole fare — the fuel, the driver's hours
+-- and the overnight allowance alike. Only the fuel is a function of the car.
+-- These columns are the dimension a class is actually allowed to move; they
+-- stay NULL until an operator costs the class, and until then the class is
+-- priced through the old multiplier so nothing reprices on deploy.
+ALTER TABLE "vehicle_classes"
+  ADD COLUMN IF NOT EXISTS "running_cost_tar"    numeric(6,2),
+  ADD COLUMN IF NOT EXISTS "running_cost_gravel" numeric(6,2),
+  ADD COLUMN IF NOT EXISTS "minimum_driver_need" numeric(10,2);
+
 COMMIT;
 
 /*

@@ -203,13 +203,32 @@ export const vehicleClasses = pgTable(
     /** Seats we sell, not seats fitted. */
     capacity: smallint("capacity").notNull(),
     luggageCapacity: smallint("luggage_capacity").notNull().default(2),
-    /** Applied to a route's fixed_price. 1.0 is the baseline class. */
+    /**
+     * Legacy. Applied to a route's fixed_price, which multiplied the driver's
+     * hours and the overnight allowance along with the fuel — see
+     * `lib/pricing/cost-model.ts` for why that is dimensionally wrong. Kept as
+     * the bridge for a class that has no per-kilometre costs yet, and as the
+     * ceiling on curated routes whose price is published.
+     */
     priceMultiplier: numeric("price_multiplier", {
       precision: 4,
       scale: 2,
     })
       .notNull()
       .default("1.00"),
+    /**
+     * What a kilometre costs this class in fuel, tyres, servicing and
+     * depreciation. The only term a bigger vehicle legitimately changes.
+     * Null until an operator has costed the class.
+     */
+    runningCostTar: numeric("running_cost_tar", { precision: 6, scale: 2 }),
+    runningCostGravel: numeric("running_cost_gravel", { precision: 6, scale: 2 }),
+    /**
+     * The floor for this class: below it a driver will not turn out at all.
+     * Per class because a scarce vehicle does not leave the yard for a sedan's
+     * minimum — a real scarcity cost, unlike a multiplied fuel bill.
+     */
+    minimumDriverNeed: numeric("minimum_driver_need", { precision: 10, scale: 2 }),
     isActive: boolean("is_active").notNull().default(true),
     sortOrder: smallint("sort_order").notNull().default(0),
     ...timestamps,
@@ -328,6 +347,42 @@ export const customers = pgTable(
     index("customers_type_idx").on(t.customerType),
   ],
 );
+
+/**
+ * The cost constants, in one row.
+ *
+ * A singleton: `id` is pinned to 1 so there can only ever be one live set of
+ * constants. Two rows would mean two answers to "what does a kilometre cost",
+ * and the losing one would surface as a fare nobody could reproduce.
+ *
+ * History is deliberately not kept here. A booking already snapshots its own
+ * fare, payout and contribution, so what someone agreed to is never rewritten
+ * by a later change — which is the only thing a price history would protect,
+ * and it is already protected where it matters.
+ */
+export const pricingSettings = pgTable("pricing_settings", {
+  /** Always 1. Enforced by a CHECK in the migration. */
+  id: smallint("id").primaryKey().default(1),
+  driverHourly: numeric("driver_hourly", { precision: 10, scale: 2 })
+    .notNull()
+    .default("110.00"),
+  sameDayLimitHours: numeric("same_day_limit_hours", { precision: 5, scale: 2 })
+    .notNull()
+    .default("10.00"),
+  overnightAllowance: numeric("overnight_allowance", { precision: 10, scale: 2 })
+    .notNull()
+    .default("450.00"),
+  handlingHours: numeric("handling_hours", { precision: 5, scale: 2 })
+    .notNull()
+    .default("1.00"),
+  contributionRate: numeric("contribution_rate", { precision: 4, scale: 3 })
+    .notNull()
+    .default("0.300"),
+  priceStep: numeric("price_step", { precision: 8, scale: 2 })
+    .notNull()
+    .default("50.00"),
+  ...timestamps,
+});
 
 export const drivers = pgTable(
   "drivers",

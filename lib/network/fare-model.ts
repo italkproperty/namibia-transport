@@ -1,4 +1,13 @@
-import { SPEED_KMH, type Road, type Surface } from "./roads";
+import {
+  BASELINE_PROFILE,
+  DEFAULT_CONSTANTS,
+  DEFAULT_RUNNING_COST,
+  modelCost,
+  modelPayout as costModelPayout,
+  type PricingConstants,
+  type VehicleCostProfile,
+} from "@/lib/pricing/cost-model";
+import type { Road, Surface } from "./roads";
 
 /**
  * What a journey costs, derived rather than looked up.
@@ -12,66 +21,24 @@ import { SPEED_KMH, type Road, type Surface } from "./roads";
  *
  * The dominant term is not the distance out. It is the distance back. A car
  * dropped at Sesriem has to return, and unless somebody pays for that return
- * the outbound fare is buying two crossings of the Namib and selling one. Every
- * per-kilometre figure below is therefore multiplied by a return factor drawn
- * from the destination's backhaul, and that single number moves the price of a
- * long transfer more than fuel, wear and the driver's day combined.
+ * the outbound fare is buying two crossings of the Namib and selling one.
  *
  * Where a curated route exists its published price wins — a price we have
- * advertised is a promise, and the model does not get to revise it. The model
- * prices the journeys nobody has priced by hand, which is almost all of them.
- */
-
-/* ----------------------------------------------------------- the constants */
-
-/**
- * What a kilometre costs the driver in fuel, tyres, servicing and the car's
- * own depreciation. Gravel is harder on everything, tyres worst of all, and
- * the difference is not marginal — a set of tyres is a month of margin.
+ * advertised is a promise, and the model does not get to revise it.
  *
- * These are the partner driver's costs, not ours: we own no fleet. They are
- * what the payout has to cover before the driver has earned anything.
+ * ## This file is now a façade
+ *
+ * The arithmetic moved to `lib/pricing/cost-model.ts`, which prices per
+ * vehicle class from per-kilometre running costs rather than multiplying a
+ * finished fare. Two copies of a fare model is how a customer gets shown one
+ * price and charged another, so there is exactly one: everything below
+ * delegates, and `tests/cost-model.test.ts` pins the baseline output to the
+ * figures this file produced before the move.
  */
-export const RUNNING_COST_PER_KM: Record<Surface, number> = {
-  tar: 3.8,
-  gravel: 5.15,
-};
 
-/** What an hour behind the wheel has to be worth for a driver to take the job. */
-const DRIVER_HOURLY = 110;
-
-/**
- * A round trip longer than this cannot be done between one sunrise and the
- * next, so the driver sleeps somewhere and we pay for it. Ten hours of driving
- * is already a long day; beyond it, an Etosha run means a bed in Otjiwarongo.
- */
-const SAME_DAY_LIMIT_HOURS = 10;
-const OVERNIGHT_ALLOWANCE = 450;
-
-/** Loading, greeting and handover, at both ends. Real hours, so real money. */
-const HANDLING_HOURS = 1;
-
-/**
- * The floor. Below about this a driver will not turn out at all — the trip to
- * the pickup, the wait and the return eat the fare whatever the distance. It
- * is exactly the payout on the shortest transfer we sell, the airport run into
- * Windhoek, which is where the number comes from rather than from a guess.
- */
-const MINIMUM_DRIVER_NEED = 455;
-
-/** Our share. The driver keeps the rest, and that ratio is in every route. */
-export const CONTRIBUTION_RATE = 0.3;
-
-/**
- * Fares are quoted in round money — nobody publishes N$4,213. Rounded up, not
- * to nearest: the step is smaller than the noise in the model, but rounding
- * down can leave the payout a few dollars short of what the drive actually
- * costs the driver, and a fare that does not cover its own fuel is the one
- * error here that compounds.
- */
-export const PRICE_STEP = 50;
-
-/* -------------------------------------------------------------- the model */
+export const RUNNING_COST_PER_KM: Record<Surface, number> = DEFAULT_RUNNING_COST;
+export const CONTRIBUTION_RATE = DEFAULT_CONSTANTS.contributionRate;
+export const PRICE_STEP = DEFAULT_CONSTANTS.priceStep;
 
 export type FareBreakdown = {
   /** One-way distance, as driven. */
@@ -85,71 +52,37 @@ export type FareBreakdown = {
   /** What the driver has to clear: running costs, their hours, and any bed. */
   driverNeed: number;
   overnights: number;
-  /** Baseline-class fare, rounded. Vehicle multipliers scale from here. */
+  /** Baseline-class fare, rounded. */
   price: number;
   /** What we keep, at the baseline class. */
   contribution: number;
 };
 
-function roundUpToStep(amount: number): number {
-  return Math.max(PRICE_STEP, Math.ceil(amount / PRICE_STEP) * PRICE_STEP);
-}
-
 /**
- * Prices one journey for the baseline vehicle class.
- *
- * `backhaul` is the destination's — the origin's does not matter, because the
- * car is already there. A returnFactor of 2 means the outbound fare carries
- * the whole empty return; 1.15 means the car is dropping someone in Windhoek
- * and will be earning again within the hour.
+ * Prices one journey. Defaults to the baseline class and the built-in
+ * constants, which is what every existing caller wants; the admin preview
+ * passes a class profile and operator-set constants instead.
  */
-export function modelFare(road: Road): FareBreakdown {
-  const backhaul = Math.min(1, Math.max(0, road.destination.backhaul));
-  const returnFactor = 2 - backhaul;
-
-  const drivenTarKm = road.tarKm * returnFactor;
-  const drivenGravelKm = road.gravelKm * returnFactor;
-
-  const perKm = (surface: Surface) =>
-    RUNNING_COST_PER_KM[surface] + DRIVER_HOURLY / SPEED_KMH[surface];
-
-  const drivingHours =
-    road.tarKm / SPEED_KMH.tar + road.gravelKm / SPEED_KMH.gravel;
-  const dutyHours = drivingHours * returnFactor + HANDLING_HOURS;
-
-  // A twenty-hour round trip is two nights away, not one.
-  const overnights = Math.max(
-    0,
-    Math.ceil(dutyHours / SAME_DAY_LIMIT_HOURS) - 1,
-  );
-
-  const driverNeed = Math.max(
-    MINIMUM_DRIVER_NEED,
-    drivenTarKm * perKm("tar") +
-      drivenGravelKm * perKm("gravel") +
-      DRIVER_HOURLY * HANDLING_HOURS +
-      overnights * OVERNIGHT_ALLOWANCE,
-  );
-
-  const price = roundUpToStep(driverNeed / (1 - CONTRIBUTION_RATE));
+export function modelFare(
+  road: Road,
+  profile: VehicleCostProfile = BASELINE_PROFILE,
+  constants: PricingConstants = DEFAULT_CONSTANTS,
+): FareBreakdown {
+  const cost = modelCost(road, profile, constants);
 
   return {
-    km: road.km,
-    drivenKm: drivenTarKm + drivenGravelKm,
-    dutyHours,
-    returnFactor,
-    driverNeed,
-    overnights,
-    price,
-    contribution: price - modelPayout(price),
+    km: cost.km,
+    drivenKm: cost.drivenKm,
+    dutyHours: cost.dutyHours,
+    returnFactor: cost.returnFactor,
+    driverNeed: cost.driverNeed,
+    overnights: cost.nights,
+    price: cost.price,
+    contribution: cost.contribution,
   };
 }
 
-/**
- * The payout that goes with a modelled price. Derived from the price rather
- * than from `driverNeed`, so the rounding lands on our side of the split and
- * the two figures always reconcile: payout + contribution = price, exactly.
- */
+/** The payout that goes with a modelled price, at the default split. */
 export function modelPayout(price: number): number {
-  return Math.round(price * (1 - CONTRIBUTION_RATE) * 100) / 100;
+  return costModelPayout(price, DEFAULT_CONSTANTS.contributionRate);
 }

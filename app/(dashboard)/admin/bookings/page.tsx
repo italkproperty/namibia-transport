@@ -23,7 +23,10 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { attributionConfidence } from "@/lib/admin/channels";
+import { AlertTriangleIcon } from "lucide-react";
 import {
+  adminReadFailures,
+  beginAdminRead,
   BOOKINGS_PER_PAGE,
   countBookings,
   getAdminSummary,
@@ -48,6 +51,16 @@ export const metadata: Metadata = {
 
 /** Always live: an operations view must never serve a cached page. */
 export const dynamic = "force-dynamic";
+
+/**
+ * Headroom over the default, which is what the 504 was hitting.
+ *
+ * Not a fix on its own — the reads are now behind a 6s deadline each, so a
+ * database that will not answer produces a page with a banner rather than a
+ * function that is killed. This is the margin that lets those deadlines fire
+ * and the page render, instead of Vercel ending the request first.
+ */
+export const maxDuration = 30;
 
 const STATUSES: BookingStatus[] = [
   "pending_payment",
@@ -96,6 +109,9 @@ function humanise(value: string): string {
 }
 
 export default async function AdminBookingsPage({ searchParams }: PageProps) {
+  // Cleared before the reads so the banner below reflects this request only.
+  beginAdminRead();
+
   const params = await searchParams;
 
   const statusParam = one(params.status);
@@ -175,9 +191,43 @@ export default async function AdminBookingsPage({ searchParams }: PageProps) {
     listSubmittedDetails(),
   ]);
 
+  /**
+   * What did not load.
+   *
+   * Every read here fails soft so one dead panel cannot take the payment queue
+   * with it. Without this banner that softness is indistinguishable from good
+   * news: an empty table reads as a quiet week, and the operator carries on
+   * believing nobody has booked.
+   */
+  const failed = adminReadFailures();
+
   return (
     <AdminShell active="/admin/bookings">
       <div className="space-y-6">
+        {failed.length > 0 && (
+          <div
+            role="alert"
+            className="border-warning/40 bg-warning/10 flex gap-3 rounded-xl border p-4"
+          >
+            <AlertTriangleIcon
+              className="text-warning mt-0.5 size-5 shrink-0"
+              aria-hidden
+            />
+            <div className="min-w-0 text-sm">
+              <p className="font-medium">
+                This page is incomplete — the database did not answer in time.
+              </p>
+              <p className="text-muted-foreground mt-1 leading-snug">
+                {failed.join(", ")} {failed.length === 1 ? "is" : "are"}{" "}
+                missing, so anything shown below may be short. Reload; if it
+                persists, check that <code>DATABASE_URL</code> is
+                Supabase&rsquo;s transaction pooler (port 6543, user{" "}
+                <code>postgres.&lt;ref&gt;</code>) and that the project is not
+                paused or at its connection limit.
+              </p>
+            </div>
+          </div>
+        )}
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div>
             <h1 className="text-xl">Bookings</h1>
@@ -286,10 +336,9 @@ export default async function AdminBookingsPage({ searchParams }: PageProps) {
                           most misleading thing on the page. */}
                       {confidence.attributed} of {confidence.total}{" "}
                       {confidence.total === 1 ? "booking" : "bookings"} through
-                      the site name a channel (
-                      {confidence.percent.toFixed(0)}%). The rest arrived
-                      without one — a link opened from WhatsApp or an email
-                      client usually does.
+                      the site name a channel ({confidence.percent.toFixed(0)}
+                      %). The rest arrived without one — a link opened from
+                      WhatsApp or an email client usually does.
                       {confidence.internal > 0 &&
                         ` ${confidence.internal} more were quoted by us and never came through the site at all.`}
                     </p>
@@ -413,7 +462,12 @@ export default async function AdminBookingsPage({ searchParams }: PageProps) {
                 className="border-input bg-background focus-visible:ring-ring h-10 w-full rounded-md border pr-3 pl-9 text-sm focus-visible:ring-[3px] focus-visible:outline-none"
               />
             </div>
-            <Button type="submit" variant="outline" size="sm" className="press h-10">
+            <Button
+              type="submit"
+              variant="outline"
+              size="sm"
+              className="press h-10"
+            >
               Find
             </Button>
             {search && (
@@ -605,7 +659,8 @@ export default async function AdminBookingsPage({ searchParams }: PageProps) {
               <span className="tabular">
                 {from}–{to}
               </span>{" "}
-              of <span className="tabular">{total.toLocaleString("en-US")}</span>
+              of{" "}
+              <span className="tabular">{total.toLocaleString("en-US")}</span>
               {search ? " matching" : ""}
             </p>
 

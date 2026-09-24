@@ -4,6 +4,30 @@ import { and, asc, desc, eq, gte, ilike, or, sql, type SQL } from "drizzle-orm";
 
 import { getDb, isDatabaseConfigured } from "@/db";
 import { foldChannels, type ChannelTotal } from "@/lib/admin/channels";
+import { READ_DEADLINE_MS, withDeadline } from "@/lib/deadline";
+
+/**
+ * Which reads failed while rendering this request.
+ *
+ * Every read model here catches its own error and returns something empty, so
+ * a page always renders. That is the right call — one dead panel must not take
+ * the payment queue with it — but on its own it is exactly the silent failure
+ * this project keeps writing rules against: an operator sees an empty table
+ * and reads it as a quiet week rather than a database that never answered.
+ *
+ * A module-level Set is safe here only because each serverless request renders
+ * one page and these are all awaited within it; it is cleared at the top of
+ * the page render. It is a breadcrumb for a banner, never a source of truth.
+ */
+const readFailures = new Set<string>();
+
+export function beginAdminRead(): void {
+  readFailures.clear();
+}
+
+export function adminReadFailures(): string[] {
+  return [...readFailures];
+}
 import {
   bookings,
   corporateEnquiries,
@@ -78,53 +102,62 @@ export async function listBookings(filters: BookingFilters) {
   const order = filters.direction === "asc" ? asc(column) : desc(column);
 
   try {
-    return await getDb()
-      .select({
-        id: bookings.id,
-        ref: bookings.ref,
-      groupRef: bookings.groupRef,
-        scheduledAt: bookings.scheduledAt,
-        createdAt: bookings.createdAt,
-        passengers: bookings.passengers,
-        luggageCount: bookings.luggageCount,
-        flightNumber: bookings.flightNumber,
-        customerPrice: bookings.customerPrice,
-        driverPayout: bookings.driverPayout,
-        contribution: bookings.contribution,
-        currency: bookings.currency,
-        acquisitionSource: bookings.acquisitionSource,
-        isReturn: bookings.isReturn,
-        isRepeatCustomer: bookings.isRepeatCustomer,
-        status: bookings.status,
-        pickupLabel: bookings.pickupLabel,
-        dropoffLabel: bookings.dropoffLabel,
-        pickupLat: bookings.pickupLat,
-        pickupLng: bookings.pickupLng,
-        dropoffLat: bookings.dropoffLat,
-        dropoffLng: bookings.dropoffLng,
-        // Null for a journey priced from the road network; `journeySlug`
-        // carries the leg in that case.
-        journeySlug: bookings.journeySlug,
-        routeSlug: routes.slug,
-        routeOrigin: routes.originLabel,
-        routeDestination: routes.destinationLabel,
-        routeCategory: routes.category,
-        vehicleClassName: vehicleClasses.name,
-        customerName: customers.fullName,
-        customerType: customers.customerType,
-      })
-      .from(bookings)
-      .leftJoin(routes, eq(bookings.routeId, routes.id))
-      .leftJoin(customers, eq(bookings.customerId, customers.id))
-      .leftJoin(vehicleClasses, eq(bookings.vehicleClassId, vehicleClasses.id))
-      .where(buildWhere(filters))
-      // A second key, so a page boundary never lands inside a group of rows
-      // that sort equal — without it, paging by status could show the same
-      // booking on two pages and skip another entirely.
-      .orderBy(order, desc(bookings.id))
-      .limit(BOOKINGS_PER_PAGE)
-      .offset(Math.max(0, filters.page ?? 0) * BOOKINGS_PER_PAGE);
+    return await withDeadline("booking list", READ_DEADLINE_MS, () =>
+      getDb()
+        .select({
+          id: bookings.id,
+          ref: bookings.ref,
+          groupRef: bookings.groupRef,
+          scheduledAt: bookings.scheduledAt,
+          createdAt: bookings.createdAt,
+          passengers: bookings.passengers,
+          luggageCount: bookings.luggageCount,
+          flightNumber: bookings.flightNumber,
+          customerPrice: bookings.customerPrice,
+          driverPayout: bookings.driverPayout,
+          contribution: bookings.contribution,
+          currency: bookings.currency,
+          acquisitionSource: bookings.acquisitionSource,
+          isReturn: bookings.isReturn,
+          isRepeatCustomer: bookings.isRepeatCustomer,
+          status: bookings.status,
+          pickupLabel: bookings.pickupLabel,
+          dropoffLabel: bookings.dropoffLabel,
+          pickupLat: bookings.pickupLat,
+          pickupLng: bookings.pickupLng,
+          dropoffLat: bookings.dropoffLat,
+          dropoffLng: bookings.dropoffLng,
+          // Null for a journey priced from the road network; `journeySlug`
+          // carries the leg in that case.
+          journeySlug: bookings.journeySlug,
+          routeSlug: routes.slug,
+          routeOrigin: routes.originLabel,
+          routeDestination: routes.destinationLabel,
+          routeCategory: routes.category,
+          vehicleClassName: vehicleClasses.name,
+          customerName: customers.fullName,
+          customerType: customers.customerType,
+        })
+        .from(bookings)
+        .leftJoin(routes, eq(bookings.routeId, routes.id))
+        .leftJoin(customers, eq(bookings.customerId, customers.id))
+        .leftJoin(
+          vehicleClasses,
+          eq(bookings.vehicleClassId, vehicleClasses.id),
+        )
+        .where(buildWhere(filters))
+        // A second key, so a page boundary never lands inside a group of rows
+        // that sort equal — without it, paging by status could show the same
+        // booking on two pages and skip another entirely.
+        .orderBy(order, desc(bookings.id))
+        .limit(BOOKINGS_PER_PAGE)
+        .offset(Math.max(0, filters.page ?? 0) * BOOKINGS_PER_PAGE),
+    );
   } catch (error) {
+    // An empty array here renders as "no bookings", which is the same picture
+    // as a quiet week. The operator needs to know the difference, so the page
+    // asks `adminReadFailed()` and says so.
+    readFailures.add("booking list");
     console.error("[admin] booking list failed", error);
     return [];
   }
@@ -142,14 +175,17 @@ export async function countBookings(filters: BookingFilters): Promise<number> {
   if (!isDatabaseConfigured()) return 0;
 
   try {
-    const [row] = await getDb()
-      .select({ total: sql<number>`count(*)::int` })
-      .from(bookings)
-      .leftJoin(routes, eq(bookings.routeId, routes.id))
-      .leftJoin(customers, eq(bookings.customerId, customers.id))
-      .where(buildWhere(filters));
+    const [row] = await withDeadline("booking count", READ_DEADLINE_MS, () =>
+      getDb()
+        .select({ total: sql<number>`count(*)::int` })
+        .from(bookings)
+        .leftJoin(routes, eq(bookings.routeId, routes.id))
+        .leftJoin(customers, eq(bookings.customerId, customers.id))
+        .where(buildWhere(filters)),
+    );
     return row?.total ?? 0;
   } catch (error) {
+    readFailures.add("booking count");
     console.error("[admin] booking count failed", error);
     return 0;
   }
@@ -197,47 +233,59 @@ export async function getAdminSummary(): Promise<AdminSummary | null> {
   try {
     const db = getDb();
 
-    const [thisMonth] = await db
-      .select({
-        count: sql<number>`count(*)::int`,
-        contribution: sql<string>`coalesce(sum(${bookings.contribution}), 0)::text`,
-      })
-      .from(bookings)
-      .where(and(gte(bookings.createdAt, startOfNamibianMonth()), earning));
+    // One wave, not four. These were sequential awaits, so the page paid four
+    // round trips to Supabase before it could draw a single number — and a
+    // Vercel function in one region talking to a database in another pays
+    // that latency four times over. Nothing here depends on anything else
+    // here, so there was never a reason to queue them.
+    const [thisMonthRows, allTimeRows, byRoute, bySource] = await withDeadline(
+      "admin summary",
+      READ_DEADLINE_MS,
+      () =>
+        Promise.all([
+          db
+            .select({
+              count: sql<number>`count(*)::int`,
+              contribution: sql<string>`coalesce(sum(${bookings.contribution}), 0)::text`,
+            })
+            .from(bookings)
+            .where(
+              and(gte(bookings.createdAt, startOfNamibianMonth()), earning),
+            ),
+          db
+            .select({
+              contribution: sql<string>`coalesce(sum(${bookings.contribution}), 0)::text`,
+            })
+            .from(bookings)
+            .where(earning),
+          db
+            .select({
+              label: sql<string>`coalesce(${routes.originLabel} || ' to ' || ${routes.destinationLabel}, 'Unassigned route')`,
+              slug: routes.slug,
+              bookings: sql<number>`count(*)::int`,
+              contribution: sql<string>`coalesce(sum(${bookings.contribution}), 0)::text`,
+              revenue: sql<string>`coalesce(sum(${bookings.customerPrice}), 0)::text`,
+            })
+            .from(bookings)
+            .leftJoin(routes, eq(bookings.routeId, routes.id))
+            .where(earning)
+            .groupBy(routes.slug, routes.originLabel, routes.destinationLabel)
+            .orderBy(desc(sql`sum(${bookings.contribution})`)),
+          db
 
-    const [allTime] = await db
-      .select({
-        contribution: sql<string>`coalesce(sum(${bookings.contribution}), 0)::text`,
-      })
-      .from(bookings)
-      .where(earning);
+            .select({
+              source: bookings.acquisitionSource,
+              bookings: sql<number>`count(*)::int`,
+              revenue: sql<string>`coalesce(sum(${bookings.customerPrice}), 0)::text`,
+            })
+            .from(bookings)
+            .where(earning)
+            .groupBy(bookings.acquisitionSource),
+        ]),
+    );
 
-    const byRoute = await db
-      .select({
-        label: sql<string>`coalesce(${routes.originLabel} || ' to ' || ${routes.destinationLabel}, 'Unassigned route')`,
-        slug: routes.slug,
-        bookings: sql<number>`count(*)::int`,
-        contribution: sql<string>`coalesce(sum(${bookings.contribution}), 0)::text`,
-        revenue: sql<string>`coalesce(sum(${bookings.customerPrice}), 0)::text`,
-      })
-      .from(bookings)
-      .leftJoin(routes, eq(bookings.routeId, routes.id))
-      .where(earning)
-      .groupBy(routes.slug, routes.originLabel, routes.destinationLabel)
-      .orderBy(desc(sql`sum(${bookings.contribution})`));
-
-    // Grouped by the raw string; the folding into channels happens in TS.
-    // Distinct sources stay in the dozens even with thousands of bookings,
-    // so this is a small result set however the business grows.
-    const bySource = await db
-      .select({
-        source: bookings.acquisitionSource,
-        bookings: sql<number>`count(*)::int`,
-        revenue: sql<string>`coalesce(sum(${bookings.customerPrice}), 0)::text`,
-      })
-      .from(bookings)
-      .where(earning)
-      .groupBy(bookings.acquisitionSource);
+    const thisMonth = thisMonthRows[0];
+    const allTime = allTimeRows[0];
 
     return {
       byChannel: foldChannels(bySource),
@@ -247,6 +295,7 @@ export async function getAdminSummary(): Promise<AdminSummary | null> {
       byRoute,
     };
   } catch (error) {
+    readFailures.add("summary");
     console.error("[admin] summary failed", error);
     return null;
   }

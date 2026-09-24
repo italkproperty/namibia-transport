@@ -256,7 +256,14 @@ price off a list.
 *Keep this short and current. Three questions only: what works, what is broken, what is
 next. The archaeology belongs in git, not here.*
 
-**Works.** A booking needs one contact channel — WhatsApp or email — not a WhatsApp
+**Works.** Fares are built from per-kilometre cost, per vehicle class, with the constants
+set in `/admin/pricing` rather than compiled in. `lib/pricing/cost-model.ts` is the single
+model: distance × running cost + hours × driver rate + nights × a bed. A vehicle class
+moves the first term and its own turn-out floor, and nothing else — the old whole-fare
+`price_multiplier` charged 40% more for the driver's hours and for a bed in Otjiwarongo
+because the car had low range, and the error grew with duration. A settings change is
+previewed against six reference journeys before it can be saved.
+A booking needs one contact channel — WhatsApp or email — not a WhatsApp
 number, and two travellers may share one. Where bookings come from, on `/admin/bookings` — `acquisition_source` folded
 into channels by `lib/admin/channels.ts`, with the share we genuinely know stated rather
 than a clean chart drawn over the gaps. Vercel Analytics is wired into the root layout.
@@ -267,15 +274,23 @@ everything derived from it. The admin quote engine, including multi-leg itinerar
 as trips. Bank transfer, with confirmation gated behind the admin password. Dispatch,
 the fleet calendar, corporate quotations, the reviews admin. 160 leg pages at `/drive`,
 24 destination pages at `/destinations`, 11 guides and `/methodology`. Fares in the
-reader's own currency on every surface that shows one. Twenty-five test suites, 946 checks.
+reader's own currency on every surface that shows one. Twenty-six test suites, 985 checks.
 
 **Broken, in order of cost.**
-1. `db/manual/RUN-ME.sql` has a new block at the bottom (24 September) that has not been
-   run against production: `customers.whatsapp` is still NOT NULL and uniquely indexed
-   there, so the code now accepts an email-only booking that the database will refuse.
-   The September 6–22 blocks were run on 24 September; `/booking/REF` should render, but
-   that has not yet been confirmed against the live page.
-2. No working card gateway. PayToday has 403'd for a month; bank transfer is the only
+1. `db/manual/RUN-ME.sql` has two unrun blocks at the bottom (both 24 September): the
+   `customers` change, without which an email-only booking is accepted by the code and
+   refused by the database; and `pricing_settings` plus the vehicle-class cost columns,
+   without which `/admin/pricing` cannot save. Neither changes a price on its own.
+   `/booking/REF` has still not been confirmed against the live page.
+2. `/admin/bookings` returned `504 FUNCTION_INVOCATION_TIMEOUT` in production on
+   24 September. Root cause unconfirmed — the container cannot reach the live site — but
+   three real defects behind it are fixed: no `connect_timeout` on the pool, four
+   sequential round trips inside `getAdminSummary`, and reads that failed soft into an
+   empty table an operator would read as a quiet week. Every admin read is now behind a
+   6s deadline and the page names what did not load. If it recurs, the banner should say
+   which read died; check `DATABASE_URL` is the transaction pooler and the project is not
+   paused or at its connection limit.
+3. No working card gateway. PayToday has 403'd for a month; bank transfer is the only
    channel. The header probe ran in production on 23 September and **every variant was
    refused identically** — no Origin, apex, www, browser User-Agent. That retires the
    header theory: the 403 does not depend on anything in the shape of our request, so
@@ -284,10 +299,13 @@ reader's own currency on every surface that shows one. Twenty-five test suites, 
    `PayTodaySupport@nedbank.com.na` asking what check fails in their logs, what
    "Authorization error:" with an empty reason means, and whether API access is
    provisioned separately from the portal and plugin. Do not re-litigate the headers.
-3. `MAIL_FROM` in Vercel is missing its angle brackets, so Spacemail rejected every
+4. `MAIL_FROM` in Vercel is missing its angle brackets, so Spacemail rejected every
    confirmation email with `553 Sender address rejected`. The code now repairs a malformed
    value at runtime, but the variable is still wrong.
-4. `GATE_RULES` covers Etosha twice, Waterberg and Fish River — but not Sossusvlei, which
+5. `USD_RATE`, `EUR_RATE` and `GBP_RATE` are unset in Vercel, so the currency picker
+   offers only NAD and ZAR and no traveller has ever seen a dollar price. This failed
+   silently twice; `/admin/pricing` now says so in as many words.
+6. `GATE_RULES` covers Etosha twice, Waterberg and Fish River — but not Sossusvlei, which
    is the most gate-critical destination in the country. Its page carries no gate warning
    because we have no coordinates for the Sesriem gate, and guessing them would put a
    made-up number behind a real-looking deadline.

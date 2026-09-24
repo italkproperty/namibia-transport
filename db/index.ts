@@ -24,11 +24,14 @@ function buildDb() {
   // catalogue fallback, so the only visible symptom is that writes fail,
   // which reads as a database problem rather than a connection-string one.
   // Say it plainly instead of leaving it to be inferred from a DNS error.
-  if (process.env.VERCEL && /@db\.[a-z0-9]+\.supabase\.co/.test(connectionString)) {
+  if (
+    process.env.VERCEL &&
+    /@db\.[a-z0-9]+\.supabase\.co/.test(connectionString)
+  ) {
     console.error(
       "[db] DATABASE_URL points at Supabase's direct connection, which is IPv6-only and unreachable from Vercel. " +
         "Use the transaction pooler instead: host aws-0-<region>.pooler.supabase.com, port 6543, " +
-        "username postgres.<project-ref>."
+        "username postgres.<project-ref>.",
     );
   }
 
@@ -37,6 +40,15 @@ function buildDb() {
     postgres(connectionString, {
       // Supabase's transaction pooler cannot prepare statements.
       prepare: false,
+      // Without this a pooler that is not answering — wrong host, connection
+      // limit reached, credentials rotated — leaves the query hanging until
+      // Vercel kills the whole function. The operator gets
+      // 504 FUNCTION_INVOCATION_TIMEOUT, which says nothing about what
+      // failed, and /admin/bookings is unreachable with money waiting to be
+      // confirmed on it. Ten seconds is far longer than a healthy connect and
+      // short enough to fail inside the function's own budget, so the catch
+      // blocks run and the page can say what broke.
+      connect_timeout: 10,
       // Per serverless instance, not per deployment. Vercel runs many of these
       // at once and they all share one pooler, so a generous number here is
       // multiplied by however many instances are warm.
