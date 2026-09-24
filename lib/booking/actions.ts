@@ -3,7 +3,7 @@
 import { eq } from "drizzle-orm";
 
 import { getDb, isDatabaseConfigured } from "@/db";
-import { bookings, customers, payments, vehicleClasses } from "@/db/schema";
+import { bookings, payments, vehicleClasses } from "@/db/schema";
 import { formatDateTime } from "@/lib/format";
 import { listVehicleClasses } from "@/lib/maps";
 import { getCompanyInfo } from "@/lib/company";

@@ -1,7 +1,8 @@
 import "server-only";
 
-import { and, eq, isNotNull } from "drizzle-orm";
+import { and, eq, isNotNull, type SQL } from "drizzle-orm";
 
+import { getDb } from "@/db";
 import { customers } from "@/db/schema";
 
 /**
@@ -35,11 +36,19 @@ import { customers } from "@/db/schema";
  * below is guarded so an absent channel produces no lookup at all.
  */
 
-/** Just enough of a Drizzle handle to work with `db` or a transaction. */
-type Executor = {
-  select: (...args: never[]) => unknown;
-  insert: (...args: never[]) => unknown;
-};
+/**
+ * A Drizzle handle that may be the connection or a transaction.
+ *
+ * The itinerary quote writes every leg and its customer inside one
+ * transaction, because a quote is only ever true as a whole, so this has to
+ * take `tx` as readily as `db`. Derived from the real types rather than
+ * described structurally: the first version declared a hand-written shape and
+ * cast to `any` to satisfy it, which compiled, failed the production lint, and
+ * would have hidden a genuine type error in here for as long as it survived.
+ */
+type Db = ReturnType<typeof getDb>;
+type Tx = Parameters<Parameters<Db["transaction"]>[0]>[0];
+export type Executor = Db | Tx;
 
 export type CustomerInput = {
   fullName: string;
@@ -61,20 +70,15 @@ export type ResolvedCustomer<T> = {
  * writes every leg and its customer in one, because a quote is only ever true
  * as a whole.
  */
-export async function resolveCustomer<D extends Executor>(
-  db: D,
+export async function resolveCustomer(
+  db: Executor,
   input: CustomerInput,
 ): Promise<ResolvedCustomer<typeof customers.$inferSelect>> {
   const whatsapp = input.whatsapp?.trim() || null;
   const email = input.email?.trim().toLowerCase() || null;
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Executor is
-  // structural so this helper takes both `db` and a transaction; Drizzle's own
-  // types for those two are not assignable to one another.
-  const exec = db as any;
-
-  const match = async (where: unknown) =>
-    (await exec.select().from(customers).where(where).limit(1))[0] as
+  const match = async (where: SQL | undefined) =>
+    (await db.select().from(customers).where(where).limit(1))[0] as
       | typeof customers.$inferSelect
       | undefined;
 
@@ -94,7 +98,7 @@ export async function resolveCustomer<D extends Executor>(
     return { customer: existing, isRepeat: true };
   }
 
-  const [created] = (await exec
+  const [created] = (await db
     .insert(customers)
     .values({
       fullName: input.fullName,

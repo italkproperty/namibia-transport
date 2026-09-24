@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 import { eq } from "drizzle-orm";
 
 import { getDb, isDatabaseConfigured } from "@/db";
-import { bookings, customers, vehicleClasses } from "@/db/schema";
+import { bookings, vehicleClasses } from "@/db/schema";
 import { getAdminGateState } from "@/lib/admin/auth";
 import { generateBookingRef } from "@/lib/booking/ref";
 import { namibianLocalToInstant } from "@/lib/booking/time";

@@ -1,9 +1,8 @@
 import "server-only";
 
-import { eq } from "drizzle-orm";
 
 import { getDb, isDatabaseConfigured } from "@/db";
-import { bookings, customers } from "@/db/schema";
+import { bookings } from "@/db/schema";
 import { generateBookingRef } from "@/lib/booking/ref";
 import { namibianLocalToInstant } from "@/lib/booking/time";
 import {
