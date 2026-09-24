@@ -148,6 +148,25 @@ export const GATE_RULES: Record<string, GateRule> = {
     lat: -27.92,
     lng: 17.48,
   },
+  /**
+   * The most gate-critical destination in the country, and the last one to get
+   * a rule — because the whole point of this file is that a deadline shown to
+   * a traveller is computed from a real position, and until now we had no
+   * position for Sesriem. Guessing it would have put an invented number behind
+   * a real-looking deadline, which is worse than the silence it replaced: a
+   * traveller who misses this gate sleeps in the car park.
+   *
+   * These are off a GPS-referenced tourist road map (WGS84), where the gate is
+   * spelled "Sesreim", paired to its label by position on the page rather than
+   * by reading order — the text stream interleaves labels and coordinates and
+   * pairs them wrongly, which put Sossusvlei a hundred kilometres into the
+   * Kalahari on the first attempt.
+   */
+  sossusvlei: {
+    gate: "the Sesriem gate",
+    lat: -24.4862,
+    lng: 15.8025,
+  },
 };
 
 export type GateCheck = {

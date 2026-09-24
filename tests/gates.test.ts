@@ -9,7 +9,7 @@
  */
 import * as SunCalc from "suncalc";
 
-import { formatMinutes, gateCheck, sunTimes } from "@/lib/parks/gates";
+import { formatMinutes, gateCheck, sunTimes, GATE_RULES } from "@/lib/parks/gates";
 
 let passed = 0;
 let failed = 0;
@@ -164,6 +164,52 @@ check(
 );
 
 /* -------------------------------------------------------------- the tally */
+
+/**
+ * Sossusvlei, which had no rule until a GPS-referenced map supplied the gate's
+ * position. It is the most gate-critical destination in the country — miss the
+ * Sesriem gate and you sleep in the car park — and the reason it went
+ * unhandled so long is that the honest alternative to a real coordinate is
+ * nothing, not a plausible guess.
+ */
+console.log("\nSossusvlei sits behind the Sesriem gate");
+
+const sesriem = GATE_RULES["sossusvlei"];
+check("Sossusvlei has a gate rule at last", Boolean(sesriem));
+check(
+  "it names the gate, so the warning is checkable",
+  sesriem?.gate === "the Sesriem gate",
+  String(sesriem?.gate),
+);
+check(
+  "the coordinate is in the Namib, not the Kalahari",
+  Boolean(sesriem) &&
+    sesriem.lat > -25 &&
+    sesriem.lat < -24 &&
+    sesriem.lng > 15 &&
+    sesriem.lng < 16.5,
+  `${sesriem?.lat}, ${sesriem?.lng}`,
+);
+check(
+  "and it is north of Sossusvlei itself, which is where the gate is",
+  Boolean(sesriem) && sesriem.lat > -24.75,
+  String(sesriem?.lat),
+);
+
+// The whole reason the rule matters: a late-afternoon departure must be
+// flagged, and a morning one must not.
+const lateRun = gateCheck("sossusvlei", "2026-11-02", "14:00", 330);
+check(
+  "a 14:00 departure for a 5.5h drive is flagged",
+  lateRun !== null && (lateRun.late || lateRun.tight),
+  JSON.stringify(lateRun),
+);
+const earlyRun = gateCheck("sossusvlei", "2026-11-02", "06:00", 330);
+check(
+  "a 06:00 departure is not",
+  earlyRun !== null && !earlyRun.late && !earlyRun.tight,
+  JSON.stringify(earlyRun),
+);
 
 console.log(`\n${passed} passed, ${failed} failed`);
 if (failed > 0) process.exit(1);

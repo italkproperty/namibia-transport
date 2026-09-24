@@ -256,7 +256,10 @@ price off a list.
 *Keep this short and current. Three questions only: what works, what is broken, what is
 next. The archaeology belongs in git, not here.*
 
-**Works.** Fares are built from per-kilometre cost, per vehicle class, with the constants
+**Works.** Sossusvlei finally carries a gate deadline — the Sesriem coordinate came off a
+GPS-referenced map, paired to its label by position on the page rather than reading order,
+which is what had put Sossusvlei a hundred kilometres into the Kalahari on the first try.
+Fares are built from per-kilometre cost, per vehicle class, with the constants
 set in `/admin/pricing` rather than compiled in. `lib/pricing/cost-model.ts` is the single
 model: distance × running cost + hours × driver rate + nights × a bed. A vehicle class
 moves the first term and its own turn-out floor, and nothing else — the old whole-fare
@@ -274,7 +277,7 @@ everything derived from it. The admin quote engine, including multi-leg itinerar
 as trips. Bank transfer, with confirmation gated behind the admin password. Dispatch,
 the fleet calendar, corporate quotations, the reviews admin. 160 leg pages at `/drive`,
 24 destination pages at `/destinations`, 11 guides and `/methodology`. Fares in the
-reader's own currency on every surface that shows one. Twenty-six test suites, 985 checks.
+reader's own currency on every surface that shows one. Twenty-six test suites, 991 checks.
 
 **Broken, in order of cost.**
 1. `db/manual/RUN-ME.sql` has two unrun blocks at the bottom (both 24 September): the
@@ -305,10 +308,11 @@ reader's own currency on every surface that shows one. Twenty-six test suites, 9
 5. `USD_RATE`, `EUR_RATE` and `GBP_RATE` are unset in Vercel, so the currency picker
    offers only NAD and ZAR and no traveller has ever seen a dollar price. This failed
    silently twice; `/admin/pricing` now says so in as many words.
-6. `GATE_RULES` covers Etosha twice, Waterberg and Fish River — but not Sossusvlei, which
-   is the most gate-critical destination in the country. Its page carries no gate warning
-   because we have no coordinates for the Sesriem gate, and guessing them would put a
-   made-up number behind a real-looking deadline.
+6. 53 places from a GPS-referenced road map are extracted to `docs/map-coordinates.json`
+   and only one of them is used so far (the Sesriem gate). Most of the rest are lodges
+   with real positions — the thing that blocked named lodge pages. Nothing is added to
+   `PLACE_NODES` from it yet, because a node also needs road segments with real distances
+   and this map's segment distances have not been extracted.
 
 **Human-only.** Running the SQL. Enabling Web Analytics in the Vercel project settings —
 the code is deployed but the beacon 404s until the dashboard toggle is on. Verifying

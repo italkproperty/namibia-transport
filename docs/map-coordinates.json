@@ -1,0 +1,320 @@
+[
+  {
+    "name": "Aba-Haub",
+    "lat": -20.5422,
+    "lng": 14.3922,
+    "pairing_pt": 1.6
+  },
+  {
+    "name": "Auob Lodge",
+    "lat": -24.8202,
+    "lng": 18.7737,
+    "pairing_pt": 1.8
+  },
+  {
+    "name": "Bambatsi Ranch",
+    "lat": -20.2047,
+    "lng": 15.4597,
+    "pairing_pt": 1.6
+  },
+  {
+    "name": "Bernabe de la Bat",
+    "lat": -20.5097,
+    "lng": 17.2407,
+    "pairing_pt": 1.6
+  },
+  {
+    "name": "Buschveld Park",
+    "lat": -20.09,
+    "lng": 16.123,
+    "pairing_pt": 1.6
+  },
+  {
+    "name": "Damaraland Camp",
+    "lat": -20.5342,
+    "lng": 14.3685,
+    "pairing_pt": 1.6
+  },
+  {
+    "name": "De Duine Hotel",
+    "lat": -22.1175,
+    "lng": 14.2727,
+    "pairing_pt": 2.3
+  },
+  {
+    "name": "Dead Vlei Parking Area",
+    "lat": -24.7465,
+    "lng": 15.2878,
+    "pairing_pt": 1.8
+  },
+  {
+    "name": "Etosha Aoba lodge",
+    "lat": -18.7543,
+    "lng": 17.0927,
+    "pairing_pt": 1.6
+  },
+  {
+    "name": "Etosha Garten Hotel",
+    "lat": -20.1043,
+    "lng": 16.154,
+    "pairing_pt": 1.9
+  },
+  {
+    "name": "Gelukspoort Guest farm",
+    "lat": -20.1512,
+    "lng": 15.6865,
+    "pairing_pt": 1.6
+  },
+  {
+    "name": "Gochas Hotel",
+    "lat": -24.8575,
+    "lng": 18.8113,
+    "pairing_pt": 2.1
+  },
+  {
+    "name": "Grootfontein",
+    "lat": -19.5658,
+    "lng": 18.1018,
+    "pairing_pt": 1.6
+  },
+  {
+    "name": "Hammerstein Rest Camp",
+    "lat": -24.885,
+    "lng": 16.184,
+    "pairing_pt": 1.7
+  },
+  {
+    "name": "Hippo Pools",
+    "lat": -17.4082,
+    "lng": 13.017,
+    "pairing_pt": 1.6
+  },
+  {
+    "name": "Hobas Campsite",
+    "lat": -27.6187,
+    "lng": 17.7155,
+    "pairing_pt": 3.6
+  },
+  {
+    "name": "Hobatere Lodge",
+    "lat": -19.2983,
+    "lng": 14.4705,
+    "pairing_pt": 1.6
+  },
+  {
+    "name": "Kaap Kruis",
+    "lat": -21.7672,
+    "lng": 13.9505,
+    "pairing_pt": 4.5
+  },
+  {
+    "name": "Kaap Kruis",
+    "lat": -21.4387,
+    "lng": 13.8185,
+    "pairing_pt": 7.0
+  },
+  {
+    "name": "Kalahari Bush Breaks",
+    "lat": -22.3098,
+    "lng": 19.7495,
+    "pairing_pt": 1.8
+  },
+  {
+    "name": "Kavita Lion Lodge",
+    "lat": -19.4357,
+    "lng": 14.6233,
+    "pairing_pt": 1.6
+  },
+  {
+    "name": "Khorab Safari Lodge",
+    "lat": -19.6582,
+    "lng": 17.3237,
+    "pairing_pt": 1.6
+  },
+  {
+    "name": "Khorixas Lodge",
+    "lat": -20.5205,
+    "lng": 14.9405,
+    "pairing_pt": 1.6
+  },
+  {
+    "name": "Klein-Aus Guest Farm",
+    "lat": -26.6522,
+    "lng": 16.2445,
+    "pairing_pt": 2.1
+  },
+  {
+    "name": "Maltahohe",
+    "lat": -24.844,
+    "lng": 16.9753,
+    "pairing_pt": 1.7
+  },
+  {
+    "name": "Mokuti Lodge",
+    "lat": -18.8087,
+    "lng": 17.0425,
+    "pairing_pt": 1.6
+  },
+  {
+    "name": "Mushara Lodge",
+    "lat": -18.8073,
+    "lng": 17.1183,
+    "pairing_pt": 1.6
+  },
+  {
+    "name": "Namatubis Guest Farm",
+    "lat": -20.0025,
+    "lng": 16.0545,
+    "pairing_pt": 1.6
+  },
+  {
+    "name": "Namibgrens",
+    "lat": -23.3842,
+    "lng": 16.2687,
+    "pairing_pt": 1.8
+  },
+  {
+    "name": "Namushasha Lodge",
+    "lat": -17.9842,
+    "lng": 23.2852,
+    "pairing_pt": 1.9
+  },
+  {
+    "name": "Oase Garni",
+    "lat": -19.6202,
+    "lng": 14.8405,
+    "pairing_pt": 1.6
+  },
+  {
+    "name": "Okahandja Rest Camp",
+    "lat": -21.9993,
+    "lng": 16.922,
+    "pairing_pt": 2.5
+  },
+  {
+    "name": "Omarunga",
+    "lat": -17.0022,
+    "lng": 13.2442,
+    "pairing_pt": 1.6
+  },
+  {
+    "name": "Omaruru Game Lodge",
+    "lat": -21.3273,
+    "lng": 16.087,
+    "pairing_pt": 2.0
+  },
+  {
+    "name": "Ombinda Lodge",
+    "lat": -20.1172,
+    "lng": 16.1547,
+    "pairing_pt": 1.6
+  },
+  {
+    "name": "Ombundja Wildlife Lodge",
+    "lat": -19.985,
+    "lng": 15.6395,
+    "pairing_pt": 1.6
+  },
+  {
+    "name": "Ondangwa",
+    "lat": -17.9177,
+    "lng": 15.9918,
+    "pairing_pt": 1.6
+  },
+  {
+    "name": "Ongava Lodge",
+    "lat": -19.3288,
+    "lng": 15.9015,
+    "pairing_pt": 1.6
+  },
+  {
+    "name": "Oshakati",
+    "lat": -17.7743,
+    "lng": 15.6935,
+    "pairing_pt": 1.6
+  },
+  {
+    "name": "Otjitambi Guest Farm",
+    "lat": -19.822,
+    "lng": 15.1835,
+    "pairing_pt": 1.4
+  },
+  {
+    "name": "Popa Falls Entrance",
+    "lat": -18.1238,
+    "lng": 21.5827,
+    "pairing_pt": 1.6
+  },
+  {
+    "name": "Quiver Tree Forest",
+    "lat": -26.4812,
+    "lng": 18.2378,
+    "pairing_pt": 2.6
+  },
+  {
+    "name": "Rostock Ritz",
+    "lat": -23.549,
+    "lng": 15.7992,
+    "pairing_pt": 2.3
+  },
+  {
+    "name": "Ruacan Fuel Stop",
+    "lat": -17.4378,
+    "lng": 14.3638,
+    "pairing_pt": 1.6
+  },
+  {
+    "name": "Rundu",
+    "lat": -17.9318,
+    "lng": 19.7715,
+    "pairing_pt": 1.6
+  },
+  {
+    "name": "Saturn Guest Farm",
+    "lat": -20.2578,
+    "lng": 15.5343,
+    "pairing_pt": 1.6
+  },
+  {
+    "name": "Sesreim",
+    "lat": -24.4862,
+    "lng": 15.8025,
+    "pairing_pt": 8.3
+  },
+  {
+    "name": "Solitaire Country Lodge",
+    "lat": -23.8938,
+    "lng": 16.0057,
+    "pairing_pt": 1.7
+  },
+  {
+    "name": "Sossusvlei",
+    "lat": -24.7408,
+    "lng": 15.2873,
+    "pairing_pt": 4.7
+  },
+  {
+    "name": "Tsumeb",
+    "lat": -19.243,
+    "lng": 17.7172,
+    "pairing_pt": 1.5
+  },
+  {
+    "name": "Twyfelfontein Country Lodge",
+    "lat": -20.5342,
+    "lng": 14.3685,
+    "pairing_pt": 1.6
+  },
+  {
+    "name": "Wolwedans Dunes Lodge",
+    "lat": -25.0037,
+    "lng": 16.0648,
+    "pairing_pt": 1.7
+  },
+  {
+    "name": "Zelda Game Farm",
+    "lat": -22.3095,
+    "lng": 19.8172,
+    "pairing_pt": 3.2
+  }
+]
