@@ -256,7 +256,11 @@ price off a list.
 *Keep this short and current. Three questions only: what works, what is broken, what is
 next. The archaeology belongs in git, not here.*
 
-**Works.** A quote can be corrected in place at `/admin/bookings/<REF>/edit`, keeping the
+**Works.** The itinerary builder prices a trip in every vehicle class at once and saves the
+one chosen onto every leg, so a quote can never name a vehicle the fare was not computed
+for. Hosea Kutako → Sossusvlei Lodge → Hosea Kutako with three nights: N$14,700 in a
+sedan, N$17,950 in the SUV.
+A quote can be corrected in place at `/admin/bookings/<REF>/edit`, keeping the
 reference and the link so a traveller reading the email you sent an hour ago sees the
 correction rather than a dead page and a second email. Refused once money has arrived
 against any leg of the trip, and on a cancelled or completed row. Editing does not restart
@@ -282,7 +286,7 @@ everything derived from it. The admin quote engine, including multi-leg itinerar
 as trips. Bank transfer, with confirmation gated behind the admin password. Dispatch,
 the fleet calendar, corporate quotations, the reviews admin. 160 leg pages at `/drive`,
 24 destination pages at `/destinations`, 11 guides and `/methodology`. Fares in the
-reader's own currency on every surface that shows one. Twenty-eight test suites, 1,022 checks.
+reader's own currency on every surface that shows one. Twenty-eight test suites, 1,028 checks.
 
 **Broken, in order of cost.**
 0. The manual quote form still stores a return as a sentence in the notes rather than a

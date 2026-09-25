@@ -15,6 +15,7 @@ import {
 import { findNode, type PlaceNode } from "@/lib/network/nodes";
 import { journeySlug } from "@/lib/network/journey";
 import { resolveCustomer } from "@/lib/booking/customer";
+import type { RunningCost } from "@/lib/pricing/cost-model";
 
 /**
  * Quoting a whole trip, not a single leg.
@@ -99,9 +100,13 @@ function displayName(node: PlaceNode, label?: string): string {
  * from the one they agreed has been given two prices, and will believe the
  * larger one.
  */
-export function priceItinerary(stops: QuoteStop[]): ItineraryQuote | null {
+export function priceItinerary(
+  stops: QuoteStop[],
+  runningCost?: RunningCost,
+): ItineraryQuote | null {
   const itinerary = planItinerary(
     stops.map((stop) => ({ slug: stop.slug, nights: stop.nights })),
+    runningCost,
   );
   if (!itinerary) return null;
 
@@ -186,6 +191,14 @@ export type SaveItineraryInput = {
   luggageCount: number;
   /** Overrides the computed total when a figure was already agreed. */
   agreedTotal?: number;
+  /**
+   * The vehicle the fare was computed for. Stored on every leg, because a
+   * quote naming one class beside a price computed for another is exactly the
+   * confusion this engine exists to remove.
+   */
+  vehicleClassId?: string | null;
+  /** That class's per-kilometre costs, so the saved total matches the quoted one. */
+  runningCost?: RunningCost;
   notes?: string;
 };
 
@@ -244,7 +257,7 @@ export async function saveItineraryQuote(
     return { ok: false, message: "No database is configured." };
   }
 
-  const quote = priceItinerary(input.stops);
+  const quote = priceItinerary(input.stops, input.runningCost);
   if (!quote) {
     return {
       ok: false,
@@ -298,6 +311,7 @@ export async function saveItineraryQuote(
                 ref: generateBookingRef(),
                 groupRef,
                 customerId: customer.id,
+                vehicleClassId: input.vehicleClassId ?? null,
                 journeySlug: journeySlug(leg.fromSlug, leg.toSlug),
                 pickupLabel: leg.fromLabel,
                 dropoffLabel: leg.toLabel,

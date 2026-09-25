@@ -1,6 +1,7 @@
 import { CONTRIBUTION_RATE, RUNNING_COST_PER_KM } from "./fare-model";
 import { findNode, type PlaceNode } from "./nodes";
 import { findRoad, type Road } from "./roads";
+import type { RunningCost } from "@/lib/pricing/cost-model";
 
 /**
  * A whole trip, costed both ways.
@@ -79,7 +80,21 @@ const roundUp = (amount: number) =>
  * Builds the trip. Null when a stop is unknown or two consecutive stops have
  * no road between them — better nothing than a confident wrong number.
  */
-export function planItinerary(stops: ItineraryStop[]): Itinerary | null {
+/**
+ * Prices a trip for one vehicle class.
+ *
+ * `runningCost` is the only thing a class changes, for the same reason set out
+ * in `lib/pricing/cost-model.ts`: a bigger vehicle burns more diesel and eats
+ * more tyres, and does not make the guide-driver's day or their bed any
+ * dearer. DRIVER_DAY and DRIVER_NIGHT are therefore deliberately outside it.
+ *
+ * It defaults to the baseline, so every existing caller — the self-drive
+ * comparison, the planner, the leg pages — prices exactly as it did before.
+ */
+export function planItinerary(
+  stops: ItineraryStop[],
+  runningCost: RunningCost = RUNNING_COST_PER_KM,
+): Itinerary | null {
   if (stops.length < 2) return null;
 
   const resolved: { node: PlaceNode; nights: number }[] = [];
@@ -122,11 +137,13 @@ export function planItinerary(stops: ItineraryStop[]): Itinerary | null {
     legs.reduce(
       (total, leg) =>
         total +
-        leg.tarKm * RUNNING_COST_PER_KM.tar +
-        leg.gravelKm * RUNNING_COST_PER_KM.gravel,
+        leg.tarKm * runningCost.tar +
+        leg.gravelKm * runningCost.gravel,
       0,
     ) +
-    localKm * RUNNING_COST_PER_KM.gravel;
+    // Local running is dunes, game drives and the run into town — gravel work
+    // whatever the vehicle, so it is costed at the gravel rate.
+    localKm * runningCost.gravel;
 
   /**
    * One driver stays with the party for the whole trip. That is what we can

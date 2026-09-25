@@ -41,6 +41,7 @@ type Stop = { key: number; slug: string | null; label: string; nights: number };
  * the traveller actually booked.
  */
 export function ItineraryBuilder({ places }: { places: PlaceOption[] }) {
+  const [vehicleClassId, setVehicleClassId] = React.useState("");
   const [stops, setStops] = React.useState<Stop[]>([
     { key: 1, slug: "hosea-kutako", label: "", nights: 0 },
     { key: 2, slug: null, label: "", nights: 2 },
@@ -136,7 +137,20 @@ export function ItineraryBuilder({ places }: { places: PlaceOption[] }) {
     );
   }
 
-  const quote = priceState?.ok ? priceState.quote : null;
+  const priced = priceState?.ok ? priceState.quotes : null;
+
+  /**
+   * Which vehicle the operator is quoting. Defaults to the first class rather
+   * than to nothing: an operator who prices a trip and then forgets to pick a
+   * vehicle would otherwise save a quote whose legs name no class at all,
+   * which is how the last one came to say "Private Car" beside a figure
+   * computed for something else.
+   */
+  const selected =
+    priced?.find((entry) => entry.vehicleClassId === vehicleClassId) ??
+    priced?.[0] ??
+    null;
+  const quote = selected?.quote ?? null;
 
   return (
     <div className="grid gap-6">
@@ -277,10 +291,49 @@ export function ItineraryBuilder({ places }: { places: PlaceOption[] }) {
         <p className="text-destructive text-sm">{priceState.message}</p>
       )}
 
-      {quote && (
+      {priced && quote && selected && (
         <section className="bg-card rounded-xl border p-4">
-          <div className="flex flex-wrap items-baseline justify-between gap-3">
-            <h2 className="text-sm font-semibold">Driven, all in</h2>
+          {/* Every class, priced. The operator picks one and that choice is
+              saved onto the legs, so the vehicle named on the quote is always
+              the vehicle the fare was computed for. */}
+          <div className="mb-4 grid gap-2">
+            <p className="text-sm font-semibold">Which vehicle</p>
+            <div className="grid gap-2 sm:grid-cols-2">
+              {priced.map((entry) => {
+                const active = entry.vehicleClassId === selected.vehicleClassId;
+                return (
+                  <button
+                    key={entry.vehicleClassId}
+                    type="button"
+                    onClick={() => setVehicleClassId(entry.vehicleClassId)}
+                    aria-pressed={active}
+                    className={`focus-ring press rounded-lg border p-3 text-left transition ${
+                      active
+                        ? "border-brand bg-brand/5"
+                        : "border-border hover:border-foreground/30"
+                    }`}
+                  >
+                    <span className="flex items-baseline justify-between gap-3">
+                      <span className="text-sm font-medium">{entry.name}</span>
+                      <span className="tabular text-sm font-semibold">
+                        {formatNad(entry.quote.total)}
+                      </span>
+                    </span>
+                    {!entry.costed && (
+                      <span className="text-muted-foreground mt-0.5 block text-xs">
+                        not costed — from the old multiplier
+                      </span>
+                    )}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          <div className="flex flex-wrap items-baseline justify-between gap-3 border-t pt-3">
+            <h2 className="text-sm font-semibold">
+              Driven, all in — {selected.name}
+            </h2>
             <p className="tabular text-brand text-2xl font-semibold">
               {formatNad(quote.total)}
             </p>
@@ -340,6 +393,11 @@ export function ItineraryBuilder({ places }: { places: PlaceOption[] }) {
       {/* ------------------------------------------------------- the save */}
       <form action={save} className="grid gap-4">
         <input type="hidden" name="stops" value={payload} />
+        <input
+          type="hidden"
+          name="vehicleClassId"
+          value={selected?.vehicleClassId ?? ""}
+        />
 
         <h2 className="text-sm font-semibold">Who it is for</h2>
         <div className="grid gap-4 sm:grid-cols-2">

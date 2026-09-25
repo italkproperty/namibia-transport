@@ -16,6 +16,8 @@ import {
   selfDriveCost,
 } from "@/lib/network/itinerary";
 import { CONTRIBUTION_RATE } from "@/lib/network/fare-model";
+import { priceItinerary } from "@/lib/admin/itinerary-quote";
+import { DEFAULT_RUNNING_COST } from "@/lib/pricing/cost-model";
 
 let passed = 0;
 let failed = 0;
@@ -197,6 +199,85 @@ check(
   "the traveller's own quote is what gets compared",
   selfDriveCost(classic, { dayRate: 5000, fuelPerKm: 2.3, waiverPerDay: 0 }).total >
     selfDriveCost(classic, { dayRate: 2445, fuelPerKm: 2.3, waiverPerDay: 0 }).total,
+);
+
+/* ------------------------------------------------- pricing by vehicle class */
+
+/**
+ * The builder priced one vehicle and offered no way to say which.
+ *
+ * An enquiry is almost never "what does one car cost" — it is two people with
+ * four bags asking what their options are. An operator who can only produce
+ * one number has to guess, and the quote then names a vehicle the fare was
+ * never computed for.
+ *
+ * The dimensional rule from `lib/pricing/cost-model.ts` applies here too, and
+ * it is the check worth having: a class changes the per-kilometre running
+ * cost and nothing else. A guide-driver's day and their bed cost the same
+ * whatever is parked outside, so a class that is 40% dearer per kilometre must
+ * come out *less* than 40% dearer overall — and by more, the longer the party
+ * stays, because a stationary day is all driver and no diesel.
+ */
+console.log("\nthe same trip, priced by vehicle class");
+
+const TRIP = [
+  { slug: "hosea-kutako", nights: 0 },
+  { slug: "sossusvlei", label: "Sossusvlei Lodge", nights: 3 },
+  { slug: "hosea-kutako", nights: 0 },
+];
+
+const scaled = (m: number) => ({
+  tar: DEFAULT_RUNNING_COST.tar * m,
+  gravel: DEFAULT_RUNNING_COST.gravel * m,
+});
+
+const sedanTrip = priceItinerary(TRIP)!;
+const suvTrip = priceItinerary(TRIP, scaled(1.4))!;
+
+check(
+  "the baseline price did not move",
+  sedanTrip.total === 14700,
+  String(sedanTrip.total),
+);
+check(
+  "omitting the running cost is the same as passing the baseline",
+  priceItinerary(TRIP, DEFAULT_RUNNING_COST)!.total === sedanTrip.total,
+);
+check(
+  "a dearer class costs more",
+  suvTrip.total > sedanTrip.total,
+  `${sedanTrip.total} vs ${suvTrip.total}`,
+);
+check(
+  "THE RULE: 40% dearer per km is not 40% dearer overall",
+  suvTrip.total < sedanTrip.total * 1.4,
+  `${suvTrip.total} vs ${Math.round(sedanTrip.total * 1.4)} if it multiplied`,
+);
+
+/**
+ * The same comparison on a trip with no nights on the ground. With nobody
+ * waiting at a lodge, more of the fare is diesel, so the class premium is
+ * larger — if it were not, the class would be multiplying something it should
+ * not.
+ */
+const transferOnly = [
+  { slug: "hosea-kutako", nights: 0 },
+  { slug: "sossusvlei", nights: 0 },
+];
+const shortSedan = priceItinerary(transferOnly)!;
+const shortSuv = priceItinerary(transferOnly, scaled(1.4))!;
+
+check(
+  "the class premium is larger where less of the fare is waiting",
+  shortSuv.total / shortSedan.total > suvTrip.total / sedanTrip.total,
+  `${(shortSuv.total / shortSedan.total).toFixed(3)} vs ${(suvTrip.total / sedanTrip.total).toFixed(3)}`,
+);
+
+check(
+  "the legs still sum to the total in every class",
+  [sedanTrip, suvTrip].every(
+    (q) => q.legs.reduce((sum, leg) => sum + leg.price, 0) === q.total,
+  ),
 );
 
 console.log(`\n${passed} passed, ${failed} failed`);
