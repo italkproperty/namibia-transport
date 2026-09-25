@@ -6,7 +6,7 @@ import { eq } from "drizzle-orm";
 import { getDb, isDatabaseConfigured } from "@/db";
 import { bookings } from "@/db/schema";
 import { getAdminGateState } from "@/lib/admin/auth";
-import { isSettled } from "@/lib/admin/booking-actions";
+import { isSettled } from "@/lib/admin/settled";
 import { namibianLocalToInstant } from "@/lib/booking/time";
 import { toMoneyString } from "@/lib/money";
 

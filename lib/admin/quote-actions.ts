@@ -11,6 +11,7 @@ import { namibianLocalToInstant } from "@/lib/booking/time";
 import { modelPayout } from "@/lib/network/fare-model";
 import { SITE } from "@/lib/site";
 import { resolveCustomer } from "@/lib/booking/customer";
+import { isUniqueViolation } from "@/lib/db-error";
 
 /**
  * Quotes an operator writes by hand, for the trips the model cannot price.
@@ -194,7 +195,7 @@ export async function createCustomQuote(
         break;
       } catch (error) {
         const duplicate =
-          error instanceof Error && /bookings_ref_key/.test(error.message);
+          isUniqueViolation(error, "bookings_ref_key");
         if (!duplicate || attempt === 4) throw error;
       }
     }

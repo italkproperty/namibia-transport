@@ -90,7 +90,7 @@ async function rowChecks() {
 
   const { getDb } = await import("@/db");
   const { bookings, customers, payments } = await import("@/db/schema");
-  const { isSettled } = await import("@/lib/admin/booking-actions");
+  const { isSettled } = await import("@/lib/admin/settled");
   const { eq, inArray } = await import("drizzle-orm");
 
   const db = getDb();

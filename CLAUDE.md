@@ -237,6 +237,18 @@ for one query — that is cannibalisation, not caution about rivals. Nothing her
 competing with other operators; the whole model exists to beat them on 2,352 routes they
 price off a list.
 
+## Reading a database error
+Drizzle wraps the driver error, and **its own message is the SQL, not the reason** —
+`Failed query: insert into "drivers" (...)`. The constraint name, the SQLSTATE and the
+detail are on the *cause*. Every check written against `String(error)` or `error.message`
+was therefore dead: four reference-collision retries (the public booking path, both admin
+quote engines, the corporate quotation) never retried, and the driver form's "that number
+already exists" never fired, so an operator got "Could not save the driver." and nothing
+to act on.
+
+**Always ask `lib/db-error.ts`** — `isUniqueViolation`, `violatedConstraint`,
+`isMissingSchema`, `describeDbError`. Never pattern-match an error message.
+
 ## Working style
 - Small, reviewable commits. Explain *why* in the message; the diff already shows what.
 - TypeScript strict, no `any` without a comment justifying it.
@@ -286,7 +298,9 @@ everything derived from it. The admin quote engine, including multi-leg itinerar
 as trips. Bank transfer, with confirmation gated behind the admin password. Dispatch,
 the fleet calendar, corporate quotations, the reviews admin. 160 leg pages at `/drive`,
 24 destination pages at `/destinations`, 11 guides and `/methodology`. Fares in the
-reader's own currency on every surface that shows one. Twenty-eight test suites, 1,028 checks.
+reader's own currency on every surface that shows one. Thirty test suites, 1,095 checks — including an end-to-end admin suite that drives the
+write paths against a real database, and a guard that fails the build if a new Server
+Action ships without an authorisation check.
 
 **Broken, in order of cost.**
 0. The manual quote form still stores a return as a sentence in the notes rather than a

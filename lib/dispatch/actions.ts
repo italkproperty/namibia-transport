@@ -25,6 +25,7 @@ import {
 } from "@/lib/messaging";
 
 import { getBookingForDispatch } from "./queries";
+import { describeDbError, isUniqueViolation } from "@/lib/db-error";
 
 /**
  * Dispatch: recording who drives, and telling the traveller.
@@ -35,7 +36,9 @@ import { getBookingForDispatch } from "./queries";
  * to a customer.
  */
 
-export type DispatchResult = { ok: true; message?: string } | { ok: false; message: string };
+export type DispatchResult =
+  | { ok: true; message?: string }
+  | { ok: false; message: string };
 
 async function requireAdmin(): Promise<DispatchResult | null> {
   const gate = await getAdminGateState();
@@ -91,70 +94,125 @@ const empty = (value: string | undefined) => {
 
 export async function addDriver(
   _prev: DispatchResult | null,
-  formData: FormData
+  formData: FormData,
 ): Promise<DispatchResult> {
   const denied = await requireAdmin();
   if (denied) return denied;
 
   const parsed = driverSchema.safeParse(Object.fromEntries(formData));
   if (!parsed.success) {
-    return { ok: false, message: parsed.error.issues[0]?.message ?? "Check the form." };
+    return {
+      ok: false,
+      message: parsed.error.issues[0]?.message ?? "Check the form.",
+    };
   }
   const values = parsed.data;
 
   try {
     const db = getDb();
-    const [driver] = await db
-      .insert(drivers)
-      .values({
-        fullName: values.fullName,
-        whatsapp: values.whatsapp,
-        phone: empty(values.phone),
-        licenseNumber: empty(values.licenseNumber),
-        notes: empty(values.notes),
-        baseNode: empty(values.baseNode),
-        // "pending" until someone has actually checked them. Nothing on the
-        // site claims a driver is vetted, and this default is why.
-        status: "pending",
-      })
-      .returning({ id: drivers.id });
 
-    // A vehicle only if enough of one was given to identify it on the day.
-    if (driver && values.registration && values.make && values.vehicleClassId) {
-      await db.insert(vehicles).values({
-        driverId: driver.id,
-        vehicleClassId: values.vehicleClassId,
-        make: values.make,
-        model: empty(values.model) ?? "",
-        registration: values.registration.toUpperCase(),
-        colour: empty(values.colour),
-      });
-    }
+    /**
+     * One transaction for the driver and their car.
+     *
+     * These were two separate inserts. A registration already on file failed
+     * the second one, and the driver row from the first stayed — a driver
+     * recorded with no vehicle, who then cannot be assigned, sitting in the
+     * list looking complete. The error message even said "the driver was not
+     * saved", which was false.
+     *
+     * A driver and the car they arrive in is one thing an operator is
+     * entering; it saves as one thing or not at all.
+     */
+    await db.transaction(async (tx) => {
+      const [driver] = await tx
+        .insert(drivers)
+        .values({
+          fullName: values.fullName,
+          whatsapp: values.whatsapp,
+          phone: empty(values.phone),
+          licenseNumber: empty(values.licenseNumber),
+          notes: empty(values.notes),
+          baseNode: empty(values.baseNode),
+          // "pending" until someone has actually checked them. Nothing on the
+          // site claims a driver is vetted, and this default is why.
+          status: "pending",
+        })
+        .returning({ id: drivers.id });
+
+      // A vehicle only if enough of one was given to identify it on the day.
+      if (
+        driver &&
+        values.registration &&
+        values.make &&
+        values.vehicleClassId
+      ) {
+        await tx.insert(vehicles).values({
+          driverId: driver.id,
+          vehicleClassId: values.vehicleClassId,
+          make: values.make,
+          model: empty(values.model) ?? "",
+          registration: values.registration.toUpperCase(),
+          colour: empty(values.colour),
+        });
+      }
+    });
 
     revalidatePath("/admin/drivers");
+    revalidatePath("/admin/calendar");
     return { ok: true, message: `${values.fullName} added.` };
   } catch (error) {
     console.error("[dispatch] could not add driver", error);
-    const message = String(error);
-    if (message.includes("drivers_whatsapp_key")) {
-      return { ok: false, message: "A driver with that WhatsApp number already exists." };
+
+    /**
+     * These branches existed and never fired. `String(error)` is Drizzle's
+     * wrapper — "Failed query: insert into ..." — and the constraint name is
+     * on the cause, so an operator adding a driver whose number was already
+     * on file got "Could not save the driver." and nothing to act on. That is
+     * how this was found: a real attempt, a real collision, a useless message.
+     */
+    if (isUniqueViolation(error, "drivers_whatsapp_key")) {
+      // Name the driver who has it. "Already exists" leaves an operator
+      // hunting a list; the name ends it, and usually reveals that the number
+      // was put on somebody else's row by mistake.
+      const [existing] = await getDb()
+        .select({ fullName: drivers.fullName, status: drivers.status })
+        .from(drivers)
+        .where(eq(drivers.whatsapp, values.whatsapp))
+        .limit(1);
+
+      return {
+        ok: false,
+        message: existing
+          ? `${existing.fullName} already has that WhatsApp number (${existing.status}). Edit that driver, or give this one a different number.`
+          : "A driver with that WhatsApp number already exists.",
+      };
     }
-    if (message.includes("vehicles_registration_key")) {
-      return { ok: false, message: "That registration is already on file." };
+    if (isUniqueViolation(error, "vehicles_registration_key")) {
+      return {
+        ok: false,
+        message: `${values.registration?.toUpperCase()} is already on file against another driver. The driver was not saved.`,
+      };
     }
-    return { ok: false, message: "Could not save the driver." };
+
+    return {
+      ok: false,
+      message: describeDbError(error, "Could not save the driver."),
+    };
   }
 }
 
 export async function setDriverStatus(
   driverId: string,
-  status: "pending" | "active" | "suspended" | "inactive"
+  status: "pending" | "active" | "suspended" | "inactive",
 ): Promise<DispatchResult> {
   const denied = await requireAdmin();
   if (denied) return denied;
 
   try {
-    await getDb().update(drivers).set({ status }).where(eq(drivers.id, driverId));
+    await getDb()
+      .update(drivers)
+      .set({ status })
+      .where(eq(drivers.id, driverId));
     revalidatePath("/admin/drivers");
     return { ok: true };
   } catch (error) {
@@ -167,7 +225,7 @@ export async function setDriverStatus(
 
 export async function assignDriver(
   _prev: DispatchResult | null,
-  formData: FormData
+  formData: FormData,
 ): Promise<DispatchResult> {
   const denied = await requireAdmin();
   if (denied) return denied;
@@ -181,7 +239,8 @@ export async function assignDriver(
   try {
     const db = getDb();
     const booking = await getBookingForDispatch(bookingId);
-    if (!booking) return { ok: false, message: "That booking no longer exists." };
+    if (!booking)
+      return { ok: false, message: "That booking no longer exists." };
 
     const [driver] = await db
       .select({
@@ -310,7 +369,7 @@ async function isSettled(bookingId: string): Promise<boolean> {
 
 export async function unassignDriver(
   assignmentId: string,
-  bookingId: string
+  bookingId: string,
 ): Promise<DispatchResult> {
   const denied = await requireAdmin();
   if (denied) return denied;
@@ -330,7 +389,9 @@ export async function unassignDriver(
     // alone — an assignment is not what put them there.
     await db
       .update(bookings)
-      .set({ status: (await isSettled(bookingId)) ? "confirmed" : "pending_payment" })
+      .set({
+        status: (await isSettled(bookingId)) ? "confirmed" : "pending_payment",
+      })
       .where(and(eq(bookings.id, bookingId), eq(bookings.status, "assigned")));
 
     revalidatePath("/admin/bookings");
@@ -353,7 +414,12 @@ async function notifyTraveller({
 }: {
   booking: NonNullable<Awaited<ReturnType<typeof getBookingForDispatch>>>;
   driver: { fullName: string; whatsapp: string | null; phone: string | null };
-  vehicle?: { make: string; model: string; colour: string | null; registration: string } | null;
+  vehicle?: {
+    make: string;
+    model: string;
+    colour: string | null;
+    registration: string;
+  } | null;
 }): Promise<boolean> {
   const company = getCompanyInfo();
 

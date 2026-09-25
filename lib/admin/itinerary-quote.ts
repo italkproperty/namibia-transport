@@ -16,6 +16,7 @@ import { findNode, type PlaceNode } from "@/lib/network/nodes";
 import { journeySlug } from "@/lib/network/journey";
 import { resolveCustomer } from "@/lib/booking/customer";
 import type { RunningCost } from "@/lib/pricing/cost-model";
+import { isUniqueViolation } from "@/lib/db-error";
 
 /**
  * Quoting a whole trip, not a single leg.
@@ -331,7 +332,7 @@ export async function saveItineraryQuote(
             break;
           } catch (error) {
             const duplicate =
-              error instanceof Error && /bookings_ref_key/.test(error.message);
+              isUniqueViolation(error, "bookings_ref_key");
             if (!duplicate || attempt === 4) throw error;
           }
         }

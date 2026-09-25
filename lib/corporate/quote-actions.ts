@@ -22,6 +22,7 @@ import {
   corporateQuoteSchema,
   type CorporateQuoteResult,
 } from "./quote-schema";
+import { isUniqueViolation } from "@/lib/db-error";
 
 /** Same unambiguous alphabet as booking refs — read aloud, typed by hand. */
 const ALPHABET = "ABCDEFGHJKLMNPQRTUVWXY2346789";
@@ -267,7 +268,7 @@ async function insertQuoteWithUniqueNumber(
     } catch (error) {
       const isDuplicate =
         error instanceof Error &&
-        /corporate_quotes_number_key/.test(error.message);
+        isUniqueViolation(error, "corporate_quotes_number_key");
       if (!isDuplicate || attempt === 4) throw error;
     }
   }

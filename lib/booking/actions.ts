@@ -32,6 +32,7 @@ import {
 import { namibianLocalToInstant } from "./time";
 import { PAYMENT_POLICY } from "./payment-policy";
 import { resolveCustomer } from "./customer";
+import { isUniqueViolation } from "@/lib/db-error";
 
 /**
  * Attribution arrives from the browser, so it is untrusted text that ends up
@@ -274,7 +275,7 @@ async function insertBookingWithUniqueRef(
       return row;
     } catch (error) {
       const isDuplicateRef =
-        error instanceof Error && /bookings_ref_key/.test(error.message);
+        isUniqueViolation(error, "bookings_ref_key");
       if (!isDuplicateRef || attempt === 4) throw error;
     }
   }

@@ -1,11 +1,12 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { and, eq, inArray, ne } from "drizzle-orm";
+import { and, eq, ne } from "drizzle-orm";
 
 import { getDb, isDatabaseConfigured } from "@/db";
-import { bookings, payments } from "@/db/schema";
+import { bookings } from "@/db/schema";
 import { getAdminGateState } from "@/lib/admin/auth";
+import { isSettled } from "@/lib/admin/settled";
 
 /**
  * Voiding a booking, and why it needed to exist.
@@ -146,29 +147,6 @@ export async function reinstateBooking(
   revalidatePath(`/booking/${booking.ref}`);
   if (booking.groupRef) revalidatePath(`/quote/${booking.groupRef}`);
   return { ok: true };
-}
-
-/** Whether money has landed for this booking, or for the trip it belongs to. */
-export async function isSettled(
-  db: ReturnType<typeof getDb>,
-  booking: { id: string; groupRef: string | null },
-): Promise<boolean> {
-  const ids = booking.groupRef
-    ? (
-        await db
-          .select({ id: bookings.id })
-          .from(bookings)
-          .where(eq(bookings.groupRef, booking.groupRef))
-      ).map((row) => row.id)
-    : [booking.id];
-
-  const [paid] = await db
-    .select({ id: payments.id })
-    .from(payments)
-    .where(and(inArray(payments.bookingId, ids), eq(payments.status, "paid")))
-    .limit(1);
-
-  return Boolean(paid);
 }
 
 /**
