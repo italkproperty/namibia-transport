@@ -15,12 +15,15 @@ import { BankTransfer } from "@/components/booking/bank-transfer";
 import { DriverCard } from "@/components/booking/driver-card";
 import { TripDetailsForm } from "@/components/booking/trip-details-form";
 import { PayNowButton } from "@/components/booking/pay-now-button";
+import { ConversionEventTag } from "@/components/marketing/conversion-event";
 import { SiteFooter } from "@/components/marketing/site-footer";
 import { SiteHeader } from "@/components/marketing/site-header";
 import { Button } from "@/components/ui/button";
 import { isAirportLeg } from "@/lib/booking/details";
 import { Fare, FareNote } from "@/components/currency/fare";
 import { getBookingByRef } from "@/lib/booking/queries";
+import { getQuoteGroup } from "@/lib/booking/group-queries";
+import { conversionFor } from "@/lib/marketing/conversion";
 import { quoteValidity } from "@/lib/booking/validity";
 import { getCompanyInfo, whatsappLink } from "@/lib/company";
 import { formatDateTime } from "@/lib/format";
@@ -97,6 +100,27 @@ export default async function BookingConfirmationPage({ params }: PageProps) {
   // one. The page stays readable so a traveller can see what they were told;
   // what goes is the way to pay yesterday's fare.
   const validity = quoteValidity(booking);
+
+  /**
+   * What to tell Google about this trip.
+   *
+   * The group is read so a multi-leg itinerary reports its real total once,
+   * rather than the leg whose reference happens to be in the address bar —
+   * four times. `conversionFor` also decides that a bank transfer is never
+   * reported from the browser, because `/admin/conversions` uploads it by
+   * click id and counting it twice is worse than counting it late.
+   */
+  const group = booking.groupRef ? await getQuoteGroup(booking.groupRef) : null;
+  const conversion = conversionFor({
+    ref: booking.ref,
+    groupRef: booking.groupRef,
+    price: booking.customerPrice,
+    groupTotal: group?.total ?? null,
+    currency: booking.currency,
+    isPaid,
+    provider: payment?.provider ?? null,
+  });
+
   const canPayNow =
     !isPaid &&
     isLiveGatewayConfigured() &&
@@ -396,6 +420,7 @@ export default async function BookingConfirmationPage({ params }: PageProps) {
         </div>
       </main>
 
+      <ConversionEventTag event={conversion} />
       <SiteFooter />
     </div>
   );

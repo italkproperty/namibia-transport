@@ -3,6 +3,7 @@ import { Archivo, IBM_Plex_Mono } from "next/font/google";
 import { Analytics } from "@vercel/analytics/next";
 
 import { CurrencyProvider } from "@/components/currency/currency-provider";
+import { GoogleTag } from "@/components/marketing/google-tag";
 import { Toaster } from "@/components/ui/sonner";
 import { SiteSchema } from "@/components/marketing/site-schema";
 import { getRates } from "@/lib/currency-rates";
@@ -112,6 +113,11 @@ export default function RootLayout({
             stores no identifier, which is why there is no consent banner on
             a site whose whole job is to be trusted before anyone lands. */}
         <Analytics />
+        {/* Ads measurement. Consent denied by default and no banner — the
+            reasoning is in the component, and it rests on the real conversion
+            being reported from the server by click id rather than counted
+            here. */}
+        <GoogleTag />
       </body>
     </html>
   );
