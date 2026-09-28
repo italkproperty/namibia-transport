@@ -156,6 +156,45 @@ ALTER TABLE "vehicle_classes"
   ADD COLUMN IF NOT EXISTS "running_cost_gravel" numeric(6,2),
   ADD COLUMN IF NOT EXISTS "minimum_driver_need" numeric(10,2);
 
+/* ---------------------------------------------- 28 September 2026 (ads) --- */
+
+-- Which ad click paid for this booking, so the money can be reported back.
+--
+-- Google optimises towards whatever we call a conversion. The conversion that
+-- matters here is money received, which for a bank transfer is a human in the
+-- admin panel days after the click — so the click has to be carried on the
+-- booking and reported later, rather than counted by a pixel at submit time.
+--
+-- Not named `gclid`, although that is what it usually holds. A click arriving
+-- from an iOS in-app browser carries `wbraid` or `gbraid` instead, and
+-- Google's upload format has a separate column for each — so the kind is
+-- stored beside the value rather than guessed from its shape later.
+ALTER TABLE "bookings"
+  ADD COLUMN IF NOT EXISTS "ad_click_id"   text,
+  ADD COLUMN IF NOT EXISTS "ad_click_kind" text;
+
+-- When this trip's revenue was reported to the ad platform.
+--
+-- A trip is paid as a trip: an itinerary is one agreed figure across several
+-- booking rows sharing a group_ref. Reporting each leg would tell Google we
+-- made four sales instead of one, at a quarter of the value each, and the
+-- bidding would learn from a figure that never existed. So the export keys on
+-- coalesce(group_ref, ref) and stamps every row in the group at once.
+--
+-- It is also the guard against double counting. A traveller refreshing the
+-- confirmation page, or opening the second leg of their own itinerary, must
+-- not report a second sale.
+ALTER TABLE "bookings"
+  ADD COLUMN IF NOT EXISTS "conversion_reported_at" timestamptz;
+
+-- The export reads exactly one slice: attributed trips whose money has
+-- arrived and which have not been reported. Partial, because the rows that
+-- qualify are a small minority of the table and always will be.
+CREATE INDEX IF NOT EXISTS "bookings_ad_click_pending_idx"
+  ON "bookings" USING btree ("created_at" DESC)
+  WHERE "ad_click_id" IS NOT NULL AND "conversion_reported_at" IS NULL;
+
+
 COMMIT;
 
 /*
