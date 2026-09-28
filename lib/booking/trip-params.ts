@@ -1,4 +1,9 @@
 import type { RouteView, VehicleClassView } from "@/lib/maps";
+import {
+  attributionQuery,
+  NO_ATTRIBUTION,
+  type Attribution,
+} from "@/lib/marketing/attribution";
 
 import { smallestFittingClass } from "./eligibility";
 import { namibianToday } from "./time";
@@ -39,7 +44,20 @@ export function defaultTripDate(): string {
 
 export const DEFAULT_TIME = "12:00";
 
-export function buildTripQuery(trip: TripParams): string {
+/**
+ * The trip, and the campaign that brought the visitor to it.
+ *
+ * Attribution is appended rather than folded into `TripParams`, because it is
+ * not part of the trip: two people on the same journey from two different ads
+ * are the same trip. But it has to travel on the same link, because this
+ * function *is* the link — every quote widget on every landing page builds the
+ * booking URL here, and for as long as it rebuilt the URL from the trip alone
+ * an ad click reached the form untagged.
+ */
+export function buildTripQuery(
+  trip: TripParams,
+  attribution: Attribution = NO_ATTRIBUTION,
+): string {
   const query = new URLSearchParams({
     [TRIP_KEYS.route]: trip.routeSlug,
     [TRIP_KEYS.date]: trip.date,
@@ -48,11 +66,16 @@ export function buildTripQuery(trip: TripParams): string {
     [TRIP_KEYS.luggage]: String(trip.luggage),
     [TRIP_KEYS.vehicleClass]: trip.vehicleClassId,
   });
-  return query.toString();
+
+  const tag = attributionQuery(attribution);
+  return tag ? `${query.toString()}&${tag}` : query.toString();
 }
 
-export function bookingHref(trip: TripParams): string {
-  return `/book?${buildTripQuery(trip)}`;
+export function bookingHref(
+  trip: TripParams,
+  attribution: Attribution = NO_ATTRIBUTION,
+): string {
+  return `/book?${buildTripQuery(trip, attribution)}`;
 }
 
 function one(value: string | string[] | undefined): string | undefined {

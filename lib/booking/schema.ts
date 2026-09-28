@@ -1,5 +1,7 @@
 import { z } from "zod";
 
+import { CLICK_KINDS } from "@/lib/marketing/attribution";
+
 import { NAMIBIA_BOUNDS } from "@/lib/maps/bounds";
 
 /**
@@ -103,6 +105,17 @@ const baseBookingSchema = z.object({
 
   /** Attribution, filled in by the browser. Sanitised server-side. */
   acquisitionSource: z.string().max(200).optional().or(z.literal("")),
+
+  /**
+   * The Google Ads click this booking came from, so the money can be reported
+   * back against it once it arrives.
+   *
+   * Bounded here and validated again in the action: this is a public endpoint
+   * and the value ends up in a file uploaded to Google, so "the browser sent
+   * it" is not a reason to store it.
+   */
+  adClickId: z.string().max(512).optional().or(z.literal("")),
+  adClickKind: z.enum(CLICK_KINDS).optional().or(z.literal("")),
 });
 
 /**

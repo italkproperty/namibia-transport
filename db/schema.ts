@@ -540,6 +540,22 @@ export const bookings = pgTable(
     /* Attribution and segmentation. */
     /** UTM campaign or referrer host — which channel produced this booking. */
     acquisitionSource: text("acquisition_source"),
+    /**
+     * The Google Ads click identifier, so revenue can be reported back to the
+     * campaign that bought it. Usually a `gclid`; `wbraid`/`gbraid` arrive
+     * from iOS app contexts and upload in a different column, so which one it
+     * is is stored rather than inferred from the value later.
+     */
+    adClickId: text("ad_click_id"),
+    adClickKind: text("ad_click_kind"),
+    /**
+     * When this trip's revenue was reported to the ad platform. Stamped
+     * across the whole `group_ref`, because an itinerary is one sale — and it
+     * is what stops a refreshed confirmation page reporting a second one.
+     */
+    conversionReportedAt: timestamp("conversion_reported_at", {
+      withTimezone: true,
+    }),
     isReturn: boolean("is_return").notNull().default(false),
     isRepeatCustomer: boolean("is_repeat_customer").notNull().default(false),
 

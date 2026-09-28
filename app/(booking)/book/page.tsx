@@ -117,14 +117,6 @@ export default async function BookPage({ searchParams }: PageProps) {
   const duration = formatDuration(route.durationMin);
   const pair = nodePairForRoute(route);
 
-  const utm = ["utm_source", "utm_medium", "utm_campaign"]
-    .map((key) => {
-      const value = firstValue(params[key]);
-      return value ? `${key}=${value}` : null;
-    })
-    .filter(Boolean)
-    .join("&");
-
   return (
     <div className="flex min-h-svh flex-col">
       <SiteHeader />
@@ -193,7 +185,6 @@ export default async function BookPage({ searchParams }: PageProps) {
                 }
                 pickupPlaces={pickupPlaces(route)}
                 dropoffPlaces={dropoffPlaces(route)}
-                utm={utm}
               />
             </div>
           </div>

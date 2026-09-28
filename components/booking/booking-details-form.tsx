@@ -28,6 +28,8 @@ import {
 import { PinDrop } from "@/components/booking/pin-drop";
 import { PlacePicker } from "@/components/booking/place-picker";
 import { createBooking } from "@/lib/booking/actions";
+import { useAttribution } from "@/components/marketing/use-attribution";
+import { acquisitionSourceFor } from "@/lib/marketing/attribution";
 import type { Place } from "@/lib/places";
 import {
   bookingFormSchema,
@@ -48,7 +50,6 @@ type Props = {
   rainNotes: string[];
   pickupPlaces: Place[];
   dropoffPlaces: Place[];
-  utm: string;
 };
 
 /** "x", "x; and y" — the road model's rain notes read as one sentence. */
@@ -72,7 +73,6 @@ export function BookingDetailsForm({
   rainNotes,
   pickupPlaces,
   dropoffPlaces,
-  utm,
 }: Props) {
   const router = useRouter();
   const [isPending, startTransition] = React.useTransition();
@@ -110,6 +110,8 @@ export function BookingDetailsForm({
       ? { lat: route.destinationLat, lng: route.destinationLng }
       : null;
 
+  const attribution = useAttribution();
+
   const form = useForm<BookingFormValues>({
     resolver: zodResolver(bookingFormSchema),
     mode: "onBlur",
@@ -136,6 +138,8 @@ export function BookingDetailsForm({
       dropoffPin: null,
       isReturn: false,
       acquisitionSource: "",
+      adClickId: "",
+      adClickKind: "",
     },
   });
 
@@ -186,12 +190,26 @@ export function BookingDetailsForm({
     form.setValue("pickupLabel", defaultPickup);
   }, [form, trip, defaultPickup]);
 
-  // Attribution: campaign tags if present, otherwise where the visitor came from.
+  /**
+   * Attribution: the campaign if there is one, otherwise where they came from.
+   *
+   * The campaign no longer has to be in *this* page's URL. `useAttribution`
+   * carries it from wherever the visitor landed, which is the whole point —
+   * an ad points at a route page, not at this form, and for as long as this
+   * effect read `?utm_source` off the current URL every paid click was filed
+   * as "Direct or typed in".
+   */
   React.useEffect(() => {
-    if (utm) {
-      form.setValue("acquisitionSource", utm);
+    const source = acquisitionSourceFor(attribution);
+    if (attribution.clickId && attribution.clickKind) {
+      form.setValue("adClickId", attribution.clickId);
+      form.setValue("adClickKind", attribution.clickKind);
+    }
+    if (source) {
+      form.setValue("acquisitionSource", source);
       return;
     }
+
     const referrer = document.referrer;
     if (!referrer) {
       form.setValue("acquisitionSource", "direct");
@@ -206,7 +224,7 @@ export function BookingDetailsForm({
     } catch {
       form.setValue("acquisitionSource", "direct");
     }
-  }, [form, utm]);
+  }, [form, attribution]);
 
   function onSubmit(values: BookingFormValues) {
     startTransition(async () => {

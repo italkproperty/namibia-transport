@@ -11,6 +11,7 @@ import {
 import type { RouteView, VehicleClassView } from "@/lib/maps";
 import { classFits, smallestFittingClass } from "@/lib/booking/eligibility";
 import { computeFare, pricingUnitLabel, unitFare } from "@/lib/pricing";
+import { useAttribution } from "@/components/marketing/use-attribution";
 
 /**
  * Shared trip state. The widget, the route quick-select and the sticky bar are
@@ -71,6 +72,12 @@ export function useTrip(
     initial?.vehicleClassId ?? vehicleClasses[0]?.id ?? ""
   );
 
+  // The campaign that brought them here, so the link this hook hands every
+  // quote widget on the site carries it into the booking form. Empty on the
+  // first render and filled on the effect, which is correct: the href is read
+  // when the visitor clicks, not when the page paints.
+  const attribution = useAttribution();
+
   const route = routes.find((r) => r.slug === routeSlug) ?? routes[0];
   const vehicleClass =
     vehicleClasses.find((c) => c.id === vehicleClassId) ?? vehicleClasses[0];
@@ -128,7 +135,7 @@ export function useTrip(
     maxPassengers: Math.max(...vehicleClasses.map((c) => c.capacity), 1),
     overCapacity:
       smallestFittingClass(vehicleClasses, passengers, luggage) === null,
-    href: bookingHref(trip),
+    href: bookingHref(trip, attribution),
     trip,
     setRouteSlug,
     setDate,

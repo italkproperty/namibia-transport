@@ -14,6 +14,7 @@ import {
   getMessenger,
   type ConfirmationDetails,
 } from "@/lib/messaging";
+import { CLICK_KINDS, isClickId, type ClickKind } from "@/lib/marketing/attribution";
 import { formatNad } from "@/lib/money";
 import { roundCoord } from "@/lib/maps/bounds";
 import { getPaymentProvider } from "@/lib/payments";
@@ -50,6 +51,24 @@ function sanitiseSource(value: string | undefined): string | null {
     .trim();
 
   return cleaned.length > 0 ? cleaned.slice(0, 200) : null;
+}
+
+/**
+ * The ad click, if the browser sent one we recognise.
+ *
+ * Both halves or neither: a click id with no kind cannot be put in the right
+ * column of an upload, and a kind with no id is nothing at all. Returning a
+ * spread rather than two fields keeps the insert from writing explicit nulls
+ * over a value on some future re-use of this helper.
+ */
+function adClick(
+  id: string | undefined,
+  kind: string | undefined,
+): { adClickId: string; adClickKind: ClickKind } | Record<string, never> {
+  const value = id?.trim();
+  if (!value || !isClickId(value)) return {};
+  if (!CLICK_KINDS.includes(kind as ClickKind)) return {};
+  return { adClickId: value, adClickKind: kind as ClickKind };
 }
 
 function emptyToNull(value: string | undefined): string | null {
@@ -175,6 +194,9 @@ export async function createBooking(
       distanceKm: route.distanceKm,
       durationMin: route.durationMin,
       acquisitionSource: sanitiseSource(values.acquisitionSource),
+      // Re-validated rather than trusted: this is a public endpoint, and the
+      // value leaves the building in a file uploaded to Google.
+      ...adClick(values.adClickId, values.adClickKind),
       isReturn: values.isReturn,
       isRepeatCustomer,
       status: "pending_payment",
