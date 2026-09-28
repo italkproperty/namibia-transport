@@ -85,6 +85,10 @@ export default function RootLayout({
           href="https://events.mapbox.com"
           crossOrigin=""
         />
+        {/* The ads tag is loaded after hydration, so warming the connection
+            here takes the DNS and TLS round trips off the point where it
+            finally fires. */}
+        <link rel="preconnect" href="https://www.googletagmanager.com" />
       </head>
       <body
         className={`${archivo.variable} ${plexMono.variable} font-sans antialiased`}

@@ -1,5 +1,3 @@
-import Script from "next/script";
-
 import { adsId } from "@/lib/marketing/google-ads";
 
 /**
@@ -22,12 +20,27 @@ import { adsId } from "@/lib/marketing/google-ads";
  * has to be exact in Europe, the banner comes first and this default changes
  * with it; it must not be loosened on its own.
  *
- * `url_passthrough` is deliberately not enabled. It is Google's own mechanism
- * for carrying a gclid between pages when cookies are denied, which is the
- * job `lib/marketing/attribution.ts` already does — and does through to the
+ * ## Why plain script tags rather than `next/script`
+ *
+ * Both of Next's useful strategies are wrong here. `afterInteractive` puts
+ * the whole tag behind React hydration, which on a marketing page with sixty
+ * chunks over a Namibian mobile connection is seconds — during which anything
+ * inspecting the page, Google's own installation check included, sees a site
+ * with no tag on it. `beforeInteractive` does the right thing but trips a
+ * lint rule written for the Pages Router, and silencing a rule to reach the
+ * behaviour two plain tags already give is a poor trade.
+ *
+ * So this is Google's published snippet, unchanged except for the consent
+ * block: an async loader and an inline bootstrap, both in the server-rendered
+ * HTML. The preload scanner starts the fetch immediately, the inline script
+ * runs as it is parsed, and `dataLayer` is a queue — so consent is recorded
+ * before any measurement command whatever order the network resolves in.
+ *
+ * `url_passthrough` is deliberately not enabled. It is Google's mechanism for
+ * carrying a gclid between pages when cookies are denied, which is the job
+ * `lib/marketing/attribution.ts` already does — and does through to the
  * database, which Google's cannot. Two mechanisms appending the same
- * parameter to the same links would be a source of doubled query strings for
- * no gain.
+ * parameter to the same links would double query strings for no gain.
  */
 export function GoogleTag() {
   const id = adsId();
@@ -35,25 +48,24 @@ export function GoogleTag() {
 
   return (
     <>
-      <Script
-        id="gtag-src"
-        strategy="afterInteractive"
-        src={`https://www.googletagmanager.com/gtag/js?id=${id}`}
+      <script async src={`https://www.googletagmanager.com/gtag/js?id=${id}`} />
+      <script
+        id="gtag-init"
+        dangerouslySetInnerHTML={{
+          __html: `
+window.dataLayer = window.dataLayer || [];
+function gtag(){dataLayer.push(arguments);}
+gtag('consent', 'default', {
+  ad_storage: 'denied',
+  ad_user_data: 'denied',
+  ad_personalization: 'denied',
+  analytics_storage: 'denied'
+});
+gtag('js', new Date());
+gtag('config', '${id}');
+`,
+        }}
       />
-      <Script id="gtag-init" strategy="afterInteractive">
-        {`
-          window.dataLayer = window.dataLayer || [];
-          function gtag(){dataLayer.push(arguments);}
-          gtag('consent', 'default', {
-            ad_storage: 'denied',
-            ad_user_data: 'denied',
-            ad_personalization: 'denied',
-            analytics_storage: 'denied'
-          });
-          gtag('js', new Date());
-          gtag('config', '${id}');
-        `}
-      </Script>
     </>
   );
 }
