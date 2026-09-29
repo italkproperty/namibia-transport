@@ -134,6 +134,34 @@ export function BankTransfer({
         {note}
       </p>
 
+      {/*
+        Real advice, and a signal that only a real operator can give.
+
+        Invoice-redirection fraud works by sending a convincing follow-up
+        message with different account details, and the people it works on are
+        exactly the ones paying an operator abroad for the first time. Saying
+        plainly that these details never change, and that we will never message
+        you new ones, turns that attack from plausible into obviously wrong.
+
+        It also states the thing a fraudulent page cannot: that the details on
+        this page are the only ones, checkable against a company you can
+        contact. That we had no such statement — and no privacy page, and no
+        registered number on the site — is a fair part of why an automated
+        safety classifier read this page the way it did.
+      */}
+      <p className="text-muted-foreground mt-2 border-t pt-2 text-xs leading-relaxed text-pretty">
+        <span className="text-foreground font-medium">
+          These details never change.
+        </span>{" "}
+        We will never message you to say our bank account has changed. If you
+        receive anything that does, it is not from us — check with us on the
+        number on our{" "}
+        <a className="underline underline-offset-2" href="/contact">
+          contact page
+        </a>{" "}
+        before sending money.
+      </p>
+
       {declared ? (
         <div className="mt-4">
           <p className="text-success flex items-start gap-2 text-sm leading-snug">

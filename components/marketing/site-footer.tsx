@@ -113,6 +113,14 @@ export function SiteFooter({ routes = [] }: { routes?: RouteView[] }) {
               </li>
               <li>
                 <Link
+                  href="/privacy"
+                  className="text-muted-foreground hover:text-foreground transition"
+                >
+                  Privacy
+                </Link>
+              </li>
+              <li>
+                <Link
                   href="/terms"
                   className="text-muted-foreground hover:text-foreground transition"
                 >
