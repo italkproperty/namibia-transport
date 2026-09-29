@@ -113,6 +113,14 @@ export function SiteFooter({ routes = [] }: { routes?: RouteView[] }) {
               </li>
               <li>
                 <Link
+                  href="/payments"
+                  className="text-muted-foreground hover:text-foreground transition"
+                >
+                  How to pay
+                </Link>
+              </li>
+              <li>
+                <Link
                   href="/privacy"
                   className="text-muted-foreground hover:text-foreground transition"
                 >
@@ -189,9 +197,10 @@ export function SiteFooter({ routes = [] }: { routes?: RouteView[] }) {
 
         <p className="text-muted-foreground text-xs">
           &copy; {new Date().getFullYear()} {SITE.name}
-          {company.registration ? ` · ${company.registration}` : ""}. Transfers
-          are fulfilled by independent Namibian partner drivers we select and
-          brief.
+          {company.registration ? ` · ${company.registration}` : ""} ·
+          registered and operating in Namibia. Fares are charged in Namibian
+          dollars. Transfers are fulfilled by independent Namibian partner
+          drivers we select and brief.
         </p>
       </div>
     </footer>
