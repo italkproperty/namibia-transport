@@ -12,11 +12,14 @@ import {
 } from "@/components/marketing/trust";
 import { Button } from "@/components/ui/button";
 import { parseTripParams } from "@/lib/booking/trip-params";
+import type { Metadata } from "next";
+
 import {
   listRoutes,
   listVehicleClasses,
   withRouteGeometries,
 } from "@/lib/maps";
+import { SITE } from "@/lib/site";
 import { PLACE_NODES } from "@/lib/network/nodes";
 import { ROAD_EDGES } from "@/lib/network/roads";
 
@@ -38,6 +41,20 @@ const PROOF = [
     label: "journeys we can price",
   },
 ];
+
+/**
+ * The homepage exported no metadata at all — so no canonical, on the one page
+ * that matters most and the one Google named first when it flagged the site.
+ *
+ * The title and description are deliberately not repeated here: the root
+ * layout already sets them, and a second copy is a second thing to keep in
+ * step. What was missing is the canonical, and it matters because the site
+ * answers on both the apex and the www host. Without it the two are two pages
+ * saying the same thing, and Google picks which one to keep.
+ */
+export const metadata: Metadata = {
+  alternates: { canonical: SITE.url },
+};
 
 export default async function HomePage({ searchParams }: PageProps) {
   const [{ routes: bareRoutes }, vehicleClasses, params] = await Promise.all([

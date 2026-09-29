@@ -3,6 +3,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ArrowRightIcon } from "lucide-react";
 
+import { JsonLd } from "@/components/marketing/json-ld";
 import { RouteMap } from "@/components/marketing/route-map";
 import { SiteFooter } from "@/components/marketing/site-footer";
 import { SiteHeader } from "@/components/marketing/site-header";
@@ -11,9 +12,11 @@ import { listRoutes } from "@/lib/maps";
 import { Fare } from "@/components/currency/fare";
 import { formatNad } from "@/lib/money";
 import { modelJourney, type Journey } from "@/lib/network/journey";
+import { DESTINATIONS_BY_SLUG } from "@/lib/network/destinations";
 import { findLeg, LEGS, type Leg } from "@/lib/network/legs";
 import { describeRoads, describeVia } from "@/lib/network/roads";
 import { GATE_RULES } from "@/lib/parks/gates";
+import { breadcrumbSchema, transferServiceSchema } from "@/lib/seo/schema";
 import { SITE } from "@/lib/site";
 
 /**
@@ -101,6 +104,46 @@ export default async function LegPage({ params }: PageProps) {
 
   const gravelShare = Math.round((road.gravelKm / road.km) * 100);
   const via = describeVia(road, 3);
+
+  /**
+   * The two things these 160 pages were missing.
+   *
+   * A trail, so a result renders as Home › Driving distances › A to B rather
+   * than as a raw URL — the cheapest structural signal on a site this size.
+   * And a priced Service, which the curated route pages have always emitted
+   * and these never did, although every one of them carries a fare the model
+   * computed. The largest page set on the site was also the one Google could
+   * read least about.
+   */
+  /**
+   * The link up to the place pages.
+   *
+   * 160 leg pages and not one of them linked to a destination page, so the 24
+   * pages that answer the broader question — *I am going to Sossusvlei, how
+   * do I get there* — were reachable only from the destinations index. A
+   * reader who landed on a pair page had nowhere to go but another pair page,
+   * and the hub of the whole structure was orphaned from its spokes.
+   *
+   * Only ends that actually have a published page: a link to a destination
+   * page that does not exist is a 404 in the one place a crawler is most
+   * likely to follow.
+   */
+  const places = [leg.a, leg.b]
+    .map((node) => DESTINATIONS_BY_SLUG.get(node.slug))
+    .filter((d): d is NonNullable<typeof d> => Boolean(d));
+
+  const crumbs = breadcrumbSchema([
+    { name: "Driving distances", path: "/drive" },
+    { name: `${a} to ${b}`, path: `/drive/${slug}` },
+  ]);
+  const service = transferServiceSchema({
+    name: `${a} to ${b} private transfer`,
+    description: `${road.km} km, about ${formatDuration(road.minutes)}, on the ${road.roads.join(", ")}. One fixed price for the whole vehicle.`,
+    price: out.route.fixedPrice,
+    path: `/drive/${slug}`,
+    originName: a,
+    destinationName: b,
+  });
 
   // A gate at either end makes the far end of this drive a deadline rather
   // than an address.
@@ -356,6 +399,36 @@ export default async function LegPage({ params }: PageProps) {
             </p>
           </section>
 
+          {places.length > 0 && (
+            <section aria-labelledby="places-heading" className="mt-10">
+              <h2 id="places-heading" className="text-base font-semibold">
+                Getting to either end
+              </h2>
+              <p className="text-muted-foreground mt-1 text-sm">
+                What it takes to reach each of these places from every gateway,
+                not just from this one.
+              </p>
+              <ul className="mt-3 divide-y border-t border-b">
+                {places.map((place) => (
+                  <li key={place.slug}>
+                    <Link
+                      href={`/destinations/${place.slug}`}
+                      className="hover:bg-card focus-ring group -mx-3 flex items-center justify-between gap-4 rounded-md px-3 py-3 transition-colors"
+                    >
+                      <span className="text-sm font-medium">
+                        Getting to {name(place.node)}
+                      </span>
+                      <ArrowRightIcon
+                        className="text-muted-foreground size-4 shrink-0 transition-transform group-hover:translate-x-0.5"
+                        aria-hidden
+                      />
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+            </section>
+          )}
+
           {/* ------------------------------------------------- neighbours */}
           {neighbours.length > 0 && (
             <section aria-labelledby="near-heading" className="mt-10">
@@ -395,6 +468,8 @@ export default async function LegPage({ params }: PageProps) {
         </article>
       </main>
 
+      <JsonLd schema={crumbs} />
+      <JsonLd schema={service} />
       <SiteFooter routes={allRoutes} />
 
       <script

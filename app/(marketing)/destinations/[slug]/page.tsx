@@ -4,6 +4,7 @@ import { notFound } from "next/navigation";
 import { ArrowRightIcon, SunsetIcon } from "lucide-react";
 
 import { Fare } from "@/components/currency/fare";
+import { JsonLd } from "@/components/marketing/json-ld";
 import { RouteMap } from "@/components/marketing/route-map";
 import { SiteFooter } from "@/components/marketing/site-footer";
 import { SiteHeader } from "@/components/marketing/site-header";
@@ -19,6 +20,7 @@ import {
 import { LEGS } from "@/lib/network/legs";
 import { nodeLabel } from "@/lib/network/nodes";
 import { describeRoads, describeVia } from "@/lib/network/roads";
+import { breadcrumbSchema, transferServiceSchema } from "@/lib/seo/schema";
 import { SITE } from "@/lib/site";
 
 /**
@@ -88,6 +90,32 @@ export default async function DestinationPage({ params }: PageProps) {
   ).slice(0, 12);
 
   const gravel = destination.arrivals.some((a) => a.journey.hasGravel);
+
+  /**
+   * These 24 pages emitted no structured data at all, which is the wrong way
+   * round: they answer the question a traveller actually types — *I am going
+   * to Sossusvlei, how do I get there and what does it cost* — and they were
+   * the pages Google could read least about.
+   *
+   * The breadcrumb already exists on screen, a few lines below; it simply was
+   * never said in a form a crawler reads. The offer is the nearest gateway's
+   * fare, because that is the figure the page leads with, and a schema that
+   * advertises a price the reader cannot find on the page is worse than none.
+   */
+  const crumbs = breadcrumbSchema([
+    { name: "Destinations", path: "/destinations" },
+    { name, path: `/destinations/${slug}` },
+  ]);
+  const service = nearest
+    ? transferServiceSchema({
+        name: `${nodeLabel(nearest.from)} to ${name} private transfer`,
+        description: `Private transfer to ${name} from ${nodeLabel(nearest.from)} — one fixed price for the whole vehicle, computed from the road.`,
+        price: nearest.journey.route.fixedPrice,
+        path: `/destinations/${slug}`,
+        originName: nodeLabel(nearest.from),
+        destinationName: name,
+      })
+    : null;
 
   return (
     <div className="flex min-h-svh flex-col">
@@ -263,6 +291,8 @@ export default async function DestinationPage({ params }: PageProps) {
         </div>
       </main>
 
+      <JsonLd schema={crumbs} />
+      {service ? <JsonLd schema={service} /> : null}
       <SiteFooter />
     </div>
   );

@@ -8,6 +8,7 @@ import { GateTable } from "@/components/marketing/gate-table";
 import { JourneyTable } from "@/components/marketing/journey-table";
 import { RainTable } from "@/components/marketing/rain-table";
 import { RouteMap } from "@/components/marketing/route-map";
+import { JsonLd } from "@/components/marketing/json-ld";
 import { SiteFooter } from "@/components/marketing/site-footer";
 import { SiteHeader } from "@/components/marketing/site-header";
 import { formatDuration, shortPlace } from "@/lib/format";
@@ -16,6 +17,7 @@ import { getRouteBySlug, listRoutes } from "@/lib/maps";
 import { Fare } from "@/components/currency/fare";
 import { modelJourneyBySlug, type Journey } from "@/lib/network/journey";
 import { pricingUnitLabel } from "@/lib/pricing";
+import { breadcrumbSchema } from "@/lib/seo/schema";
 import { SITE } from "@/lib/site";
 
 type PageProps = { params: Promise<{ slug: string }> };
@@ -347,6 +349,12 @@ export default async function GuidePage({ params }: PageProps) {
         </article>
       </main>
 
+      <JsonLd
+        schema={breadcrumbSchema([
+          { name: "Guides", path: "/guides" },
+          { name: guide.title, path: `/guides/${slug}` },
+        ])}
+      />
       <SiteFooter routes={allRoutes} />
 
       <script

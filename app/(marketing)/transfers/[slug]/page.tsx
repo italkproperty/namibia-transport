@@ -6,6 +6,7 @@ import { CheckIcon } from "lucide-react";
 import { RouteQuote } from "@/components/booking/route-quote";
 import { FleetSection } from "@/components/marketing/fleet";
 import { RouteMap } from "@/components/marketing/route-map";
+import { JsonLd } from "@/components/marketing/json-ld";
 import { SiteFooter } from "@/components/marketing/site-footer";
 import { SiteHeader } from "@/components/marketing/site-header";
 import { formatDistance, formatDuration } from "@/lib/format";
@@ -18,6 +19,7 @@ import {
 import { Fare } from "@/components/currency/fare";
 import { routeFaqs, routeTitle } from "@/lib/route-content";
 import { GUIDES } from "@/lib/guides";
+import { breadcrumbSchema } from "@/lib/seo/schema";
 import { INCLUSIONS, SITE } from "@/lib/site";
 
 type PageProps = { params: Promise<{ slug: string }> };
@@ -249,6 +251,12 @@ export default async function RoutePage({ params }: PageProps) {
         </div>
       </main>
 
+      <JsonLd
+        schema={breadcrumbSchema([
+          { name: "Transfers", path: "/transfers" },
+          { name: routeTitle(route), path: `/transfers/${slug}` },
+        ])}
+      />
       <SiteFooter routes={allRoutes} />
     </div>
   );
