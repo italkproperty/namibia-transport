@@ -134,9 +134,28 @@ export async function createBooking(
 
     const isRepeatCustomer = Boolean(existing);
 
-    const customer =
-      existing ??
-      (
+    let customer = existing;
+
+    if (customer) {
+      // A repeat traveller can enter a new email on this booking. Previously
+      // we reused the customer row unchanged, which meant an old NULL email
+      // could reach PayToday even though the traveller had just supplied one
+      // on the form. PayToday requires user_email for a payment intent.
+      const bookingEmail = emptyToNull(values.email);
+      const [updatedCustomer] = await db
+        .update(customers)
+        .set({
+          fullName: values.fullName,
+          ...(bookingEmail ? { email: bookingEmail } : {}),
+          customerType: values.customerType,
+          updatedAt: new Date(),
+        })
+        .where(eq(customers.id, customer.id))
+        .returning();
+
+      customer = updatedCustomer ?? customer;
+    } else {
+      customer = (
         await db
           .insert(customers)
           .values({
@@ -147,6 +166,7 @@ export async function createBooking(
           })
           .returning()
       )[0];
+    }
 
     // Vehicle class rows only exist once seeded; without one the foreign key
     // would fail with a message no traveller could act on.
