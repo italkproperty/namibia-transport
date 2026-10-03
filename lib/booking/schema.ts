@@ -74,10 +74,9 @@ const baseBookingSchema = z.object({
   email: z
     .string()
     .trim()
+    .min(1, "Enter your email address for card payment")
     .email("Enter a valid email address")
-    .max(160)
-    .optional()
-    .or(z.literal("")),
+    .max(160),
 
   customerType: z.enum(["tourist", "corporate"]),
 
