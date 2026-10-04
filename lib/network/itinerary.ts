@@ -206,6 +206,7 @@ export function planItinerary(
         fromSlug: road.origin.slug,
         toSlug: road.destination.slug,
         km: road.km,
+        tarKm: road.tarKm,
         minutes: road.minutes,
         gravelKm: road.gravelKm,
       });
