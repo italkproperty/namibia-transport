@@ -10,8 +10,9 @@ import type { FareQuote, RouteView, VehicleClassView } from "@/lib/maps/types";
  * for the base class, and the vehicle-class multiplier scales it. Passenger
  * count is not an input to the fare — nothing in the cost base scales with
  * it (not fuel, not driver hours, not the empty return), and our own fare
- * model the airport route is published at N$850 per vehicle as a commercial override;
- * the cost model's N$650 baseline remains an operating recommendation. Party size matters only to which vehicle class is eligible,
+ * model: the airport route is published at N$850 per vehicle as a commercial
+ * override; the cost model's N$650 baseline remains an operating
+ * recommendation. Party size matters only to which vehicle class is eligible,
  * which is `lib/booking/eligibility.ts`'s job.
  *
  * The per_person pricing unit survives in the type for one future product —
@@ -20,71 +21,3 @@ import type { FareQuote, RouteView, VehicleClassView } from "@/lib/maps/types";
  * reject it, and at runtime it prices as per-vehicle rather than collapsing
  * a render.
  *
- * The server still recomputes from the database on submit — this module makes
- * the two agree, it does not make the client's number trustworthy.
- */
-
-/** Fares are quoted in whole Namibian dollars — no stray cents in the UI. */
-function roundToRand(amount: number): number {
-  return Math.round(amount);
-}
-
-export function computeFare(
-  route: Pick<
-    RouteView,
-    | "id"
-    | "slug"
-    | "fixedPrice"
-    | "pricingUnit"
-    | "defaultDriverPayout"
-    | "currency"
-    | "distanceKm"
-    | "durationMin"
-  >,
-  vehicleClass: Pick<VehicleClassView, "id" | "slug" | "priceMultiplier">
-): FareQuote {
-  const multiplier = Number(vehicleClass.priceMultiplier);
-  if (!Number.isFinite(multiplier) || multiplier <= 0) {
-    throw new Error(
-      `Vehicle class ${vehicleClass.slug} has an invalid price multiplier`
-    );
-  }
-
-  const customerPrice = roundToRand(Number(route.fixedPrice) * multiplier);
-  const driverPayout = roundToRand(
-    Number(route.defaultDriverPayout) * multiplier
-  );
-
-  return {
-    routeId: route.id,
-    vehicleClassId: vehicleClass.id,
-    customerPrice: toMoneyString(customerPrice),
-    driverPayout: toMoneyString(driverPayout),
-    contribution: toMoneyString(customerPrice - driverPayout),
-    currency: route.currency,
-    distanceKm: route.distanceKm,
-    durationMin: route.durationMin,
-  };
-}
-
-/** The price shown next to a class — same as the total, since a fare buys the vehicle. */
-export function unitFare(
-  route: Pick<RouteView, "fixedPrice">,
-  vehicleClass: Pick<VehicleClassView, "priceMultiplier">
-): number {
-  return roundToRand(
-    Number(route.fixedPrice) * Number(vehicleClass.priceMultiplier)
-  );
-}
-
-/**
- * The label that must accompany every price. Always "per vehicle" — the one
- * legitimate per-person product (a scheduled shared shuttle) does not exist
- * yet, and until it does no surface may say "per person" next to a fare.
- */
-// The route stays in the signature so the shared-shuttle future is a
-// one-line change at every call site rather than a refactor.
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-export function pricingUnitLabel(_route: Pick<RouteView, "pricingUnit">): string {
-  return "per vehicle";
-}
