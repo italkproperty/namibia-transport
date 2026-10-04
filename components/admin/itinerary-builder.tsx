@@ -199,17 +199,6 @@ export function ItineraryBuilder({ places }: { places: PlaceOption[] }) {
     null;
   const quote = selected?.quote ?? null;
 
-  React.useEffect(() => {
-    if (!quote) return;
-    setLegOverrides((current) => {
-      const next: Record<number, string> = {};
-      quote.legs.forEach((leg, index) => {
-        next[index] = current[index] ?? String(leg.price);
-      });
-      return next;
-    });
-  }, [quote]);
-
   const effectiveLegPrices = quote
     ? quote.legs.map((leg, index) => {
         const value = Number(legOverrides[index] ?? leg.price);
@@ -428,7 +417,8 @@ export function ItineraryBuilder({ places }: { places: PlaceOption[] }) {
                   </Label>
                   <Input
                     id={`leg-price-${index}`}
-                    value={legOverrides[index] ?? String(leg.price)}
+                    value={legOverrides[index] ?? ""}
+                    placeholder={String(leg.price)}
                     onChange={(event) =>
                       setLegOverrides((current) => ({
                         ...current,
