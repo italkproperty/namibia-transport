@@ -17,13 +17,7 @@ type PublishedRoute = {
   defaultDriverPayout: string;
 };
 
-function RoutePriceRow({
-  route,
-  contributionRate,
-}: {
-  route: PublishedRoute;
-  contributionRate: number;
-}) {
+function RoutePriceRow({ route }: { route: PublishedRoute }) {
   const [state, action, pending] = useActionState<SaveResult | null, FormData>(
     savePublishedRoutePrice,
     null,
@@ -130,7 +124,6 @@ export function RoutePricingForm({
             <RoutePriceRow
               key={route.id}
               route={route}
-              contributionRate={contributionRate}
             />
           ))}
         </div>
