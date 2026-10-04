@@ -86,14 +86,14 @@ export const CATALOG_ROUTES: NewRoute[] = [
     /**
      * Per vehicle, like every other private transfer. This fare was born
      * per-person and corrected in September 2026: nothing in the cost base
-     * scales with the party size, our own fare model derives exactly N$650
-     * per vehicle for this leg from the minimum call-out, and N$1,950 for a
-     * 45-minute drive was a price that prevented the booking. per_person
-     * returns only with a genuine scheduled shared shuttle.
+     * scales with the party size. The published commercial fare is N$850 per
+     * vehicle; the cost model remains a separate N$650 operating baseline used
+     * for costing and recommendations. per_person returns only with a genuine
+     * scheduled shared shuttle.
      */
     pricingUnit: "per_vehicle",
-    fixedPrice: "650.00",
-    defaultDriverPayout: "455.00",
+    fixedPrice: "850.00",
+    defaultDriverPayout: "595.00",
     isActive: true,
     distanceKm: "45.00",
     durationMin: 45,

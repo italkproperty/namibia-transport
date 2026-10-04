@@ -18,9 +18,9 @@ insert into routes (
 ) values
   (
     '6bbb2bd7-7148-5977-952e-9cd2e38b8aaf'::uuid, 'hosea-kutako-to-windhoek', 'Hosea Kutako International Airport (WDH)', 'Windhoek CBD',
-    'airport'::route_category, '650.00'::numeric,
-    'per_person'::pricing_unit, 'NAD',
-    '455.00'::numeric, true,
+    'airport'::route_category, '850.00'::numeric,
+    'per_vehicle'::pricing_unit, 'NAD',
+    '595.00'::numeric, true,
     '45.00'::numeric, 45,
     10,
     -22.4799, 17.4709, -22.5609, 17.0658,

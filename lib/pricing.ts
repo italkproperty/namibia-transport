@@ -10,8 +10,9 @@ import type { FareQuote, RouteView, VehicleClassView } from "@/lib/maps/types";
  * for the base class, and the vehicle-class multiplier scales it. Passenger
  * count is not an input to the fare — nothing in the cost base scales with
  * it (not fuel, not driver hours, not the empty return), and our own fare
- * model derives the airport run's N$650 per vehicle from the minimum
- * call-out. Party size matters only to which vehicle class is eligible,
+ * model: the airport route is published at N$850 per vehicle as a commercial
+ * override; the cost model's N$650 baseline remains an operating
+ * recommendation. Party size matters only to which vehicle class is eligible,
  * which is `lib/booking/eligibility.ts`'s job.
  *
  * The per_person pricing unit survives in the type for one future product —

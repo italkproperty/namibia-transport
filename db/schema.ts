@@ -118,8 +118,8 @@ export const enquiryStatusEnum = pgEnum("enquiry_status", [
 ]);
 
 /**
- * How a route's fixed_price is charged. Airport transfers sell per seat;
- * long-distance private transfers sell the whole vehicle.
+ * How a route's fixed_price is charged. Private transfers sell the whole
+ * vehicle; per_person is reserved for a future genuine shared-shuttle product.
  */
 export const pricingUnitEnum = pgEnum("pricing_unit", [
   "per_vehicle",

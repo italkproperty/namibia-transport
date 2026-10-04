@@ -2,8 +2,9 @@ import type { Metadata } from "next";
 
 import { AdminShell } from "@/components/admin/shell";
 import { PricingForm } from "@/components/admin/pricing-form";
+import { RoutePricingForm } from "@/components/admin/route-pricing-form";
 import { VehicleCostForm } from "@/components/admin/vehicle-cost-form";
-import { listVehicleClasses } from "@/lib/maps";
+import { listRoutes, listVehicleClasses } from "@/lib/maps";
 import { formatNad } from "@/lib/money";
 import { BASELINE_PROFILE, type PricingConstants } from "@/lib/pricing/cost-model";
 import { previewJourneys, worstSwing } from "@/lib/pricing/preview";
@@ -35,8 +36,11 @@ export default async function AdminPricingPage({
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
   const params = await searchParams;
-  const config = await getPricingConfig();
-  const classes = await listVehicleClasses();
+  const [config, classes, routeCatalog] = await Promise.all([
+    getPricingConfig(),
+    listVehicleClasses(),
+    listRoutes({ activeOnly: true }),
+  ]);
 
   const first = (key: string) => {
     const value = params[key];
@@ -76,9 +80,10 @@ export default async function AdminPricingPage({
         <div>
           <h1 className="text-xl">Pricing</h1>
           <p className="text-muted-foreground mt-1 max-w-2xl text-sm text-pretty">
-            What a kilometre, an hour and a night away cost. Every fare on the
-            site is built from these — {rows.length} reference journeys are
-            modelled below so a change can be seen before it is made.
+            What a kilometre, an hour and a night away cost for the operating
+            model. Published route fares are managed separately above. These
+            {rows.length} reference journeys show what changing the model would
+            do before it is made.
           </p>
           {!config.stored && (
             <p className="text-muted-foreground mt-2 max-w-2xl text-xs text-pretty">
@@ -88,6 +93,20 @@ export default async function AdminPricingPage({
             </p>
           )}
         </div>
+
+        {/* ------------------------------------------------ published prices */}
+        <RoutePricingForm
+          routes={routeCatalog.routes.map((route) => ({
+            id: route.id,
+            slug: route.slug,
+            originLabel: route.originLabel,
+            destinationLabel: route.destinationLabel,
+            category: route.category,
+            fixedPrice: route.fixedPrice,
+            defaultDriverPayout: route.defaultDriverPayout,
+          }))}
+          contributionRate={config.constants.contributionRate}
+        />
 
         {/* ------------------------------------------------- the constants */}
         <PricingForm
