@@ -4,8 +4,9 @@ import { revalidatePath } from "next/cache";
 import { eq } from "drizzle-orm";
 
 import { getDb, isDatabaseConfigured } from "@/db";
-import { pricingSettings, vehicleClasses } from "@/db/schema";
+import { pricingSettings, routes, vehicleClasses } from "@/db/schema";
 import { getAdminGateState } from "@/lib/admin/auth";
+import { DEFAULT_CONSTANTS } from "./cost-model";
 import { CLASS_BOUNDS, CONSTANT_BOUNDS, checkBound, type FieldError } from "./settings";
 
 /**
@@ -96,6 +97,107 @@ export async function savePricingSettings(
 
   revalidatePath("/admin/pricing");
   return { ok: true };
+}
+
+/**
+ * Changes the customer-facing price of one published route.
+ *
+ * Route price is the commercial price of record. The cost model above is an
+ * operating model and recommendation engine; it must not silently overwrite a
+ * price the business has deliberately published.
+ *
+ * The payout is derived from the current contribution target so a route price
+ * change cannot accidentally create a second, hidden margin decision.
+ */
+export async function savePublishedRoutePrice(
+  _prev: SaveResult | null,
+  form: FormData,
+): Promise<SaveResult> {
+  const gate = await getAdminGateState();
+  if (gate.state !== "signed-in") {
+    return { ok: false, message: "Sign in to change pricing." };
+  }
+
+  if (!isDatabaseConfigured()) {
+    return { ok: false, message: "No database is configured on this deployment." };
+  }
+
+  const routeId = String(form.get("routeId") ?? "").trim();
+  const rawPrice = String(form.get("price") ?? "").trim();
+
+  if (!routeId) {
+    return { ok: false, message: "No route was selected." };
+  }
+
+  if (!/^\d+(?:\.\d{1,2})?$/.test(rawPrice)) {
+    return { ok: false, message: "Enter a fare as a whole Namibian dollar amount." };
+  }
+
+  const price = Number(rawPrice);
+  if (!Number.isFinite(price) || !Number.isInteger(price) || price < 100 || price > 50000) {
+    return {
+      ok: false,
+      message: "Published fares must be whole rands between N$100 and N$50,000.",
+    };
+  }
+
+  try {
+    const db = getDb();
+    const [settings] = await db
+      .select({ contributionRate: pricingSettings.contributionRate })
+      .from(pricingSettings)
+      .where(eq(pricingSettings.id, 1))
+      .limit(1);
+
+    const contributionRate = Number(
+      settings?.contributionRate ?? DEFAULT_CONSTANTS.contributionRate,
+    );
+
+    if (
+      !Number.isFinite(contributionRate) ||
+      contributionRate < 0.05 ||
+      contributionRate > 0.6
+    ) {
+      return {
+        ok: false,
+        message: "The pricing contribution target is invalid. Fix the pricing settings first.",
+      };
+    }
+
+    const payout =
+      Math.round(price * (1 - contributionRate) * 100) / 100;
+
+    const [route] = await db
+      .update(routes)
+      .set({
+        fixedPrice: price.toFixed(2),
+        defaultDriverPayout: payout.toFixed(2),
+        updatedAt: new Date(),
+      })
+      .where(eq(routes.id, routeId))
+      .returning({
+        slug: routes.slug,
+        fixedPrice: routes.fixedPrice,
+        defaultDriverPayout: routes.defaultDriverPayout,
+      });
+
+    if (!route) {
+      return { ok: false, message: "That route no longer exists." };
+    }
+
+    revalidatePath("/admin/pricing");
+    revalidatePath("/");
+    revalidatePath("/transfers");
+    revalidatePath(`/transfers/${route.slug}`);
+
+    return { ok: true };
+  } catch (error) {
+    console.error("[pricing] published route price save failed", error);
+    return {
+      ok: false,
+      message: "The database refused the fare change, so nothing was saved.",
+    };
+  }
 }
 
 /** Per-kilometre costs for one vehicle class. */
