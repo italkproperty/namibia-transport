@@ -14,12 +14,14 @@ type ShareBookingLinkProps = {
   url: string;
   label?: string;
   customerName?: string | null;
+  whatsappHref?: string | null;
 };
 
 export function ShareBookingLink({
   url,
   label = "Share",
   customerName,
+  whatsappHref,
 }: ShareBookingLinkProps) {
   const [copied, setCopied] = React.useState(false);
   const [sharing, setSharing] = React.useState(false);
@@ -86,6 +88,26 @@ export function ShareBookingLink({
         <Share2Icon className="size-3.5" aria-hidden />
         {sharing ? "Sharing…" : label}
       </Button>
+
+      {whatsappHref && (
+        <Button
+          asChild
+          type="button"
+          variant="ghost"
+          size="sm"
+          className="press h-8 px-2 text-success"
+          title="Open WhatsApp with the quote ready to send"
+        >
+          <a
+            href={whatsappHref}
+            target="_blank"
+            rel="noopener noreferrer"
+            aria-label="Send booking link on WhatsApp"
+          >
+            WhatsApp
+          </a>
+        </Button>
+      )}
 
       <Button
         asChild
