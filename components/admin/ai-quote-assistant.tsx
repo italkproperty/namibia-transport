@@ -31,16 +31,19 @@ export function AIQuoteAssistant() {
 
   React.useEffect(() => {
     if (pending || !state?.ok) return;
-    setActiveDraft(state.draft);
-    if (pendingOperatorMessage && state.assistantReply) {
+    setActiveDraft(displayDraft);
+    if (pendingOperatorMessage && state?.ok ? state.assistantReply : null) {
       setChatHistory((current) => [
         ...current,
         { role: "operator", content: pendingOperatorMessage },
-        { role: "claude", content: state.assistantReply },
+        { role: "claude", content: state?.ok ? state.assistantReply : null },
       ].slice(-12));
       setPendingOperatorMessage(null);
     }
-  }, [state, pendingOperatorMessage]);
+  }, [state, pending, pendingOperatorMessage]);
+
+  const displayDraft = activeDraft ?? (state?.ok ? displayDraft : null);
+  const displayBookings = state?.ok ? displayBookings : [];
 
   const applyDraft = (draft: AIQuoteDraft) => {
     window.dispatchEvent(
@@ -100,25 +103,25 @@ export function AIQuoteAssistant() {
         <p className="text-destructive mt-3 text-sm">{state.message}</p>
       )}
 
-      {state?.ok && (
+      {displayDraft && (
         <div className="mt-5 grid gap-4 border-t pt-4">
           <div className="flex items-start gap-3">
             <CheckCircle2Icon className="text-success mt-0.5 size-5 shrink-0" />
             <div className="min-w-0">
-              <p className="text-sm font-medium">{state.draft.summary}</p>
+              <p className="text-sm font-medium">{displayDraft.summary}</p>
               <p className="text-muted-foreground mt-1 text-xs">
-                {state.draft.intent.replace(/_/g, " ")} · {state.draft.confidence} confidence
+                {displayDraft.intent.replace(/_/g, " ")} · {displayDraft.confidence} confidence
               </p>
             </div>
           </div>
 
-          {state.matchedBookings.length > 0 && (
+          {displayBookings.length > 0 && (
             <div className="rounded-lg border p-3">
               <p className="text-xs font-semibold uppercase tracking-wider">
                 Existing customer history found
               </p>
               <ul className="mt-2 grid gap-2">
-                {state.matchedBookings.map((booking) => (
+                {displayBookings.map((booking) => (
                   <li
                     key={booking.ref}
                     className="flex flex-wrap items-baseline justify-between gap-2 text-xs"
@@ -138,11 +141,11 @@ export function AIQuoteAssistant() {
             </div>
           )}
 
-          {state.draft.missing.length > 0 && (
+          {displayDraft.missing.length > 0 && (
             <div className="border-warning/30 bg-warning/10 rounded-lg border p-3">
               <p className="text-xs font-semibold">Still needs confirmation</p>
               <p className="text-muted-foreground mt-1 text-xs">
-                {state.draft.missing.join(" · ")}
+                {displayDraft.missing.join(" · ")}
               </p>
             </div>
           )}
@@ -151,30 +154,30 @@ export function AIQuoteAssistant() {
             <div className="rounded-lg border p-3">
               <p className="text-muted-foreground text-xs">Customer</p>
               <p className="mt-1 text-sm font-medium">
-                {state.draft.customer.fullName || "Not identified"}
+                {displayDraft.customer.fullName || "Not identified"}
               </p>
               <p className="text-muted-foreground text-xs">
-                {state.draft.customer.whatsapp || state.draft.customer.email || "No contact found"}
+                {displayDraft.customer.whatsapp || displayDraft.customer.email || "No contact found"}
               </p>
             </div>
             <div className="rounded-lg border p-3">
               <p className="text-muted-foreground text-xs">Existing / additional money</p>
               <p className="mt-1 text-sm font-medium">
-                {formatNad(state.draft.existingPaidAmount)} already paid
+                {formatNad(displayDraft.existingPaidAmount)} already paid
               </p>
               <p className="text-muted-foreground text-xs">
-                {state.draft.additionalAmountRequested > 0
-                  ? `${formatNad(state.draft.additionalAmountRequested)} additional amount mentioned`
+                {displayDraft.additionalAmountRequested > 0
+                  ? `${formatNad(displayDraft.additionalAmountRequested)} additional amount mentioned`
                   : "No additional amount explicitly requested"}
               </p>
             </div>
           </div>
 
-          {state.draft.stops.length > 0 && (
+          {displayDraft.stops.length > 0 && (
             <div className="rounded-lg border p-3">
               <p className="text-muted-foreground text-xs">Detected itinerary</p>
               <ol className="mt-2 grid gap-1 text-sm">
-                {state.draft.stops.map((stop, index) => (
+                {displayDraft.stops.map((stop, index) => (
                   <li key={`${stop.slug}-${index}`}>
                     {index + 1}. {stop.label || stop.slug}
                     {stop.nights > 0 ? ` · ${stop.nights} nights` : ""}
@@ -187,7 +190,7 @@ export function AIQuoteAssistant() {
           <div className="rounded-lg border border-brand/20 bg-brand/[0.03] p-3">
             <p className="text-xs font-semibold">Claude&apos;s interpretation</p>
             <p className="text-muted-foreground mt-1 text-sm leading-relaxed">
-              {state.assistantReply}
+              {state?.ok ? state.assistantReply : null}
             </p>
           </div>
 
@@ -238,7 +241,7 @@ export function AIQuoteAssistant() {
               <input
                 type="hidden"
                 name="draft"
-                value={JSON.stringify(activeDraft ?? state.draft)}
+                value={JSON.stringify(activeDraft ?? displayDraft)}
               />
               <input
                 type="hidden"
@@ -271,14 +274,14 @@ export function AIQuoteAssistant() {
           </div>
 
           <div className="flex flex-wrap gap-2">
-            <Button type="button" onClick={() => applyDraft(activeDraft ?? state.draft)} className="press">
+            <Button type="button" onClick={() => applyDraft(activeDraft ?? displayDraft)} className="press">
               <ClipboardPasteIcon className="size-4" aria-hidden />
               Apply final context to quote builder
             </Button>
-            {state.draft.agreedTotal > 0 && (
+            {displayDraft.agreedTotal > 0 && (
               <span className="text-muted-foreground self-center text-xs">
                 Conversation contains an agreed total of{" "}
-                <strong>{formatNad(state.draft.agreedTotal)}</strong>.
+                <strong>{formatNad(displayDraft.agreedTotal)}</strong>.
               </span>
             )}
           </div>
