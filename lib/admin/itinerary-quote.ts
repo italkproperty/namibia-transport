@@ -192,8 +192,8 @@ export type SaveItineraryInput = {
   luggageCount: number;
   /** Overrides the computed total when a figure was already agreed. */
   agreedTotal?: number;
-  /** Explicit operator price for each generated leg, in itinerary order. */
-  legPrices?: number[];
+  /** Explicit operator price for each generated leg, in itinerary order. Null keeps the generated price. */
+  legPrices?: Array<number | null>;
   /**
    * The vehicle the fare was computed for. Stored on every leg, because a
    * quote naming one class beside a price computed for another is exactly the
@@ -272,16 +272,25 @@ export async function saveItineraryQuote(
   // An agreed figure overrides the model. Explicit leg prices are even more
   // specific: they let the operator negotiate one stop without disturbing the
   // others. When both are present, explicit leg prices win.
+  const hasExplicitLegPrice =
+    input.legPrices?.some(
+      (price) => price !== null && Number.isFinite(price) && price > 0,
+    ) ?? false;
   const validLegPrices =
     input.legPrices &&
     input.legPrices.length === quote.legs.length &&
-    input.legPrices.every((price) => Number.isFinite(price) && price > 0)
+    input.legPrices.every(
+      (price) => price === null || (Number.isFinite(price) && price > 0),
+    ) &&
+    hasExplicitLegPrice
       ? input.legPrices
       : null;
-  const total =
-    validLegPrices
-      ? validLegPrices.reduce((sum, price) => sum + price, 0)
-      : input.agreedTotal ?? quote.total;
+  const effectiveModelLegPrices = quote.legs.map((leg, index) =>
+    validLegPrices?.[index] ?? leg.price,
+  );
+  const total = validLegPrices
+    ? effectiveModelLegPrices.reduce((sum, price) => sum + price, 0)
+    : input.agreedTotal ?? quote.total;
   const scale = total / quote.total;
 
   const db = getDb();
@@ -308,7 +317,7 @@ export async function saveItineraryQuote(
         const price = validLegPrices
           ? isLast
             ? total - allocated
-            : Math.round(validLegPrices[index])
+            : Math.round(effectiveModelLegPrices[index])
           : isLast
             ? total - allocated
             : Math.round(leg.price * scale);
