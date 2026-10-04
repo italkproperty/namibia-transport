@@ -12,15 +12,7 @@ import {
   vehicleClasses,
   vehicles,
 } from "@/db/schema";
-
-/**
- * Reads for the dispatch side of the operation.
- *
- * The whole site promises the traveller gets a driver's name, the vehicle and
- * its registration before pickup. Until now the tables to record that existed
- * and nothing read or wrote them, so the promise rested entirely on somebody
- * remembering. These are the reads that let the product keep it.
- */
+import { READ_DEADLINE_MS, withDeadline } from "@/lib/deadline";
 
 export type DriverRow = Awaited<ReturnType<typeof listDrivers>>[number];
 
@@ -28,47 +20,40 @@ export async function listDrivers() {
   if (!isDatabaseConfigured()) return [];
 
   try {
-    const rows = await getDb()
-      .select({
-        id: drivers.id,
-        fullName: drivers.fullName,
-        whatsapp: drivers.whatsapp,
-        phone: drivers.phone,
-        status: drivers.status,
-        licenseNumber: drivers.licenseNumber,
-        licenseExpiresAt: drivers.licenseExpiresAt,
-        notes: drivers.notes,
-        createdAt: drivers.createdAt,
-        vehicleId: vehicles.id,
-        make: vehicles.make,
-        model: vehicles.model,
-        registration: vehicles.registration,
-        colour: vehicles.colour,
-        seats: vehicles.seats,
-        vehicleClassName: vehicleClasses.name,
-      })
-      .from(drivers)
-      .leftJoin(
-        vehicles,
-        and(eq(vehicles.driverId, drivers.id), eq(vehicles.isActive, true))
-      )
-      .leftJoin(vehicleClasses, eq(vehicleClasses.id, vehicles.vehicleClassId))
-      .orderBy(asc(drivers.status), asc(drivers.fullName));
-
-    return rows;
+    return await withDeadline("driver list", READ_DEADLINE_MS, () =>
+      getDb()
+        .select({
+          id: drivers.id,
+          fullName: drivers.fullName,
+          whatsapp: drivers.whatsapp,
+          phone: drivers.phone,
+          status: drivers.status,
+          licenseNumber: drivers.licenseNumber,
+          licenseExpiresAt: drivers.licenseExpiresAt,
+          notes: drivers.notes,
+          createdAt: drivers.createdAt,
+          vehicleId: vehicles.id,
+          make: vehicles.make,
+          model: vehicles.model,
+          registration: vehicles.registration,
+          colour: vehicles.colour,
+          seats: vehicles.seats,
+          vehicleClassName: vehicleClasses.name,
+        })
+        .from(drivers)
+        .leftJoin(
+          vehicles,
+          and(eq(vehicles.driverId, drivers.id), eq(vehicles.isActive, true)),
+        )
+        .leftJoin(vehicleClasses, eq(vehicleClasses.id, vehicles.vehicleClassId))
+        .orderBy(asc(drivers.status), asc(drivers.fullName)),
+    );
   } catch (error) {
     console.error("[dispatch] could not list drivers", error);
     return [];
   }
 }
 
-/**
- * Every booking's current assignment, keyed by booking id.
- *
- * One query rather than one per row: the dispatch board shows a page of
- * bookings at a time and an N+1 there is a slow board for whoever is trying to
- * get a car to an airport.
- */
 export async function assignmentsByBooking(): Promise<
   Map<
     string,
@@ -89,28 +74,28 @@ export async function assignmentsByBooking(): Promise<
   if (!isDatabaseConfigured()) return new Map();
 
   try {
-    const rows = await getDb()
-      .select({
-        bookingId: dispatchAssignments.bookingId,
-        assignmentId: dispatchAssignments.id,
-        status: dispatchAssignments.status,
-        payoutAmount: dispatchAssignments.payoutAmount,
-        assignedAt: dispatchAssignments.assignedAt,
-        driverName: drivers.fullName,
-        driverWhatsapp: drivers.whatsapp,
-        driverPhone: drivers.phone,
-        registration: vehicles.registration,
-        make: vehicles.make,
-        model: vehicles.model,
-        colour: vehicles.colour,
-      })
-      .from(dispatchAssignments)
-      .innerJoin(drivers, eq(drivers.id, dispatchAssignments.driverId))
-      .leftJoin(vehicles, eq(vehicles.id, dispatchAssignments.vehicleId))
-      .orderBy(desc(dispatchAssignments.assignedAt));
+    const rows = await withDeadline("assignment list", READ_DEADLINE_MS, () =>
+      getDb()
+        .select({
+          bookingId: dispatchAssignments.bookingId,
+          assignmentId: dispatchAssignments.id,
+          status: dispatchAssignments.status,
+          payoutAmount: dispatchAssignments.payoutAmount,
+          assignedAt: dispatchAssignments.assignedAt,
+          driverName: drivers.fullName,
+          driverWhatsapp: drivers.whatsapp,
+          driverPhone: drivers.phone,
+          registration: vehicles.registration,
+          make: vehicles.make,
+          model: vehicles.model,
+          colour: vehicles.colour,
+        })
+        .from(dispatchAssignments)
+        .innerJoin(drivers, eq(drivers.id, dispatchAssignments.driverId))
+        .leftJoin(vehicles, eq(vehicles.id, dispatchAssignments.vehicleId))
+        .orderBy(desc(dispatchAssignments.assignedAt)),
+    );
 
-    // Newest first, so the first row per booking wins and a re-assignment
-    // shows the driver actually on the trip rather than the one replaced.
     const byBooking = new Map<string, ReturnType<typeof mapRow>>();
     for (const row of rows) {
       if (!byBooking.has(row.bookingId)) byBooking.set(row.bookingId, mapRow(row));
@@ -148,7 +133,6 @@ function mapRow(row: {
   };
 }
 
-/** Everything the assignment message needs, in one read. */
 export async function getBookingForDispatch(bookingId: string) {
   if (!isDatabaseConfigured()) return null;
 
@@ -169,7 +153,6 @@ export async function getBookingForDispatch(bookingId: string) {
       passengers: bookings.passengers,
       routeOrigin: routes.originLabel,
       routeDestination: routes.destinationLabel,
-      /** What was sold, so an assignment cannot quietly shrink the car. */
       bookedClassName: vehicleClasses.name,
       bookedCapacity: vehicleClasses.capacity,
     })
