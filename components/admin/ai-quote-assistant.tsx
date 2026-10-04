@@ -36,12 +36,14 @@ export function AIQuoteAssistant() {
     if (pending || !state?.ok) return;
     setActiveDraft(state.draft);
     if (pendingOperatorMessage && state.assistantReply) {
-      const nextHistory: AIQuoteChatMessage[] = [
-        ...current,
-        { role: "operator", content: pendingOperatorMessage },
-        { role: "claude", content: state.assistantReply },
-      ];
-      setChatHistory(nextHistory.slice(-12));
+      setChatHistory((current) => {
+        const nextHistory: AIQuoteChatMessage[] = [
+          ...current,
+          { role: "operator", content: pendingOperatorMessage },
+          { role: "claude", content: state.assistantReply },
+        ];
+        return nextHistory.slice(-12);
+      });
       setPendingOperatorMessage(null);
     }
   }, [state, pending, pendingOperatorMessage]);
