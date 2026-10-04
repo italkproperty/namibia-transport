@@ -2,6 +2,8 @@
 
 import * as React from "react";
 import {
+  ArrowDownIcon,
+  ArrowUpIcon,
   CheckCircle2Icon,
   CopyIcon,
   ExternalLinkIcon,
@@ -53,6 +55,10 @@ export function ItineraryBuilder({ places }: { places: PlaceOption[] }) {
   const [agreedTotal, setAgreedTotal] = React.useState("");
   const [notes, setNotes] = React.useState("");
   const [legOverrides, setLegOverrides] = React.useState<Record<number, string>>({});
+  const [driverPositioningOrigin, setDriverPositioningOrigin] = React.useState("windhoek");
+  const [includeDriverPositioning, setIncludeDriverPositioning] = React.useState(true);
+  const [draggedKey, setDraggedKey] = React.useState<number | null>(null);
+  const [dragOverKey, setDragOverKey] = React.useState<number | null>(null);
   const [stops, setStops] = React.useState<Stop[]>([
     { key: 1, slug: "hosea-kutako", label: "", nights: 0 },
     { key: 2, slug: null, label: "", nights: 2 },
@@ -120,6 +126,31 @@ export function ItineraryBuilder({ places }: { places: PlaceOption[] }) {
     setStops((current) =>
       current.map((stop) => (stop.key === key ? { ...stop, ...patch } : stop)),
     );
+
+  const moveStop = (fromKey: number, toKey: number) => {
+    if (fromKey === toKey) return;
+    setStops((current) => {
+      const fromIndex = current.findIndex((stop) => stop.key === fromKey);
+      const toIndex = current.findIndex((stop) => stop.key === toKey);
+      if (fromIndex < 0 || toIndex < 0) return current;
+      const next = [...current];
+      const [moved] = next.splice(fromIndex, 1);
+      next.splice(toIndex, 0, moved);
+      return next;
+    });
+  };
+
+  const moveStopByOffset = (key: number, offset: number) => {
+    setStops((current) => {
+      const index = current.findIndex((stop) => stop.key === key);
+      const nextIndex = index + offset;
+      if (index < 0 || nextIndex < 0 || nextIndex >= current.length) return current;
+      const next = [...current];
+      const [moved] = next.splice(index, 1);
+      next.splice(nextIndex, 0, moved);
+      return next;
+    });
+  };
 
   if (saveState?.ok) {
     const message = `Hi — here is your quote from Namibia Transport. The full itinerary, the fare and how to pay are here: ${saveState.url}`;
