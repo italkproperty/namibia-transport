@@ -9,6 +9,7 @@ import {
 
 import { AssignDriver } from "@/components/admin/assign-driver";
 import { BookingRowActions } from "@/components/admin/booking-actions";
+import { PaymentReconciliationMonitor } from "@/components/admin/payment-reconciliation-monitor";
 import { PendingTransfers } from "@/components/admin/pending-transfers";
 import { TravellerDetails } from "@/components/admin/traveller-details";
 import { AdminShell } from "@/components/admin/shell";
@@ -143,6 +144,11 @@ export default async function AdminBookingsPage({ searchParams }: PageProps) {
     listDrivers(),
     assignmentsByBooking(),
   ]);
+
+  const pendingPaymentRefs = rows
+    .filter((row) => row.status === "pending_payment")
+    .map((row) => row.ref)
+    .slice(0, 5);
 
   const pages = Math.max(1, Math.ceil(total / BOOKINGS_PER_PAGE));
   const from = total === 0 ? 0 : page * BOOKINGS_PER_PAGE + 1;
@@ -477,6 +483,8 @@ export default async function AdminBookingsPage({ searchParams }: PageProps) {
             )}
           </form>
         </section>
+
+        <PaymentReconciliationMonitor bookingRefs={pendingPaymentRefs} />
 
         {/* --------------------------------------------------------- table */}
         {rows.length === 0 ? (

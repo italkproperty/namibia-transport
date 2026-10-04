@@ -239,6 +239,73 @@ export type PaymentReconcileState =
   | { ok: false; message: string; status?: string }
   | null;
 
+/**
+ * Automatically re-checks a small set of pending bookings while the admin
+ * bookings page is open. The client may trigger this action, but the server
+ * still performs the admin authorization check and re-reads each booking
+ * before asking PayToday anything.
+ */
+export type AutoPaymentReconcileResult = {
+  ok: boolean;
+  checked: number;
+  changed: number;
+  paid: number;
+};
+
+const AUTO_PAYMENT_TIMEOUT_MS = 5_000;
+
+async function reconcileWithTimeout(bookingRef: string) {
+  return Promise.race([
+    reconcileBookingPayment(bookingRef),
+    new Promise<never>((_, reject) =>
+      setTimeout(
+        () => reject(new Error("payment reconciliation timed out")),
+        AUTO_PAYMENT_TIMEOUT_MS,
+      ),
+    ),
+  ]);
+}
+
+export async function autoReconcilePayments(
+  bookingRefs: string[],
+): Promise<AutoPaymentReconcileResult> {
+  const gate = await getAdminGateState();
+  if (gate.state !== "signed-in") {
+    return { ok: false, checked: 0, changed: 0, paid: 0 };
+  }
+  if (!isDatabaseConfigured()) {
+    return { ok: false, checked: 0, changed: 0, paid: 0 };
+  }
+
+  const refs = [...new Set(
+    bookingRefs
+      .filter((ref): ref is string => typeof ref === "string")
+      .map((ref) => ref.trim())
+      .filter(Boolean),
+  )].slice(0, 5);
+
+  let checked = 0;
+  let changed = 0;
+  let paid = 0;
+
+  for (const ref of refs) {
+    try {
+      const result = await reconcileWithTimeout(ref);
+      checked += 1;
+      if (result.changed) changed += 1;
+      if (result.payment?.status === "paid") paid += 1;
+    } catch (error) {
+      console.error("[admin] automatic payment reconciliation failed for " + ref, error);
+    }
+  }
+
+  if (changed > 0) {
+    revalidatePath("/admin/bookings");
+    revalidatePath("/admin/calendar");
+  }
+
+  return { ok: true, checked, changed, paid };
+}
 export async function reconcilePayment(
   _previous: PaymentReconcileState,
   formData: FormData,

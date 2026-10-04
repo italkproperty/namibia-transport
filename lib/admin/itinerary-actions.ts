@@ -200,6 +200,23 @@ export async function saveItineraryAction(
     return { ok: false, message: "Give the date the first leg departs." };
   }
 
+  const legPricesRaw = field("legPrices");
+  let legPrices: Array<number | null> | undefined;
+  if (legPricesRaw) {
+    try {
+      const parsed = JSON.parse(legPricesRaw);
+      if (Array.isArray(parsed)) {
+        legPrices = parsed.map((value) => {
+          if (value === null || value === "") return null;
+          const number = Number(value);
+          return Number.isFinite(number) ? number : null;
+        });
+      }
+    } catch {
+      return { ok: false, message: "The leg prices could not be read. Price the itinerary again." };
+    }
+  }
+
   const agreedRaw = field("agreedTotal").replace(/[\s,]/g, "");
   const agreedTotal = agreedRaw ? Number(agreedRaw) : undefined;
   if (agreedRaw && (!Number.isFinite(agreedTotal) || (agreedTotal ?? 0) <= 0)) {
@@ -238,6 +255,7 @@ export async function saveItineraryAction(
     passengers: Number(field("passengers") || "2"),
     luggageCount: Number(field("luggageCount") || "0"),
     agreedTotal,
+    legPrices,
     notes: field("notes") || undefined,
   });
 

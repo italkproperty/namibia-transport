@@ -3,6 +3,7 @@ import Link from "next/link";
 import { ArrowLeftIcon } from "lucide-react";
 
 import { AdminShell } from "@/components/admin/shell";
+import { AIQuoteAssistant } from "@/components/admin/ai-quote-assistant";
 import { ItineraryBuilder } from "@/components/admin/itinerary-builder";
 import { QuoteForm } from "@/components/admin/quote-form";
 import { pendingMigrations } from "@/lib/admin/migrations";
@@ -99,6 +100,8 @@ export default async function NewQuotePage() {
             </p>
           </div>
         )}
+
+        <AIQuoteAssistant />
 
         <ItineraryBuilder places={places} />
 

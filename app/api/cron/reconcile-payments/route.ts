@@ -11,7 +11,12 @@ export const dynamic = "force-dynamic";
 export const maxDuration = 30;
 
 const BATCH_SIZE = 5;
-const PAYMENT_LOOKBACK_MS = 48 * 60 * 60 * 1000;
+// Keep outstanding PayToday attempts in the automatic queue for two weeks.
+// Payment intents themselves are short-lived, but a customer can complete an
+// intent days after the booking was created; the payment row is what tells us
+// when the checkout actually existed. Older abandoned quotes are left for the
+// explicit admin check rather than being polled forever.
+const PAYMENT_LOOKBACK_MS = 14 * 24 * 60 * 60 * 1000;
 const PER_PAYMENT_TIMEOUT_MS = 5_000;
 
 type Candidate = {
@@ -42,7 +47,7 @@ async function reconcileWithTimeout(bookingRef: string) {
  *
  * The traveller's return URL is useful but cannot be the only trigger: they
  * can pay successfully and close the tab before returning to Namibia Transport.
- * This job re-reads a small recent queue from PayToday and applies the same
+ * This job re-reads a small outstanding queue from PayToday and applies the same
  * amount-checked, idempotent reconciliation used by the confirmation page.
  *
  * It deliberately does not create payments, cancel bookings, or trust a status
