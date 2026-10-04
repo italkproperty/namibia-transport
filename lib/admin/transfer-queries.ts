@@ -5,6 +5,7 @@ import { and, desc, eq, ne } from "drizzle-orm";
 import { getDb, isDatabaseConfigured } from "@/db";
 import { bookings, customers, payments } from "@/db/schema";
 import { BANK_TRANSFER_PROVIDER } from "@/lib/payments/transfer";
+import { READ_DEADLINE_MS, withDeadline } from "@/lib/deadline";
 
 export type PendingTransfer = {
   bookingId: string;
@@ -35,9 +36,8 @@ export type PendingTransfer = {
 export async function listPendingTransfers(): Promise<PendingTransfer[]> {
   if (!isDatabaseConfigured()) return [];
 
-  const db = getDb();
-
-  const rows = await db
+  const rows = await withDeadline("pending transfer list", READ_DEADLINE_MS, () =>
+    getDb()
     .select({
       bookingId: bookings.id,
       ref: bookings.ref,
@@ -63,7 +63,8 @@ export async function listPendingTransfers(): Promise<PendingTransfer[]> {
         ne(bookings.status, "cancelled"),
       ),
     )
-    .orderBy(desc(payments.createdAt));
+    .orderBy(desc(payments.createdAt)),
+  );
 
   return rows
     .map((row) => {
@@ -86,4 +87,8 @@ export async function listPendingTransfers(): Promise<PendingTransfer[]> {
     })
     .filter((row) => row.declaredAt !== null)
     .sort((a, b) => (a.declaredAt ?? "").localeCompare(b.declaredAt ?? ""));
+  } catch (error) {
+    console.error("[admin] pending transfer list failed", error);
+    return [];
+  }
 }
