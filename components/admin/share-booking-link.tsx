@@ -47,7 +47,7 @@ export function ShareBookingLink({
       await navigator.share({
         title: "Namibia Transport booking",
         text: customerName
-          ? \`Namibia Transport booking for \${customerName}\`
+          ? `Namibia Transport booking for ${customerName}`
           : "Namibia Transport booking",
         url,
       });
