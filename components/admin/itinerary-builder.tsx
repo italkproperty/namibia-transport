@@ -57,6 +57,7 @@ export function ItineraryBuilder({ places }: { places: PlaceOption[] }) {
   const [legOverrides, setLegOverrides] = React.useState<Record<number, string>>({});
   const [driverPositioningOrigin, setDriverPositioningOrigin] = React.useState("windhoek");
   const [includeDriverPositioning, setIncludeDriverPositioning] = React.useState(true);
+  const [returnDriverToBase, setReturnDriverToBase] = React.useState(true);
   const [draggedKey, setDraggedKey] = React.useState<number | null>(null);
   const [dragOverKey, setDragOverKey] = React.useState<number | null>(null);
   const [stops, setStops] = React.useState<Stop[]>([
@@ -452,8 +453,8 @@ export function ItineraryBuilder({ places }: { places: PlaceOption[] }) {
             <label className="flex items-center gap-2 pb-2 text-sm">
               <input
                 type="checkbox"
-                name="driverPositioningReturn"
-                defaultChecked
+                checked={returnDriverToBase}
+                onChange={(event) => setReturnDriverToBase(event.target.checked)}
                 className="size-4 rounded border"
               />
               Return driver to base
