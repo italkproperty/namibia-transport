@@ -264,6 +264,35 @@ to act on.
   distinguish good from bad, say so and tell a human where to look instead. A green light
   on a ruined output is worse than no light.
 
+## Production definition of done
+
+A feature is not done because TypeScript compiles or Vercel is green. For any booking, quote,
+payment or dispatch change, verify the complete operator journey on the rendered production-like
+page:
+
+1. **Create** — the record persists once, with all legs belonging to the correct itinerary/group.
+2. **Find** — an operator can search for it by booking reference, group reference, customer name or phone.
+3. **Share** — the customer-facing URL is visible from the operator's working screen, can be copied,
+   opened, and shared without returning to the creation wizard.
+4. **Open** — the public URL renders the exact saved fare, itinerary, dates, customer-facing notes and
+   payment state; a missing/expired/cancelled quote explains what to do next.
+5. **Pay** — the amount recorded by the payment layer reconciles to the whole itinerary, never only
+   the first leg.
+6. **Dispatch** — each driving leg is independently schedulable and assignable, while the customer
+   continues to see one trip.
+7. **Complete** — a completed leg is immutable enough to preserve the financial record, and the
+   operator can see what remains to run.
+8. **Recover** — cancellation, reinstatement, edit, duplicate submission, database timeout and a
+   stale/malformed URL each have a deliberate outcome rather than a generic 500/404.
+
+For route changes, add at least one test for the real Namibian place name and one for the network
+anchor. Never let an accommodation label silently become a different road node. Where a place such
+as a lodge, park gate or attraction has access-road behaviour that differs from the nearest town,
+the routing model must represent that distinction explicitly before the distance is customer-facing.
+
+For every schema-dependent feature, the code, cumulative SQL migration, test, and rendered-page
+verification are one release unit. A green build with an unapplied Supabase migration is not green.
+
 ## Where we are
 *Keep this short and current. Three questions only: what works, what is broken, what is
 next. The archaeology belongs in git, not here.*

@@ -136,6 +136,7 @@ export async function listBookings(filters: BookingFilters) {
           routeCategory: routes.category,
           vehicleClassName: vehicleClasses.name,
           customerName: customers.fullName,
+          customerWhatsapp: customers.whatsapp,
           customerType: customers.customerType,
         })
         .from(bookings)
