@@ -257,14 +257,62 @@ export function ItineraryBuilder({ places }: { places: PlaceOption[] }) {
           {stops.map((stop, index) => (
             <li
               key={stop.key}
-              className="bg-card grid gap-2 rounded-lg border p-3 sm:grid-cols-[auto_1fr_10rem_5rem_auto] sm:items-center"
+              onDragOver={(event) => {
+                event.preventDefault();
+                if (draggedKey !== null && draggedKey !== stop.key) {
+                  setDragOverKey(stop.key);
+                }
+              }}
+              onDrop={(event) => {
+                event.preventDefault();
+                if (draggedKey !== null) moveStop(draggedKey, stop.key);
+                setDraggedKey(null);
+                setDragOverKey(null);
+              }}
+              className={`bg-card grid gap-2 rounded-lg border p-3 transition sm:grid-cols-[auto_1fr_10rem_5rem_auto] sm:items-center ${
+                dragOverKey === stop.key ? "border-brand ring-2 ring-brand/20" : ""
+              }`}
             >
-              <span
-                className="text-muted-foreground hidden sm:block"
-                aria-hidden
-              >
-                <GripVerticalIcon className="size-4" />
-              </span>
+              <div className="flex items-center gap-1">
+                <button
+                  type="button"
+                  draggable
+                  onDragStart={(event) => {
+                    setDraggedKey(stop.key);
+                    event.dataTransfer.effectAllowed = "move";
+                    event.dataTransfer.setData("text/plain", String(stop.key));
+                  }}
+                  onDragEnd={() => {
+                    setDraggedKey(null);
+                    setDragOverKey(null);
+                  }}
+                  aria-label={`Drag ${stop.label || "stop"} to reorder`}
+                  title="Drag to reorder"
+                  className="text-muted-foreground hover:text-foreground focus-ring hidden cursor-grab rounded p-1 active:cursor-grabbing sm:block"
+                >
+                  <GripVerticalIcon className="size-4" aria-hidden />
+                </button>
+                <div className="flex sm:hidden">
+                  <button
+                    type="button"
+                    onClick={() => moveStopByOffset(stop.key, -1)}
+                    disabled={index === 0}
+                    aria-label="Move stop up"
+                    className="text-muted-foreground hover:text-foreground focus-ring rounded p-1 disabled:opacity-30"
+                  >
+                    <ArrowUpIcon className="size-4" aria-hidden />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => moveStopByOffset(stop.key, 1)}
+                    disabled={index === stops.length - 1}
+                    aria-label="Move stop down"
+                    className="text-muted-foreground hover:text-foreground focus-ring rounded p-1 disabled:opacity-30"
+                  >
+                    <ArrowDownIcon className="size-4" aria-hidden />
+                  </button>
+                </div>
+              </div>
 
               <div className="min-w-0">
                 <Label
