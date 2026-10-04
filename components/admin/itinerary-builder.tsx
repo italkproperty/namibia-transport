@@ -466,6 +466,16 @@ export function ItineraryBuilder({ places }: { places: PlaceOption[] }) {
       {/* ------------------------------------------------------ the price */}
       <form action={price}>
         <input type="hidden" name="stops" value={payload} />
+        <input
+          type="hidden"
+          name="driverPositioningOrigin"
+          value={includeDriverPositioning ? driverPositioningOrigin : ""}
+        />
+        <input
+          type="hidden"
+          name="driverPositioningReturn"
+          value={includeDriverPositioning && returnDriverToBase ? "true" : "false"}
+        />
         <Button
           type="submit"
           variant="outline"
@@ -615,6 +625,16 @@ export function ItineraryBuilder({ places }: { places: PlaceOption[] }) {
       {/* ------------------------------------------------------- the save */}
       <form action={save} className="grid gap-4">
         <input type="hidden" name="stops" value={payload} />
+        <input
+          type="hidden"
+          name="driverPositioningOrigin"
+          value={includeDriverPositioning ? driverPositioningOrigin : ""}
+        />
+        <input
+          type="hidden"
+          name="driverPositioningReturn"
+          value={includeDriverPositioning && returnDriverToBase ? "true" : "false"}
+        />
         <input
           type="hidden"
           name="vehicleClassId"
