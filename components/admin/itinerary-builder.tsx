@@ -105,7 +105,6 @@ export function ItineraryBuilder({ places }: { places: PlaceOption[] }) {
     null,
   );
   const [copied, setCopied] = React.useState(false);
-  const [whatsapp, setWhatsapp] = React.useState("");
 
   const payload = JSON.stringify(
     stops
