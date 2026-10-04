@@ -53,6 +53,7 @@ export function ItineraryBuilder({ places }: { places: PlaceOption[] }) {
   const [startDate, setStartDate] = React.useState("");
   const [startTime, setStartTime] = React.useState("08:00");
   const [agreedTotal, setAgreedTotal] = React.useState("");
+  const [priceOverrideTouched, setPriceOverrideTouched] = React.useState(false);
   const [notes, setNotes] = React.useState("");
   const [legOverrides, setLegOverrides] = React.useState<Record<number, string>>({});
   const [driverPositioningOrigin, setDriverPositioningOrigin] = React.useState("windhoek");
@@ -93,7 +94,13 @@ export function ItineraryBuilder({ places }: { places: PlaceOption[] }) {
       if (draft.startTime) setStartTime(draft.startTime);
       if (draft.passengers > 0) setPassengers(String(draft.passengers));
       if (draft.luggageCount >= 0) setLuggageCount(String(draft.luggageCount));
-      if (draft.agreedTotal > 0) setAgreedTotal(String(draft.agreedTotal));
+      if (draft.agreedTotal > 0) {
+        setAgreedTotal(String(draft.agreedTotal));
+        setPriceOverrideTouched(true);
+      } else {
+        setAgreedTotal("");
+        setPriceOverrideTouched(false);
+      }
       if (draft.notes) setNotes(draft.notes);
       setLegOverrides({});
     };
@@ -112,6 +119,27 @@ export function ItineraryBuilder({ places }: { places: PlaceOption[] }) {
     null,
   );
   const [copied, setCopied] = React.useState(false);
+
+  const priced = priceState?.ok ? priceState.quotes : null;
+  const selected =
+    priced?.find((entry) => entry.vehicleClassId === vehicleClassId) ??
+    priced?.[0] ??
+    null;
+  const quote = selected?.quote ?? null;
+
+  React.useEffect(() => {
+    if (quote && !priceOverrideTouched) {
+      setAgreedTotal(String(quote.total));
+    }
+  }, [quote, priceOverrideTouched]);
+
+  const effectiveLegPrices = quote
+    ? quote.legs.map((leg, index) => {
+        const value = Number(legOverrides[index] ?? leg.price);
+        return Number.isFinite(value) && value > 0 ? value : leg.price;
+      })
+    : [];
+  const effectiveTotal = effectiveLegPrices.reduce((sum, value) => sum + value, 0);
 
   const payload = JSON.stringify(
     stops
@@ -215,8 +243,6 @@ export function ItineraryBuilder({ places }: { places: PlaceOption[] }) {
     );
   }
 
-  const priced = priceState?.ok ? priceState.quotes : null;
-
   /**
    * Which vehicle the operator is quoting. Defaults to the first class rather
    * than to nothing: an operator who prices a trip and then forgets to pick a
@@ -224,19 +250,6 @@ export function ItineraryBuilder({ places }: { places: PlaceOption[] }) {
    * which is how the last one came to say "Private Car" beside a figure
    * computed for something else.
    */
-  const selected =
-    priced?.find((entry) => entry.vehicleClassId === vehicleClassId) ??
-    priced?.[0] ??
-    null;
-  const quote = selected?.quote ?? null;
-
-  const effectiveLegPrices = quote
-    ? quote.legs.map((leg, index) => {
-        const value = Number(legOverrides[index] ?? leg.price);
-        return Number.isFinite(value) && value > 0 ? value : leg.price;
-      })
-    : [];
-  const effectiveTotal = effectiveLegPrices.reduce((sum, value) => sum + value, 0);
 
   return (
     <div className="grid gap-6">
@@ -504,7 +517,12 @@ export function ItineraryBuilder({ places }: { places: PlaceOption[] }) {
                   <button
                     key={entry.vehicleClassId}
                     type="button"
-                    onClick={() => setVehicleClassId(entry.vehicleClassId)}
+                    onClick={() => {
+                      setVehicleClassId(entry.vehicleClassId);
+                      if (!priceOverrideTouched) {
+                        setAgreedTotal(String(entry.quote.total));
+                      }
+                    }}
                     aria-pressed={active}
                     className={`focus-ring press rounded-lg border p-3 text-left transition ${
                       active
@@ -542,6 +560,34 @@ export function ItineraryBuilder({ places }: { places: PlaceOption[] }) {
             route · {formatDuration(quote.drivingMinutes)} driving · {quote.gravelKm} km
             gravel
           </p>
+
+          <div className="bg-muted/40 mt-4 rounded-lg border p-3">
+            <div className="grid gap-3 sm:grid-cols-[1fr_12rem] sm:items-end">
+              <div>
+                <Label htmlFor="final-customer-price">Final customer price (N$)</Label>
+                <p className="text-muted-foreground mt-1 text-xs leading-relaxed">
+                  The system price is a recommendation, not a mandatory selling price.
+                  Adjust it to the commercial price you actually want to offer. Current
+                  system recommendation: {formatNad(quote.total)}.
+                </p>
+              </div>
+              <Input
+                id="final-customer-price"
+                inputMode="decimal"
+                value={agreedTotal}
+                onChange={(event) => {
+                  setAgreedTotal(event.target.value);
+                  setPriceOverrideTouched(true);
+                }}
+                className="h-10 text-right tabular font-medium"
+                aria-describedby="final-customer-price-help"
+              />
+            </div>
+            <p id="final-customer-price-help" className="text-muted-foreground mt-2 text-xs">
+              This changes what the customer is charged; it does not change the underlying
+              route, distance, driving time or driver-positioning calculation.
+            </p>
+          </div>
           {quote.positioning && quote.positioningKm > 0 && (
             <p className="text-muted-foreground mt-1 text-xs">
               Includes driver positioning: {quote.positioningKm} km ·{" "}
@@ -627,6 +673,20 @@ export function ItineraryBuilder({ places }: { places: PlaceOption[] }) {
         <input type="hidden" name="stops" value={payload} />
         <input
           type="hidden"
+          name="legPrices"
+          value={JSON.stringify(
+            quote
+              ? quote.legs.map((leg, index) => {
+                  const raw = legOverrides[index]?.trim();
+                  if (!raw) return null;
+                  const value = Number(raw);
+                  return Number.isFinite(value) && value > 0 ? value : null;
+                })
+              : [],
+          )}
+        />
+        <input
+          type="hidden"
           name="driverPositioningOrigin"
           value={includeDriverPositioning ? driverPositioningOrigin : ""}
         />
@@ -670,14 +730,7 @@ export function ItineraryBuilder({ places }: { places: PlaceOption[] }) {
             hint="Later legs fall out of the nights above."
           />
           <Field label="At" name="startTime" type="time" value={startTime} onChange={setStartTime} />
-          <Field
-            label="Agreed total (N$)"
-            name="agreedTotal"
-            inputMode="decimal"
-            value={agreedTotal}
-            onChange={setAgreedTotal}
-            hint="Use this only when you want one overall agreed total. Individual leg prices above override the model."
-          />
+          <input type="hidden" name="agreedTotal" value={agreedTotal} />
           <Field
             label="Large cases"
             name="luggageCount"
