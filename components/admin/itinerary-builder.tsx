@@ -389,6 +389,10 @@ export function ItineraryBuilder({ places }: { places: PlaceOption[] }) {
           ))}
         </ul>
 
+        <p className="text-muted-foreground mt-2 text-xs">
+          Drag the grip to change the driving order. Use the arrows on smaller screens.
+        </p>
+
         <Button
           type="button"
           variant="outline"
@@ -406,6 +410,57 @@ export function ItineraryBuilder({ places }: { places: PlaceOption[] }) {
           Add a stop
         </Button>
       </section>
+
+      <div className="bg-muted/40 rounded-lg border p-3">
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div>
+            <p className="text-sm font-semibold">Driver positioning</p>
+            <p className="text-muted-foreground mt-1 max-w-2xl text-xs leading-relaxed">
+              Internal logistics only. The customer itinerary stays separate.
+              This accounts for the driver's trip from base to the first pickup
+              and, when enabled, back to base after the last drop-off.
+            </p>
+          </div>
+          <label className="flex items-center gap-2 text-sm">
+            <input
+              type="checkbox"
+              checked={includeDriverPositioning}
+              onChange={(event) => setIncludeDriverPositioning(event.target.checked)}
+              className="size-4 rounded border"
+            />
+            Include in quote cost
+          </label>
+        </div>
+
+        {includeDriverPositioning && (
+          <div className="mt-3 grid gap-3 sm:grid-cols-[1fr_auto] sm:items-end">
+            <div>
+              <Label
+                htmlFor="driver-positioning-origin"
+                className="text-muted-foreground mb-1 text-xs"
+              >
+                Driver base
+              </Label>
+              <PlaceSearch
+                id="driver-positioning-origin"
+                places={places}
+                value={driverPositioningOrigin}
+                onSelect={setDriverPositioningOrigin}
+                placeholder="Where is the driver starting?"
+              />
+            </div>
+            <label className="flex items-center gap-2 pb-2 text-sm">
+              <input
+                type="checkbox"
+                name="driverPositioningReturn"
+                defaultChecked
+                className="size-4 rounded border"
+              />
+              Return driver to base
+            </label>
+          </div>
+        )}
+      </div>
 
       {/* ------------------------------------------------------ the price */}
       <form action={price}>
