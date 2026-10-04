@@ -7,6 +7,7 @@ import { getDb, isDatabaseConfigured } from "@/db";
 import { bookings } from "@/db/schema";
 import { getAdminGateState } from "@/lib/admin/auth";
 import { isSettled } from "@/lib/admin/settled";
+import { reconcileBookingPayment } from "@/lib/payments/reconcile";
 
 /**
  * Voiding a booking, and why it needed to exist.
@@ -223,4 +224,95 @@ export async function completeBooking(
   revalidatePath(`/booking/${booking.ref}`);
   if (booking.groupRef) revalidatePath(`/quote/${booking.groupRef}`);
   return { ok: true };
+}
+
+
+/**
+ * Re-checks PayToday for one pending booking.
+ *
+ * This is intentionally an operator action rather than a "mark paid" control:
+ * the gateway is queried and its reported amount must still match the payment
+ * row before reconciliation can confirm the booking.
+ */
+export type PaymentReconcileState =
+  | { ok: true; message: string; status: string }
+  | { ok: false; message: string; status?: string }
+  | null;
+
+export async function reconcilePayment(
+  _previous: PaymentReconcileState,
+  formData: FormData,
+): Promise<PaymentReconcileState> {
+  const gate = await getAdminGateState();
+  if (gate.state !== "signed-in") {
+    return { ok: false, message: "Sign in first." };
+  }
+  if (!isDatabaseConfigured()) {
+    return { ok: false, message: "No database is configured." };
+  }
+
+  const id = String(formData.get("bookingId") ?? "").trim();
+  if (!id) return { ok: false, message: "Which booking?" };
+
+  const db = getDb();
+  const [booking] = await db
+    .select({
+      id: bookings.id,
+      ref: bookings.ref,
+      status: bookings.status,
+    })
+    .from(bookings)
+    .where(eq(bookings.id, id))
+    .limit(1);
+
+  if (!booking) return { ok: false, message: "Booking not found." };
+
+  if (booking.status !== "pending_payment") {
+    return {
+      ok: true,
+      status: booking.status,
+      message: `Booking is already ${booking.status.replace(/_/g, " ")}.`,
+    };
+  }
+
+  try {
+    const result = await reconcileBookingPayment(booking.ref);
+    const status = result.payment?.status ?? "none";
+
+    if (status === "paid") {
+      return {
+        ok: true,
+        status,
+        message: "PayToday reports this payment as paid. Booking confirmed.",
+      };
+    }
+
+    if (status === "failed" || status === "cancelled") {
+      return {
+        ok: true,
+        status,
+        message: `PayToday reports the payment as ${status}. The booking remains unpaid.`,
+      };
+    }
+
+    if (status === "pending" || status === "authorized") {
+      return {
+        ok: true,
+        status,
+        message: `PayToday still reports the payment as ${status}.`,
+      };
+    }
+
+    return {
+      ok: true,
+      status,
+      message: "No PayToday payment could be reconciled for this booking.",
+    };
+  } catch (error) {
+    console.error(`[admin] payment reconciliation failed for ${booking.ref}`, error);
+    return {
+      ok: false,
+      message: "Could not reach the payment gateway. Try again shortly.",
+    };
+  }
 }

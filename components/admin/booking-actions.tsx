@@ -2,13 +2,16 @@
 
 import * as React from "react";
 import Link from "next/link";
-import { CheckIcon, PencilIcon, RotateCcwIcon, XIcon } from "lucide-react";
+import { CheckIcon, PencilIcon, RefreshCwIcon, RotateCcwIcon, XIcon } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
+import { useRouter } from "next/navigation";
 import {
   cancelBooking,
   completeBooking,
+  reconcilePayment,
   reinstateBooking,
+  type PaymentReconcileState,
   type VoidState,
 } from "@/lib/admin/booking-actions";
 
@@ -26,6 +29,7 @@ export function BookingRowActions({
   bookingRef,
   isCancelled,
   isCompleted,
+  isPendingPayment,
   /** Sold, departed, and not yet marked as run. */
   canComplete,
   isGroup,
@@ -34,6 +38,7 @@ export function BookingRowActions({
   bookingRef: string;
   isCancelled: boolean;
   isCompleted: boolean;
+  isPendingPayment: boolean;
   canComplete: boolean;
   isGroup: boolean;
 }) {
@@ -49,6 +54,15 @@ export function BookingRowActions({
     VoidState,
     FormData
   >(completeBooking, null);
+  const [reconcileState, reconcile, reconciling] =
+    React.useActionState<PaymentReconcileState, FormData>(reconcilePayment, null);
+  const router = useRouter();
+
+  React.useEffect(() => {
+    if (reconcileState?.ok && reconcileState.status === "paid") {
+      router.refresh();
+    }
+  }, [reconcileState?.ok, reconcileState?.status, router]);
   const [confirming, setConfirming] = React.useState(false);
 
   // A trip that has run is finished in both directions: it cannot be cancelled
@@ -93,6 +107,33 @@ export function BookingRowActions({
             Edit
           </Link>
         </Button>
+        {isPendingPayment && (
+          <form action={reconcile} className="grid gap-1">
+            <input type="hidden" name="bookingId" value={bookingId} />
+            <Button
+              type="submit"
+              size="sm"
+              variant="ghost"
+              disabled={reconciling}
+              className="press text-muted-foreground hover:text-foreground h-8 gap-1.5 text-xs"
+            >
+              <RefreshCwIcon className="size-3.5" aria-hidden />
+              {reconciling ? "Checking…" : "Check payment"}
+            </Button>
+            {reconcileState && (
+              <p
+                className={
+                  reconcileState.ok && reconcileState.status === "paid"
+                    ? "text-success max-w-56 text-[0.7rem] leading-snug"
+                    : "text-muted-foreground max-w-56 text-[0.7rem] leading-snug"
+                }
+              >
+                {reconcileState.message}
+              </p>
+            )}
+          </form>
+        )}
+
         {/* Only offered once the trip has actually departed — marking a future
             trip run is always a mis-click, and the server refuses it anyway. */}
         {canComplete && (
