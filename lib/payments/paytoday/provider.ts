@@ -42,9 +42,16 @@ export class PayTodayPaymentProvider implements PaymentProvider {
     const sdk = await getPayTodaySdk();
     const { firstName, lastName } = splitName(input.customer.fullName);
 
-    // PayToday requires an e-mail on the intent, but our booking form keeps it
-    // optional to stay at two taps. Fall back to the operator's address so the
-    // receipt lands somewhere real rather than failing the payment outright.
+    // The public booking form requires both email and mobile because
+    // PayToday expects both on the payment intent. Keep the fallback for
+    // operator-created bookings that may legitimately predate that rule.
+    const phone = normalisePhone(input.customer.whatsapp);
+    if (phone.length < 7) {
+      throw new Error(
+        "PayToday requires a traveller mobile number for card checkout."
+      );
+    }
+
     const email =
       input.customer.email?.trim() ||
       process.env.PAYTODAY_FALLBACK_EMAIL?.trim() ||
@@ -65,7 +72,7 @@ export class PayTodayPaymentProvider implements PaymentProvider {
       user_first_name: firstName,
       user_last_name: lastName,
       user_email: email,
-      user_phone_number: normalisePhone(input.customer.whatsapp),
+      user_phone_number: phone,
       return_url: input.returnUrl ?? defaultReturnUrl(input.bookingRef),
     });
 

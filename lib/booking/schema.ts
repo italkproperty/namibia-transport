@@ -11,26 +11,22 @@ import { NAMIBIA_BOUNDS } from "@/lib/maps/bounds";
  */
 
 /**
- * Loose on purpose — Namibian and international numbers, any spacing.
+ * Loose on purpose — Namibian and international mobile numbers, any spacing.
  *
- * Optional, and that is the point. WhatsApp is how dispatch and driver
- * coordination actually work, so it is asked for first and it is the channel
- * we want. It is not universal among inbound travellers, and requiring it
- * turned an operating truth into an acquisition rule: a German couple with no
- * WhatsApp could not book at all. What is required is *a* way to reach the
- * traveller, enforced by `contactChannel` below.
+ * Required because the public booking creates a PayToday card-payment intent
+ * immediately, and PayToday's integration requires a phone number on that
+ * intent. WhatsApp is preferred for driver coordination, but this field is
+ * fundamentally the traveller's mobile number and does not require WhatsApp.
  */
 const whatsapp = z
   .string()
   .trim()
-  .min(7, "That number looks too short — include the country code")
+  .min(7, "Enter a mobile or WhatsApp number, including the country code")
   .max(24, "That number looks too long")
   .regex(
     /^\+?[\d\s()-]+$/,
     "Use digits only, optionally starting with + and a country code",
-  )
-  .optional()
-  .or(z.literal(""));
+  );
 
 /** One dropped pin, or nothing. Null and undefined both mean "no pin". */
 const pinPoint = z
@@ -115,25 +111,6 @@ const baseBookingSchema = z.object({
    */
   adClickId: z.string().max(512).optional().or(z.literal("")),
   adClickKind: z.enum(CLICK_KINDS).optional().or(z.literal("")),
-});
-
-/**
- * One contact channel, whichever it is.
- *
- * The error is attached to the WhatsApp field because that is the one we ask
- * for first and the one most people will fill; a form-level error with no
- * field to point at leaves a traveller looking for what went wrong.
- */
-function hasContactChannel(values: {
-  whatsapp?: string;
-  email?: string;
-}): boolean {
-  return Boolean(values.whatsapp?.trim() || values.email?.trim());
-}
-
-export const bookingFormSchema = baseBookingSchema.refine(hasContactChannel, {
-  path: ["whatsapp"],
-  message: "We need one way to reach you — a WhatsApp number or an email address",
 });
 
 export type BookingFormValues = z.infer<typeof bookingFormSchema>;
