@@ -1,11 +1,18 @@
 "use client";
 
 import * as React from "react";
-import { BotIcon, CheckCircle2Icon, ClipboardPasteIcon, SparklesIcon } from "lucide-react";
+import {
+  BotIcon,
+  CheckCircle2Icon,
+  ClipboardPasteIcon,
+  SendIcon,
+  SparklesIcon,
+} from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import {
   analyseQuoteConversation,
+  type AIQuoteChatMessage,
   type AIQuoteDraft,
   type AIQuoteState,
 } from "@/lib/admin/ai-quote-actions";
@@ -17,6 +24,23 @@ export function AIQuoteAssistant() {
     FormData
   >(analyseQuoteConversation, null);
   const [conversation, setConversation] = React.useState("");
+  const [activeDraft, setActiveDraft] = React.useState<AIQuoteDraft | null>(null);
+  const [chatInput, setChatInput] = React.useState("");
+  const [chatHistory, setChatHistory] = React.useState<AIQuoteChatMessage[]>([]);
+  const [pendingOperatorMessage, setPendingOperatorMessage] = React.useState<string | null>(null);
+
+  React.useEffect(() => {
+    if (!state?.ok) return;
+    setActiveDraft(state.draft);
+    if (pendingOperatorMessage && state.assistantReply) {
+      setChatHistory((current) => [
+        ...current,
+        { role: "operator", content: pendingOperatorMessage },
+        { role: "claude", content: state.assistantReply },
+      ].slice(-12));
+      setPendingOperatorMessage(null);
+    }
+  }, [state, pendingOperatorMessage]);
 
   const applyDraft = (draft: AIQuoteDraft) => {
     window.dispatchEvent(
@@ -44,6 +68,7 @@ export function AIQuoteAssistant() {
       </div>
 
       <form action={action} className="mt-4 grid gap-3">
+        <input type="hidden" name="mode" value="initial" />
         <label htmlFor="ai-conversation" className="text-xs font-medium">
           Customer conversation
         </label>
@@ -159,14 +184,100 @@ export function AIQuoteAssistant() {
             </div>
           )}
 
+          <div className="rounded-lg border border-brand/20 bg-brand/[0.03] p-3">
+            <p className="text-xs font-semibold">Claude&apos;s interpretation</p>
+            <p className="text-muted-foreground mt-1 text-sm leading-relaxed">
+              {state.assistantReply}
+            </p>
+          </div>
+
+          <div className="rounded-xl border bg-background/60 p-4">
+            <div className="flex items-start gap-3">
+              <BotIcon className="text-brand mt-0.5 size-4 shrink-0" aria-hidden />
+              <div className="min-w-0 flex-1">
+                <p className="text-xs font-semibold">Talk to Claude about this quote</p>
+                <p className="text-muted-foreground mt-1 text-xs leading-relaxed">
+                  Correct facts, clarify the customer&apos;s request, or change the itinerary.
+                  Your instructions update the quote context; they do not silently change payment records.
+                </p>
+              </div>
+            </div>
+
+            {chatHistory.length > 0 && (
+              <div className="mt-3 grid gap-2 border-t pt-3">
+                {chatHistory.map((message, index) => (
+                  <div
+                    key={index}
+                    className={message.role === "operator"
+                      ? "ml-8 rounded-lg border bg-muted/40 p-2.5 text-xs"
+                      : "mr-8 rounded-lg border border-brand/20 bg-brand/[0.03] p-2.5 text-xs"}
+                  >
+                    <p className="font-semibold">
+                      {message.role === "operator" ? "You" : "Claude"}
+                    </p>
+                    <p className="text-muted-foreground mt-1 whitespace-pre-wrap leading-relaxed">
+                      {message.content}
+                    </p>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            <form
+              action={action}
+              className="mt-3 grid gap-2"
+              onSubmit={() => {
+                const message = chatInput.trim();
+                if (message) {
+                  setPendingOperatorMessage(message);
+                  setChatInput("");
+                }
+              }}
+            >
+              <input type="hidden" name="mode" value="chat" />
+              <input
+                type="hidden"
+                name="draft"
+                value={JSON.stringify(activeDraft ?? state.draft)}
+              />
+              <input
+                type="hidden"
+                name="history"
+                value={JSON.stringify(chatHistory)}
+              />
+              <label htmlFor="ai-quote-chat" className="sr-only">
+                Clarification for Claude
+              </label>
+              <textarea
+                id="ai-quote-chat"
+                name="message"
+                value={chatInput}
+                onChange={(event) => setChatInput(event.target.value)}
+                placeholder='e.g. "The client already paid the N$8,500 for NT-XPG4H4. Treat that as paid."'
+                rows={3}
+                disabled={pending}
+                className="border-input bg-background focus-visible:ring-ring w-full rounded-md border px-3 py-2 text-sm leading-relaxed focus-visible:ring-[3px] focus-visible:outline-none"
+              />
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <span className="text-muted-foreground text-xs">
+                  Claude will keep the current quote context in mind.
+                </span>
+                <Button type="submit" disabled={pending || !chatInput.trim()} className="press">
+                  <SendIcon className="size-4" aria-hidden />
+                  {pending ? "Thinking…" : "Send clarification"}
+                </Button>
+              </div>
+            </form>
+          </div>
+
           <div className="flex flex-wrap gap-2">
-            <Button type="button" onClick={() => applyDraft(state.draft)} className="press">
+            <Button type="button" onClick={() => applyDraft(activeDraft ?? state.draft)} className="press">
               <ClipboardPasteIcon className="size-4" aria-hidden />
-              Apply to quote builder
+              Apply final context to quote builder
             </Button>
             {state.draft.agreedTotal > 0 && (
               <span className="text-muted-foreground self-center text-xs">
-                Conversation contains an agreed total of 
+                Conversation contains an agreed total of{" "}
                 <strong>{formatNad(state.draft.agreedTotal)}</strong>.
               </span>
             )}
