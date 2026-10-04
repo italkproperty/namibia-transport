@@ -6,6 +6,7 @@ import { getDb, isDatabaseConfigured } from "@/db";
 import { bookings, customers, payments } from "@/db/schema";
 import { getAdminGateState } from "@/lib/admin/auth";
 import { PLACE_NODES } from "@/lib/network/nodes";
+import { routeItineraryIntelligence } from "@/lib/network/place-resolution";
 
 const MAX_CONVERSATION_CHARS = 30_000;
 const MODEL = process.env.ANTHROPIC_MODEL_TRANSPORT?.trim() || "claude-sonnet-5-5";
@@ -149,6 +150,32 @@ const OUTPUT_SCHEMA = {
     "missing",
     "confidence",
   ],
+} as const;
+
+const GEOGRAPHY_TOOL = {
+  name: "resolve_and_route_itinerary",
+  description:
+    "Resolve customer-facing Namibian places to the trusted Namibia Transport road network and calculate the actual route between consecutive stops. Use this before finalizing any quote itinerary. Never guess a routing node when the tool returns unresolved. The result contains road distance, driving time, roads and intermediate routing places.",
+  strict: true,
+  input_schema: {
+    type: "object",
+    additionalProperties: false,
+    properties: {
+      stops: {
+        type: "array",
+        items: {
+          type: "object",
+          additionalProperties: false,
+          properties: {
+            place: { type: "string" },
+            label: { type: "string" },
+          },
+          required: ["place", "label"],
+        },
+      },
+    },
+    required: ["stops"],
+  },
 } as const;
 
 function extractSignals(text: string) {
@@ -322,7 +349,7 @@ export async function analyseQuoteConversation(
       "The operator may be dealing with an existing customer, an existing booking, a payment already made, or a request for an additional trip. Never treat an additional amount as a new total unless the conversation clearly says so.",
       "If an existing booking is present, preserve its reference and explain whether the customer is amending it, adding a separate booking, or merely discussing payment.",
       "A payment already made is historical money. It must never be silently subtracted from a new trip price. If the customer asks for an additional deposit/payment, identify that separately.",
-      "Stops must be in travel order. Use ONLY a slug from the supplied place catalogue. If the real place is a lodge, hotel, farm or attraction, use the nearest supplied routing place as the slug and put the actual customer-facing name in label.",
+      "Before finalizing stops, call resolve_and_route_itinerary with the customer-facing place names. Treat its routing result as authoritative for distance, route, driving time and routing anchors. A lodge/hotel/farm/attraction may have a different routing anchor; preserve the real customer-facing name in label and use the tool-resolved routing node in slug. Never map a place to the same node as the next distinct place merely because the model thinks they are geographically related. If the tool says a place is unresolved, do not guess.",
       "Never manufacture a price. agreedTotal is only a price explicitly agreed in the conversation. Otherwise use 0 and let the server-side Namibia Transport pricing engine calculate it.",
       "For nights: a stop's nights means nights spent there before travelling to the next stop.",
       "If a detail is genuinely absent, leave the relevant scalar blank/0 and put the missing item in missing.",
@@ -388,41 +415,118 @@ export async function analyseQuoteConversation(
             placeCatalogue: placeCatalogue(),
           });
 
-    const messages =
+    const messages: Array<{
+      role: "user" | "assistant";
+      content: unknown;
+    }> =
       mode === "chat"
         ? [
             ...history.map((item) => ({
-              role: item.role === "operator" ? "user" : "assistant",
+              role: item.role === "operator" ? ("user" as const) : ("assistant" as const),
               content: item.content,
             })),
             { role: "user", content: userPayload },
           ]
         : [{ role: "user", content: userPayload }];
 
-    const response = await fetch("https://api.anthropic.com/v1/messages", {
-      method: "POST",
-      headers: {
-        "content-type": "application/json",
-        Authorization: `Bearer ${apiKey}`,
-        "anthropic-version": "2023-06-01",
-      },
-      body: JSON.stringify({
-        model: MODEL,
-        max_tokens: 5000,
-        system,
-        messages,
-        output_config: {
-          effort: "high",
-          format: {
-            type: "json_schema",
-            schema: OUTPUT_SCHEMA,
-          },
-        },
-      }),
-      signal: AbortSignal.timeout(30_000),
-    });
+    const tools = [GEOGRAPHY_TOOL];
+    let workingMessages = messages;
+    let body: unknown = null;
+    let response: Response | null = null;
 
-    const body = await response.json().catch(() => null);
+    for (let round = 0; round < 3; round += 1) {
+      response = await fetch("https://api.anthropic.com/v1/messages", {
+        method: "POST",
+        headers: {
+          "content-type": "application/json",
+          Authorization: `Bearer ${apiKey}`,
+          "anthropic-version": "2023-06-01",
+        },
+        body: JSON.stringify({
+          model: MODEL,
+          max_tokens: 5000,
+          system,
+          messages: workingMessages,
+          tools,
+          output_config: {
+            effort: "high",
+            format: {
+              type: "json_schema",
+              schema: OUTPUT_SCHEMA,
+            },
+          },
+        }),
+        signal: AbortSignal.timeout(30_000),
+      });
+
+      body = await response.json().catch(() => null);
+      if (!response.ok) break;
+
+      const content = (body as { content?: unknown })?.content;
+      const toolCalls = Array.isArray(content)
+        ? content.filter(
+            (item): item is {
+              type: "tool_use";
+              id: string;
+              name: string;
+              input: unknown;
+            } =>
+              typeof item === "object" &&
+              item !== null &&
+              (item as { type?: unknown }).type === "tool_use" &&
+              typeof (item as { id?: unknown }).id === "string" &&
+              typeof (item as { name?: unknown }).name === "string",
+          )
+        : [];
+
+      if (toolCalls.length === 0) break;
+
+      workingMessages = [
+        ...workingMessages,
+        { role: "assistant", content },
+        {
+          role: "user",
+          content: toolCalls.map((call) => {
+            if (call.name !== GEOGRAPHY_TOOL.name) {
+              return {
+                type: "tool_result",
+                tool_use_id: call.id,
+                is_error: true,
+                content: "Unknown tool.",
+              };
+            }
+
+            try {
+              const input = call.input as {
+                stops?: Array<{ place?: unknown; label?: unknown }>;
+              };
+              const stops = (input.stops ?? []).map((stop) => ({
+                place: typeof stop.place === "string" ? stop.place : "",
+                label: typeof stop.label === "string" ? stop.label : "",
+              }));
+              const result = routeItineraryIntelligence(stops);
+              return {
+                type: "tool_result",
+                tool_use_id: call.id,
+                content: JSON.stringify(result),
+              };
+            } catch (error) {
+              console.error("[ai-quote] geography tool failed", error);
+              return {
+                type: "tool_result",
+                tool_use_id: call.id,
+                is_error: true,
+                content: "The routing engine could not calculate this itinerary.",
+              };
+            }
+          }),
+        },
+      ];
+    }
+
+    if (!response || !body) {
+      return { ok: false, message: "Claude returned no quote analysis." };
+    }
     if (!response.ok) {
       const errorBody =
         body &&
@@ -512,6 +616,22 @@ export async function analyseQuoteConversation(
         label: String(stop.label ?? "").slice(0, 120),
         nights: Math.max(0, Math.floor(Number(stop.nights) || 0)),
       }));
+
+    // Deterministic post-model correction: the model may understand the
+    // customer-facing name but choose the wrong routing anchor. Trusted place
+    // resolution wins over the model's slug whenever an alias is known.
+    const corrected = routeItineraryIntelligence(
+      draft.stops.map((stop) => ({
+        place: stop.slug,
+        label: stop.label,
+      })),
+    );
+    draft.stops = draft.stops.map((stop, index) => {
+      const resolved = corrected.stops[index];
+      return resolved?.slug
+        ? { ...stop, slug: resolved.slug }
+        : stop;
+    });
 
     draft.existingBookingRefs = [...new Set(draft.existingBookingRefs ?? [])]
       .filter((ref) => existingBookings.some((booking) => booking.ref === ref));
