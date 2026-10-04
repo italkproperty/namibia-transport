@@ -82,13 +82,13 @@ check(
 
 console.log("\nthe fare never multiplies by the party");
 
-// The two bold rows of the spec: these used to return N$1,950 and N$4,550.
-check("WDH -> Windhoek, sedan: N$650 whatever the party", price(airport, sedan) === 650);
-check("WDH -> Windhoek, SUV: N$910 whatever the party", price(airport, suv) === 910);
+// The published airport fare is N$850 per vehicle and must never scale by party size.
+check("WDH -> Windhoek, sedan: N$850 whatever the party", price(airport, sedan) === 850);
+check("WDH -> Windhoek, SUV: N$1,190 whatever the party", price(airport, suv) === 1190);\ncheck("the airport route keeps a 30% contribution at N$850", Number(airport.defaultDriverPayout) === 595);
 check("WDH -> Swakopmund, sedan: N$4,200", price(swakop, sedan) === 4200);
 check("WDH -> Swakopmund, SUV: N$5,880", price(swakop, suv) === 5880);
 check(
-  // Within float noise of a whole rand: 650 × 1.4 is 909.999… in IEEE 754,
+  // Within float noise of a whole rand: the route fare is scaled by 1.4 for the SUV,
   // and computeFare's rounding is what the customer sees. The invariant is
   // that no catalogue fare produces a genuine fraction the rounding could
   // move away from what was advertised.
