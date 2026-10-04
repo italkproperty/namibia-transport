@@ -7,6 +7,7 @@ import { getDb, isDatabaseConfigured } from "@/db";
 import { bookings } from "@/db/schema";
 import { getAdminGateState } from "@/lib/admin/auth";
 import { isSettled } from "@/lib/admin/settled";
+import { reconcileBookingPayment } from "@/lib/payments/reconcile";
 
 /**
  * Voiding a booking, and why it needed to exist.
@@ -233,8 +234,6 @@ export async function completeBooking(
  * the gateway is queried and its reported amount must still match the payment
  * row before reconciliation can confirm the booking.
  */
-import { reconcileBookingPayment } from "@/lib/payments/reconcile";
-
 export type PaymentReconcileState =
   | { ok: true; message: string; status: string }
   | { ok: false; message: string; status?: string }
