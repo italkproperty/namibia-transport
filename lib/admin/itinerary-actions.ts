@@ -9,6 +9,8 @@ import {
   type ItineraryQuote,
   type QuoteStop,
 } from "@/lib/admin/itinerary-quote";
+import { findNode } from "@/lib/network/nodes";
+import type { DriverPositioning } from "@/lib/network/itinerary";
 import { SITE } from "@/lib/site";
 import { listVehicleClasses } from "@/lib/maps";
 import { getPricingConfig, profileFor } from "@/lib/pricing/settings";
@@ -22,6 +24,14 @@ import type { RunningCost } from "@/lib/pricing/cost-model";
  * everywhere else on this site: the client never computes or sends a fare, it
  * asks for one.
  */
+
+function parseDriverPositioning(
+  originSlug: string,
+  returnToOrigin: boolean,
+): DriverPositioning | undefined {
+  if (!originSlug || !findNode(originSlug)) return undefined;
+  return { originSlug, returnToOrigin };
+}
 
 function parseStops(raw: string): QuoteStop[] {
   try {
@@ -89,6 +99,9 @@ export type SerialisedQuote = {
     price: number;
   }[];
   selfDrive: { id: string; label: string; total: number; note: string }[];
+  positioning: DriverPositioning | null;
+  positioningKm: number;
+  positioningDrivingMinutes: number;
 };
 
 function serialise(quote: ItineraryQuote): SerialisedQuote {
@@ -108,6 +121,9 @@ function serialise(quote: ItineraryQuote): SerialisedQuote {
       price: leg.price,
     })),
     selfDrive: quote.selfDrive,
+    positioning: quote.positioning,
+    positioningKm: quote.positioningKm,
+    positioningDrivingMinutes: quote.positioningDrivingMinutes,
   };
 }
 
@@ -121,6 +137,10 @@ export async function priceItineraryAction(
   }
 
   const stops = parseStops(String(formData.get("stops") ?? "[]"));
+  const positioning = parseDriverPositioning(
+    String(formData.get("driverPositioningOrigin") ?? "").trim(),
+    String(formData.get("driverPositioningReturn") ?? "false") === "true",
+  );
   if (stops.length < 2) {
     return { ok: false, message: "An itinerary needs at least two stops." };
   }
@@ -133,7 +153,7 @@ export async function priceItineraryAction(
   const quotes: PricedClass[] = [];
   for (const vehicleClass of classes) {
     const profile = profileFor(config, vehicleClass.slug);
-    const quote = priceItinerary(stops, profile.runningCost);
+    const quote = priceItinerary(stops, profile.runningCost, positioning);
     if (!quote) continue;
     quotes.push({
       vehicleClassId: vehicleClass.id,
@@ -146,7 +166,7 @@ export async function priceItineraryAction(
   if (quotes.length === 0) {
     // Either the pair has no road, or the vehicle catalogue is unseeded. Say
     // which, because the remedies are nothing alike.
-    const baseline = priceItinerary(stops);
+    const baseline = priceItinerary(stops, undefined, positioning);
     return {
       ok: false,
       message: baseline
@@ -193,6 +213,11 @@ export async function saveItineraryAction(
   if (stops.length < 2) {
     return { ok: false, message: "An itinerary needs at least two stops." };
   }
+
+  const positioning = parseDriverPositioning(
+    field("driverPositioningOrigin"),
+    field("driverPositioningReturn") === "true",
+  );
 
   const startDate = field("startDate");
   const startTime = field("startTime") || "08:00";
@@ -257,6 +282,7 @@ export async function saveItineraryAction(
     agreedTotal,
     legPrices,
     notes: field("notes") || undefined,
+    positioning,
   });
 
   if (!result.ok) return result;
