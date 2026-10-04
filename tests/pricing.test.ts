@@ -4,8 +4,8 @@
  * The bug this guards against: airport transfers multiplied the fare by the
  * party size, so three people paid N$1,950 for a 45-minute drive and N$4,200
  * for four and a half hours. Nothing in the cost base scales with passenger
- * count, and our own fare model derives the airport run's N$650 per vehicle
- * from the minimum call-out. Passenger count and luggage select the vehicle
+ * count. The published airport fare is N$850 per vehicle; the cost model's
+ * N$650 baseline is a separate operating recommendation. Passenger count and luggage select the vehicle
  * class; they never multiply the fare — and no route may carry per_person
  * until a genuine scheduled shared shuttle exists.
  */
@@ -84,7 +84,7 @@ console.log("\nthe fare never multiplies by the party");
 
 // The published airport fare is N$850 per vehicle and must never scale by party size.
 check("WDH -> Windhoek, sedan: N$850 whatever the party", price(airport, sedan) === 850);
-check("WDH -> Windhoek, SUV: N$1,190 whatever the party", price(airport, suv) === 1190);\ncheck("the airport route keeps a 30% contribution at N$850", Number(airport.defaultDriverPayout) === 595);
+check("WDH -> Windhoek, SUV: N$1,190 whatever the party", price(airport, suv) === 1190);\ncheck(\n  "the airport route keeps a 30% contribution at N$850",\n  Number(airport.defaultDriverPayout) === 595,\n);
 check("WDH -> Swakopmund, sedan: N$4,200", price(swakop, sedan) === 4200);
 check("WDH -> Swakopmund, SUV: N$5,880", price(swakop, suv) === 5880);
 check(
