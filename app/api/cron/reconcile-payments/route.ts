@@ -10,7 +10,7 @@ export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 export const maxDuration = 30;
 
-const BATCH_SIZE = 8;
+const BATCH_SIZE = 5;
 const PAYMENT_LOOKBACK_MS = 48 * 60 * 60 * 1000;
 const PER_PAYMENT_TIMEOUT_MS = 5_000;
 
@@ -95,9 +95,9 @@ export async function GET(request: Request) {
     }> = [];
     let timedOut = 0;
 
-    // Keep gateway calls bounded. The DB pool is intentionally one connection,
-    // so a small worker pool avoids turning a payment sweep into another
-    // connection queue while still allowing PayToday requests to overlap.
+    // Keep the batch small. Each reconciliation performs database reads and a
+    // remote PayToday query, so five attempts fit comfortably inside the
+    // function deadline without turning a slow gateway into a second timeout.
     for (const candidate of candidates as Candidate[]) {
       try {
         const result = await reconcileWithTimeout(candidate.bookingRef);
