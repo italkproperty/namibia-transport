@@ -528,10 +528,21 @@ export function ItineraryBuilder({ places }: { places: PlaceOption[] }) {
             </p>
           </div>
           <p className="text-muted-foreground mt-1 text-xs">
-            {quote.days} days · {quote.nights} nights · {quote.km} km ·{" "}
-            {formatDuration(quote.drivingMinutes)} driving · {quote.gravelKm} km
+            {quote.days} days · {quote.nights} nights · {quote.km} km passenger
+            route · {formatDuration(quote.drivingMinutes)} driving · {quote.gravelKm} km
             gravel
           </p>
+          {quote.positioning && quote.positioningKm > 0 && (
+            <p className="text-muted-foreground mt-1 text-xs">
+              Includes driver positioning: {quote.positioningKm} km ·{" "}
+              {formatDuration(quote.positioningDrivingMinutes)} additional driving
+              from{" "}
+              {places.find(
+                (place) => place.slug === quote.positioning?.originSlug,
+              )?.name ?? quote.positioning.originSlug}
+              {quote.positioning.returnToOrigin ? " and back to base" : ""}.
+            </p>
+          )}
 
           <ul className="mt-3 divide-y border-t">
             {quote.legs.map((leg, index) => (
