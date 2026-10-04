@@ -418,7 +418,7 @@ export function ItineraryBuilder({ places }: { places: PlaceOption[] }) {
             <p className="text-sm font-semibold">Driver positioning</p>
             <p className="text-muted-foreground mt-1 max-w-2xl text-xs leading-relaxed">
               Internal logistics only. The customer itinerary stays separate.
-              This accounts for the driver's trip from base to the first pickup
+              This accounts for the driver&apos;s trip from base to the first pickup
               and, when enabled, back to base after the last drop-off.
             </p>
           </div>
