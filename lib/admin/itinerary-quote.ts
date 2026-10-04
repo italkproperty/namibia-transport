@@ -270,16 +270,35 @@ export async function saveItineraryQuote(
     return { ok: false, message: "No database is configured." };
   }
 
+  // Re-resolve the operator's customer-facing labels before saving. The
+  // preview and save actions are separate server requests, so a stale/blank
+  // model slug must never make a quote that was just successfully priced
+  // impossible to save. Labels are only used as a fallback; trusted slugs win.
+  const resolvedStops = input.stops.map((stop) => {
+    if (findNode(stop.slug)) return stop;
+    const label = stop.label?.trim();
+    if (!label) return stop;
+    const alias = label.toLowerCase().replace(/\\s+/g, " ").trim();
+    const fallback: Record<string, string> = {
+      "namib desert lodge": "solitaire",
+      "deadvlei": "sossusvlei",
+      "dead vlei": "sossusvlei",
+      "sossusvlei / deadvlei": "sossusvlei",
+    };
+    const slug = fallback[alias];
+    return slug && findNode(slug) ? { ...stop, slug } : stop;
+  });
+
   const quote = priceItinerary(
-    input.stops,
+    resolvedStops,
     input.runningCost,
     input.positioning,
   );
   if (!quote) {
+    const route = resolvedStops.map((stop) => stop.label?.trim() || stop.slug).join(" → ");
     return {
       ok: false,
-      message:
-        "That itinerary cannot be routed — check that consecutive stops are different places the network knows.",
+      message: `That itinerary cannot be routed: ${route}. Price the itinerary again so the saved quote uses the same routing state.`,
     };
   }
 
