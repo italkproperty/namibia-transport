@@ -403,7 +403,12 @@ export async function analyseQuoteConversation(
           ]
         : [{ role: "user", content: userPayload }];
 
-    // Claude is responsible for understanding the conversation and extracting the\n    // customer-facing itinerary. Routing is deliberately deterministic and server-side:\n    // once Claude returns the stops, routeItineraryIntelligence resolves lodge/hotel/\n    // attraction names to trusted network anchors. This avoids a tool-call loop\n    // consuming the response without ever producing the structured quote.\n    const response = await fetch("https://api.anthropic.com/v1/messages", {\n      method: "POST",\n      headers: {\n        "content-type": "application/json",\n        Authorization: `Bearer ${apiKey}`,\n        "anthropic-version": "2023-06-01",\n      },\n      body: JSON.stringify({\n        model: MODEL,\n        max_tokens: 5000,\n        system,\n        messages,\n        output_config: {\n          effort: "high",\n          format: {\n            type: "json_schema",\n            schema: OUTPUT_SCHEMA,\n          },\n        },\n      }),\n      signal: AbortSignal.timeout(30_000),\n    });\n\n    const body = await response.json().catch(() => null);\n
+    // Claude is responsible for understanding the conversation and extracting the
+    // customer-facing itinerary. Routing is deliberately deterministic and server-side:
+    // once Claude returns the stops, routeItineraryIntelligence resolves lodge/hotel/
+    // attraction names to trusted network anchors. This avoids a tool-call loop
+    // consuming the response without ever producing the structured quote.\n    const response = await fetch("https://api.anthropic.com/v1/messages", {\n      method: "POST",\n      headers: {\n        "content-type": "application/json",\n        Authorization: `Bearer ${apiKey}`,\n        "anthropic-version": "2023-06-01",\n      },\n      body: JSON.stringify({\n        model: MODEL,\n        max_tokens: 5000,\n        system,\n        messages,\n        output_config: {\n          effort: "high",\n          format: {\n            type: "json_schema",\n            schema: OUTPUT_SCHEMA,\n          },\n        },\n      }),\n      signal: AbortSignal.timeout(30_000),\n    });\n\n    const body = await response.json().catch(() => null);
+
     if (!response || !body) {
       return { ok: false, message: "Claude returned no quote analysis." };
     }
