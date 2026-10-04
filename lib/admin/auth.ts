@@ -17,13 +17,36 @@ import { cookies } from "next/headers";
 
 const COOKIE_NAME = "nt_admin";
 const SESSION_SECONDS = 60 * 60 * 8;
+const PRODUCTION_COOKIE_DOMAIN = ".namibiatransport.com";
+
+/**
+ * Production is served on both the apex and www custom domain. A host-only
+ * cookie makes a session created on one host invisible to the other, which is
+ * especially easy to trigger when an operator follows a link containing the
+ * www hostname after signing in on the apex hostname.
+ *
+ * Keep preview deployments host-only: a Vercel preview domain cannot legally
+ * set a cookie for the production custom domain.
+ */
+function sessionCookieOptions() {
+  return {
+    httpOnly: true,
+    sameSite: "lax" as const,
+    secure: process.env.NODE_ENV === "production",
+    path: "/",
+    maxAge: SESSION_SECONDS,
+    ...(process.env.VERCEL_ENV === "production"
+      ? { domain: PRODUCTION_COOKIE_DOMAIN }
+      : {}),
+  };
+}
 
 /**
  * Trimmed, because the value is pasted into a hosting dashboard and a
  * trailing newline is invisible there while being fatal here: the comparison
  * below rejects on length before it ever looks at the characters, so
- * "secret\n" on the server and "secret" in the form silently disagree and the
- * operator is told their correct password is wrong.
+ * "secret\n" on the server and "secret" in the form silently disagree and
+ * the operator is told their correct password is wrong.
  */
 function adminPassword(): string | null {
   const password = process.env.ADMIN_PASSWORD?.trim();
@@ -68,16 +91,10 @@ export async function signInWithPassword(candidate: string): Promise<boolean> {
   // carrying edge whitespace as meaningful.
   if (!safeEquals(candidate.trim(), password)) return false;
 
-  (await cookies()).set(COOKIE_NAME, sessionToken(password), {
-    httpOnly: true,
-    sameSite: "lax",
-    secure: process.env.NODE_ENV === "production",
-    path: "/",
-    maxAge: SESSION_SECONDS,
-  });
+  (await cookies()).set(COOKIE_NAME, sessionToken(password), sessionCookieOptions());
   return true;
 }
 
 export async function signOutAdmin(): Promise<void> {
-  (await cookies()).delete(COOKIE_NAME);
+  (await cookies()).delete(COOKIE_NAME, sessionCookieOptions());
 }
