@@ -383,7 +383,7 @@ export function BookingDetailsForm({
               name="whatsapp"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>WhatsApp number</FormLabel>
+                  <FormLabel>Mobile / WhatsApp number</FormLabel>
                   <FormControl>
                     <Input
                       className="h-11"
@@ -396,8 +396,8 @@ export function BookingDetailsForm({
                     />
                   </FormControl>
                   <FormDescription>
-                    Include your country code. This is how your driver reaches
-                    you on the day.
+                    Required for the online card payment. Include your country code. WhatsApp is
+                    preferred so your driver can reach you easily on the day.
                   </FormDescription>
                   <FormMessage />
                 </FormItem>
@@ -405,12 +405,8 @@ export function BookingDetailsForm({
             />
           </div>
 
-          {/* Email sat 130 lines below WhatsApp, under a heading of its own,
-              which made "either one will do" impossible to read as a rule.
-              WhatsApp is still asked for first — it is how dispatch and driver
-              coordination actually work — but it is not universal among
-              inbound travellers, and requiring it turned an operating truth
-              into a reason to turn a booking away. */}
+          {/* Email is required by the online card-payment flow and is collected
+              alongside the mobile number used by PayToday and dispatch. */}
           <div className="grid gap-4 sm:grid-cols-2">
             <FormField
               control={form.control}
@@ -429,8 +425,7 @@ export function BookingDetailsForm({
                     />
                   </FormControl>
                   <FormDescription>
-                    Use this instead if you do not have WhatsApp — we will send
-                    your confirmation here.
+                    Required for the online card payment and your payment receipt.
                   </FormDescription>
                   <FormMessage />
                 </FormItem>
@@ -438,8 +433,8 @@ export function BookingDetailsForm({
             />
 
             <p className="text-muted-foreground self-end pb-2 text-xs text-pretty">
-              Your email is required for the online card payment. WhatsApp is
-              used for driver coordination.
+              Your mobile number is required for the online card payment. WhatsApp is
+              preferred for driver coordination.
             </p>
           </div>
 
