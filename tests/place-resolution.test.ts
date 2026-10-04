@@ -45,6 +45,22 @@ check(
   trip.totalKm > 0,
   String(trip.totalKm),
 );
+
+const labelsOnly = routeItineraryIntelligence([
+  { place: "", label: "Namib Desert Lodge" },
+  { place: "", label: "Sossusvlei / Deadvlei" },
+  { place: "", label: "Namib Desert Lodge" },
+]);
+
+check("AI label-only itinerary remains routable", labelsOnly.routable, JSON.stringify(labelsOnly));
+check(
+  "AI label-only lodge names resolve to trusted anchors",
+  labelsOnly.stops[0]?.slug === "solitaire" &&
+    labelsOnly.stops[1]?.slug === "sossusvlei" &&
+    labelsOnly.stops[2]?.slug === "solitaire",
+  JSON.stringify(labelsOnly.stops),
+);
+
 check(
   "round trip has a non-zero driving time",
   trip.totalDrivingMinutes > 0,
