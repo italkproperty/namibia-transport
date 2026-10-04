@@ -163,7 +163,12 @@ export function AIQuoteAssistant() {
             <div className="rounded-lg border p-3">
               <p className="text-muted-foreground text-xs">Existing / additional money</p>
               <p className="mt-1 text-sm font-medium">
-                {formatNad(displayDraft.existingPaidAmount)} already paid
+                {formatNad(displayDraft.existingPaidAmount)} payment context
+              </p>
+              <p className="text-muted-foreground text-xs">
+                {displayDraft.existingPaidAmount > 0
+                  ? "Operator/customer context — not a gateway verification."
+                  : "No payment amount confirmed in the quote context."}
               </p>
               <p className="text-muted-foreground text-xs">
                 {displayDraft.additionalAmountRequested > 0
