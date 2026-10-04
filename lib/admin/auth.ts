@@ -96,5 +96,24 @@ export async function signInWithPassword(candidate: string): Promise<boolean> {
 }
 
 export async function signOutAdmin(): Promise<void> {
-  (await cookies()).delete(COOKIE_NAME, sessionCookieOptions());
+  const cookieStore = await cookies();
+
+  // Next.js only accepts the cookie name for delete(). To remove a cookie
+  // with a specific domain, expire it with the same domain/path attributes.
+  cookieStore.set(COOKIE_NAME, "", {
+    ...sessionCookieOptions(),
+    maxAge: 0,
+  });
+
+  // Also clear the legacy host-only cookie created before the domain fix.
+  // Otherwise an old host-only cookie could survive sign-out on one hostname.
+  if (process.env.VERCEL_ENV === "production") {
+    cookieStore.set(COOKIE_NAME, "", {
+      httpOnly: true,
+      sameSite: "lax",
+      secure: true,
+      path: "/",
+      maxAge: 0,
+    });
+  }
 }
