@@ -45,10 +45,10 @@ function buildDb() {
       // Vercel kills the whole function. The operator gets
       // 504 FUNCTION_INVOCATION_TIMEOUT, which says nothing about what
       // failed, and /admin/bookings is unreachable with money waiting to be
-      // confirmed on it. Ten seconds is far longer than a healthy connect and
-      // short enough to fail inside the function's own budget, so the catch
+      // confirmed on it. Five seconds keeps connection establishment inside the six-second
+      // admin read deadline and is short enough to fail inside the function's own budget, so the catch
       // blocks run and the page can say what broke.
-      connect_timeout: 10,
+      connect_timeout: 5,
       // Per serverless instance, not per deployment. Vercel runs many of these
       // at once and they all share one pooler, so a generous number here is
       // multiplied by however many instances are warm.
