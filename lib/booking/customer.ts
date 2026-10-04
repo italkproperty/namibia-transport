@@ -95,6 +95,36 @@ export async function resolveCustomer(
   }
 
   if (existing) {
+    // A returning traveller may have supplied a new email/number/name on this
+    // booking. Keep the customer record current because the payment provider
+    // reads its contact details when the checkout intent is created.
+    const nextWhatsapp = whatsapp ?? existing.whatsapp;
+    const nextEmail = email ?? existing.email;
+    const nextFullName = input.fullName.trim() || existing.fullName;
+    const nextCustomerType = input.customerType ?? existing.customerType;
+
+    const changed =
+      nextWhatsapp !== existing.whatsapp ||
+      nextEmail !== existing.email ||
+      nextFullName !== existing.fullName ||
+      nextCustomerType !== existing.customerType;
+
+    if (changed) {
+      const [updated] = await db
+        .update(customers)
+        .set({
+          fullName: nextFullName,
+          whatsapp: nextWhatsapp,
+          email: nextEmail,
+          customerType: nextCustomerType,
+          updatedAt: new Date(),
+        })
+        .where(eq(customers.id, existing.id))
+        .returning();
+
+      return { customer: updated ?? existing, isRepeat: true };
+    }
+
     return { customer: existing, isRepeat: true };
   }
 
