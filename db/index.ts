@@ -52,7 +52,11 @@ function buildDb() {
       // Per serverless instance, not per deployment. Vercel runs many of these
       // at once and they all share one pooler, so a generous number here is
       // multiplied by however many instances are warm.
-      max: 4,
+      // Vercel can keep many function instances warm. Four sockets per
+      // instance multiplies quickly under traffic and can starve Supavisor;
+      // this app's queries are short and should share one transaction-mode
+      // connection per warm instance.
+      max: 1,
       // Without this, postgres.js holds every socket it ever opened. A warm
       // instance that served one booking at 06:00 was still holding four
       // connections at noon, and the pooler counts them against the limit all
