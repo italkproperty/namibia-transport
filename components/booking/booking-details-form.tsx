@@ -438,8 +438,8 @@ export function BookingDetailsForm({
             />
 
             <p className="text-muted-foreground self-end pb-2 text-xs text-pretty">
-              We need one of the two. WhatsApp is quicker on the day; either is
-              fine for the booking.
+              Your email is required for the online card payment. WhatsApp is
+              used for driver coordination.
             </p>
           </div>
 
