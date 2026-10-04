@@ -49,6 +49,10 @@ export type AIQuoteChatMessage = {
   content: string;
 };
 
+type AIQuoteModelResponse = AIQuoteDraft & {
+  assistantReply: string;
+};
+
 export type AIQuoteState =
   | {
       ok: true;
@@ -489,13 +493,15 @@ export async function analyseQuoteConversation(
       return { ok: false, message: "Claude returned no quote analysis." };
     }
 
-    let draft: AIQuoteDraft;
+    let modelResponse: AIQuoteModelResponse;
     try {
-      draft = JSON.parse(raw) as AIQuoteDraft;
+      modelResponse = JSON.parse(raw) as AIQuoteModelResponse;
     } catch {
       console.error("[ai-quote] structured response was not JSON");
       return { ok: false, message: "Claude returned an unreadable quote analysis. Try again." };
     }
+
+    const { assistantReply, ...draft } = modelResponse;
 
     // Defence in depth: the model's structured output is still untrusted input.
     const allowedSlugs = new Set(PLACE_NODES.map((node) => node.slug));
@@ -515,8 +521,8 @@ export async function analyseQuoteConversation(
       draft,
       matchedBookings: existingBookings,
       assistantReply:
-        typeof draft.assistantReply === "string" && draft.assistantReply.trim()
-          ? draft.assistantReply.trim()
+        typeof assistantReply === "string" && assistantReply.trim()
+          ? assistantReply.trim()
           : draft.summary,
     };
   } catch (error) {
