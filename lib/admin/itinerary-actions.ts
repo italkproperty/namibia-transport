@@ -201,12 +201,16 @@ export async function saveItineraryAction(
   }
 
   const legPricesRaw = field("legPrices");
-  let legPrices: number[] | undefined;
+  let legPrices: Array<number | null> | undefined;
   if (legPricesRaw) {
     try {
       const parsed = JSON.parse(legPricesRaw);
       if (Array.isArray(parsed)) {
-        legPrices = parsed.map((value) => Number(value));
+        legPrices = parsed.map((value) => {
+          if (value === null || value === "") return null;
+          const number = Number(value);
+          return Number.isFinite(number) ? number : null;
+        });
       }
     } catch {
       return { ok: false, message: "The leg prices could not be read. Price the itinerary again." };
