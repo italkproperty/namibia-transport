@@ -45,6 +45,7 @@ import { mapsLink } from "@/lib/maps/bounds";
 import { assignmentsByBooking, listDrivers } from "@/lib/dispatch/queries";
 import { formatNad } from "@/lib/money";
 import { journeyLabel } from "@/lib/network/journey";
+import { whatsappLink } from "@/lib/company";
 import { SITE } from "@/lib/site";
 
 export const metadata: Metadata = {
@@ -650,6 +651,14 @@ export default async function AdminBookingsPage({ searchParams }: PageProps) {
                         }
                         label={row.groupRef ? "Share quote" : "Share"}
                         customerName={row.customerName}
+                        whatsappHref={
+                          row.customerWhatsapp
+                            ? whatsappLink(
+                                row.customerWhatsapp,
+                                `Hi ${row.customerName ?? ""} — here is your Namibia Transport ${row.groupRef ? "quote" : "booking"} link: ${row.groupRef ? `${SITE.url}/quote/${encodeURIComponent(row.groupRef)}` : `${SITE.url}/booking/${encodeURIComponent(row.ref)}`}`,
+                              )
+                            : null
+                        }
                       />
                     </TableCell>
                     <TableCell className="text-right">
