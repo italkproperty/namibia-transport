@@ -54,6 +54,7 @@ export type PositioningLeg = {
   fromSlug: string;
   toSlug: string;
   km: number;
+  tarKm: number;
   minutes: number;
   gravelKm: number;
 };
@@ -192,6 +193,7 @@ export function planItinerary(
         fromSlug: road.origin.slug,
         toSlug: road.destination.slug,
         km: road.km,
+        tarKm: road.tarKm,
         minutes: road.minutes,
         gravelKm: road.gravelKm,
       });
