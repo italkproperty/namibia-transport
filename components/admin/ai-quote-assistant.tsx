@@ -29,21 +29,21 @@ export function AIQuoteAssistant() {
   const [chatHistory, setChatHistory] = React.useState<AIQuoteChatMessage[]>([]);
   const [pendingOperatorMessage, setPendingOperatorMessage] = React.useState<string | null>(null);
 
+  const displayDraft = activeDraft ?? (state?.ok ? state.draft : null);
+  const displayBookings = state?.ok ? state.matchedBookings : [];
+
   React.useEffect(() => {
     if (pending || !state?.ok) return;
-    setActiveDraft(displayDraft);
-    if (pendingOperatorMessage && state?.ok ? state.assistantReply : null) {
+    setActiveDraft(state.draft);
+    if (pendingOperatorMessage && state.assistantReply) {
       setChatHistory((current) => [
         ...current,
         { role: "operator", content: pendingOperatorMessage },
-        { role: "claude", content: state?.ok ? state.assistantReply : null },
+        { role: "claude", content: state.assistantReply },
       ].slice(-12));
       setPendingOperatorMessage(null);
     }
   }, [state, pending, pendingOperatorMessage]);
-
-  const displayDraft = activeDraft ?? (state?.ok ? displayDraft : null);
-  const displayBookings = state?.ok ? displayBookings : [];
 
   const applyDraft = (draft: AIQuoteDraft) => {
     window.dispatchEvent(
