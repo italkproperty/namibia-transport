@@ -113,6 +113,15 @@ const baseBookingSchema = z.object({
   adClickKind: z.enum(CLICK_KINDS).optional().or(z.literal("")),
 });
 
+/**
+ * Public booking schema. Keep this named export stable because both the
+ * browser form and the Server Action import it directly.
+ *
+ * Mobile/WhatsApp and email are required here so PayToday receives the
+ * traveller contact details it needs for card checkout.
+ */
+export const bookingFormSchema = baseBookingSchema;
+
 export type BookingFormValues = z.infer<typeof bookingFormSchema>;
 
 /** The unrefined shape, for callers that build values a field at a time. */
