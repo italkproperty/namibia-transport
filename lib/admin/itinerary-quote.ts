@@ -192,6 +192,8 @@ export type SaveItineraryInput = {
   luggageCount: number;
   /** Overrides the computed total when a figure was already agreed. */
   agreedTotal?: number;
+  /** Explicit operator price for each generated leg, in itinerary order. */
+  legPrices?: number[];
   /**
    * The vehicle the fare was computed for. Stored on every leg, because a
    * quote naming one class beside a price computed for another is exactly the
@@ -267,9 +269,19 @@ export async function saveItineraryQuote(
     };
   }
 
-  // An agreed figure overrides the model, and the legs are re-split against it
-  // so the parts still sum to what the traveller was told.
-  const total = input.agreedTotal ?? quote.total;
+  // An agreed figure overrides the model. Explicit leg prices are even more
+  // specific: they let the operator negotiate one stop without disturbing the
+  // others. When both are present, explicit leg prices win.
+  const validLegPrices =
+    input.legPrices &&
+    input.legPrices.length === quote.legs.length &&
+    input.legPrices.every((price) => Number.isFinite(price) && price > 0)
+      ? input.legPrices
+      : null;
+  const total =
+    validLegPrices
+      ? validLegPrices.reduce((sum, price) => sum + price, 0)
+      : input.agreedTotal ?? quote.total;
   const scale = total / quote.total;
 
   const db = getDb();
@@ -293,7 +305,13 @@ export async function saveItineraryQuote(
 
       for (const [index, leg] of quote.legs.entries()) {
         const isLast = index === quote.legs.length - 1;
-        const price = isLast ? total - allocated : Math.round(leg.price * scale);
+        const price = validLegPrices
+          ? isLast
+            ? total - allocated
+            : Math.round(validLegPrices[index])
+          : isLast
+            ? total - allocated
+            : Math.round(leg.price * scale);
         allocated += price;
 
         const payout = Math.round(price * (quote.totalPayout / quote.total));
