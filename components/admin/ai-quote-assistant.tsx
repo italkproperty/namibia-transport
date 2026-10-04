@@ -30,7 +30,7 @@ export function AIQuoteAssistant() {
   const [pendingOperatorMessage, setPendingOperatorMessage] = React.useState<string | null>(null);
 
   React.useEffect(() => {
-    if (!state?.ok) return;
+    if (pending || !state?.ok) return;
     setActiveDraft(state.draft);
     if (pendingOperatorMessage && state.assistantReply) {
       setChatHistory((current) => [
