@@ -152,33 +152,7 @@ const OUTPUT_SCHEMA = {
   ],
 } as const;
 
-// Kept as documentation of the routing contract; routing itself is server-side after extraction.\nconst GEOGRAPHY_TOOL = {
-  name: "resolve_and_route_itinerary",
-  description:
-    "Resolve customer-facing Namibian places to the trusted Namibia Transport road network and calculate the actual route between consecutive stops. Use this before finalizing any quote itinerary. Never guess a routing node when the tool returns unresolved. The result contains road distance, driving time, roads and intermediate routing places.",
-  strict: true,
-  input_schema: {
-    type: "object",
-    additionalProperties: false,
-    properties: {
-      stops: {
-        type: "array",
-        items: {
-          type: "object",
-          additionalProperties: false,
-          properties: {
-            place: { type: "string" },
-            label: { type: "string" },
-          },
-          required: ["place", "label"],
-        },
-      },
-    },
-    required: ["stops"],
-  },
-} as const;
-
-function extractSignals(text: string) {
+// Kept as documentation of the routing contract; routing itself is server-side after extraction.\nfunction extractSignals(text: string) {
   const refs = [...new Set(
     text.match(/\bNT(?:-G)?-[A-Z0-9]{5,12}\b/gi)?.map((v) => v.toUpperCase()) ?? [],
   )];
@@ -429,7 +403,7 @@ export async function analyseQuoteConversation(
           ]
         : [{ role: "user", content: userPayload }];
 
-    // Claude is responsible for understanding the conversation and extracting the\n    // customer-facing itinerary. Routing is deliberately deterministic and server-side:\n    // once Claude returns the stops, routeItineraryIntelligence resolves lodge/hotel/\n    // attraction names to trusted network anchors. This avoids a tool-call loop\n    // consuming the response without ever producing the structured quote.\n    const response = await fetch("https://api.anthropic.com/v1/messages", {\n      method: "POST",\n      headers: {\n        "content-type": "application/json",\n        Authorization: \`Bearer \${apiKey}\`,\n        "anthropic-version": "2023-06-01",\n      },\n      body: JSON.stringify({\n        model: MODEL,\n        max_tokens: 5000,\n        system,\n        messages,\n        output_config: {\n          effort: "high",\n          format: {\n            type: "json_schema",\n            schema: OUTPUT_SCHEMA,\n          },\n        },\n      }),\n      signal: AbortSignal.timeout(30_000),\n    });\n\n    const body = await response.json().catch(() => null);\n
+    // Claude is responsible for understanding the conversation and extracting the\n    // customer-facing itinerary. Routing is deliberately deterministic and server-side:\n    // once Claude returns the stops, routeItineraryIntelligence resolves lodge/hotel/\n    // attraction names to trusted network anchors. This avoids a tool-call loop\n    // consuming the response without ever producing the structured quote.\n    const response = await fetch("https://api.anthropic.com/v1/messages", {\n      method: "POST",\n      headers: {\n        "content-type": "application/json",\n        Authorization: `Bearer ${apiKey}`,\n        "anthropic-version": "2023-06-01",\n      },\n      body: JSON.stringify({\n        model: MODEL,\n        max_tokens: 5000,\n        system,\n        messages,\n        output_config: {\n          effort: "high",\n          format: {\n            type: "json_schema",\n            schema: OUTPUT_SCHEMA,\n          },\n        },\n      }),\n      signal: AbortSignal.timeout(30_000),\n    });\n\n    const body = await response.json().catch(() => null);\n
     if (!response || !body) {
       return { ok: false, message: "Claude returned no quote analysis." };
     }
