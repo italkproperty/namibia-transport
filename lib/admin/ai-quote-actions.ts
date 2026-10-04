@@ -282,23 +282,25 @@ export async function analyseQuoteConversation(
     };
   }
 
+  const mode = String(formData.get("mode") ?? "initial");
   const conversation = String(formData.get("conversation") ?? "").trim();
-  if (!conversation) {
-    return { ok: false, message: "Paste the WhatsApp or email conversation first." };
-  }
-  if (conversation.length > MAX_CONVERSATION_CHARS) {
-    return {
-      ok: false,
-      message: "That conversation is too long. Paste the relevant customer thread, up to 30,000 characters.",
-    };
+  const operatorMessage = String(formData.get("message") ?? "").trim();
+  const currentDraftRaw = String(formData.get("draft") ?? "");
+  const historyRaw = String(formData.get("history") ?? "");
+
+  if (mode === "initial") {
+    if (!conversation) {
+      return { ok: false, message: "Paste the WhatsApp or email conversation first." };
+    }
+    if (conversation.length > MAX_CONVERSATION_CHARS) {
+      return {
+        ok: false,
+        message: "That conversation is too long. Paste the relevant customer thread, up to 30,000 characters.",
+      };
+    }
   }
 
   try {
-    const existingBookings = await findExistingBookings(conversation);
-    const today = new Intl.DateTimeFormat("en-CA", {
-      timeZone: "Africa/Windhoek",
-    }).format(new Date());
-
     const system = [
       "You are Namibia Transport's internal quoting copilot.",
       "You read messy WhatsApp and email conversations and maintain a precise quote brief for an experienced human operator.",
@@ -322,11 +324,6 @@ export async function analyseQuoteConversation(
       "Think the problem through before you answer.",
     ].join("\n");
 
-    const mode = String(formData.get("mode") ?? "initial");
-    const operatorMessage = String(formData.get("message") ?? "").trim();
-    const currentDraftRaw = String(formData.get("draft") ?? "");
-    const historyRaw = String(formData.get("history") ?? "");
-
     let currentDraft: AIQuoteDraft | null = null;
     if (mode === "chat") {
       if (!operatorMessage) {
@@ -341,6 +338,15 @@ export async function analyseQuoteConversation(
         return { ok: false, message: "The current quote context could not be read. Analyse the conversation again." };
       }
     }
+
+    const historyLookupText =
+      mode === "chat"
+        ? [operatorMessage, ...(currentDraft?.existingBookingRefs ?? [])].join("\n")
+        : conversation;
+    const existingBookings = await findExistingBookings(historyLookupText);
+    const today = new Intl.DateTimeFormat("en-CA", {
+      timeZone: "Africa/Windhoek",
+    }).format(new Date());
 
     const history = mode === "chat"
       ? (() => {
