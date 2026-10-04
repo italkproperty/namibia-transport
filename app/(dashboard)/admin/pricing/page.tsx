@@ -80,9 +80,10 @@ export default async function AdminPricingPage({
         <div>
           <h1 className="text-xl">Pricing</h1>
           <p className="text-muted-foreground mt-1 max-w-2xl text-sm text-pretty">
-            What a kilometre, an hour and a night away cost. Every fare on the
-            site is built from these — {rows.length} reference journeys are
-            modelled below so a change can be seen before it is made.
+            What a kilometre, an hour and a night away cost for the operating
+            model. Published route fares are managed separately above. These
+            {rows.length} reference journeys show what changing the model would
+            do before it is made.
           </p>
           {!config.stored && (
             <p className="text-muted-foreground mt-2 max-w-2xl text-xs text-pretty">
