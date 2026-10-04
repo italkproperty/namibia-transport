@@ -1,6 +1,6 @@
 "use server";
 
-import { desc, eq, inArray, or, type SQL } from "drizzle-orm";
+import { desc, eq, inArray, like, or, type SQL } from "drizzle-orm";
 
 import { getDb, isDatabaseConfigured } from "@/db";
 import { bookings, customers, payments } from "@/db/schema";
@@ -144,7 +144,7 @@ function extractSignals(text: string) {
   )];
   const phones = [...new Set(
     text.match(/(?:\+?\d[\d\s().-]{7,}\d)/g)?.map((v) => v.replace(/[^\d+]/g, "")) ?? [],
-  )].filter((v) => v.replace(/\D/g, "").length >= 8);
+  )].filter((v) => v.length >= 8);
   return { refs, emails, phones };
 }
 
@@ -166,7 +166,12 @@ async function findExistingBookings(text: string): Promise<MatchedBooking[]> {
   if (emails.length > 0 || phones.length > 0) {
     const conditions: SQL[] = [];
     if (emails.length > 0) conditions.push(inArray(customers.email, emails));
-    if (phones.length > 0) conditions.push(inArray(customers.whatsapp, phones));
+    for (const phone of phones) {
+      const suffix = phone.slice(-7);
+      if (suffix.length >= 7) {
+        conditions.push(like(customers.whatsapp, `%${suffix}`));
+      }
+    }
     const rows = await db
       .select({ id: bookings.id })
       .from(bookings)
