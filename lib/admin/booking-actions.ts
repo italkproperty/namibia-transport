@@ -252,6 +252,20 @@ export type AutoPaymentReconcileResult = {
   paid: number;
 };
 
+const AUTO_PAYMENT_TIMEOUT_MS = 5_000;
+
+async function reconcileWithTimeout(bookingRef: string) {
+  return Promise.race([
+    reconcileBookingPayment(bookingRef),
+    new Promise<never>((_, reject) =>
+      setTimeout(
+        () => reject(new Error("payment reconciliation timed out")),
+        AUTO_PAYMENT_TIMEOUT_MS,
+      ),
+    ),
+  ]);
+}
+
 export async function autoReconcilePayments(
   bookingRefs: string[],
 ): Promise<AutoPaymentReconcileResult> {
@@ -276,7 +290,7 @@ export async function autoReconcilePayments(
 
   for (const ref of refs) {
     try {
-      const result = await reconcileBookingPayment(ref);
+      const result = await reconcileWithTimeout(ref);
       checked += 1;
       if (result.changed) changed += 1;
       if (result.payment?.status === "paid") paid += 1;
