@@ -636,6 +636,7 @@ export default async function AdminBookingsPage({ searchParams }: PageProps) {
                         bookingRef={row.ref}
                         isCancelled={row.status === "cancelled"}
                         isCompleted={row.status === "completed"}
+                        isPendingPayment={row.status === "pending_payment"}
                         canComplete={
                           (row.status === "assigned" ||
                             row.status === "confirmed") &&
