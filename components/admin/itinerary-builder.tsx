@@ -23,6 +23,7 @@ import {
 import { whatsappLink } from "@/lib/company";
 import { formatDuration } from "@/lib/format";
 import { formatNad } from "@/lib/money";
+import type { AIQuoteDraft } from "@/lib/admin/ai-quote-actions";
 
 type Stop = { key: number; slug: string | null; label: string; nights: number };
 
@@ -42,12 +43,58 @@ type Stop = { key: number; slug: string | null; label: string; nights: number };
  */
 export function ItineraryBuilder({ places }: { places: PlaceOption[] }) {
   const [vehicleClassId, setVehicleClassId] = React.useState("");
+  const [fullName, setFullName] = React.useState("");
+  const [whatsapp, setWhatsapp] = React.useState("");
+  const [email, setEmail] = React.useState("");
+  const [passengers, setPassengers] = React.useState("2");
+  const [luggageCount, setLuggageCount] = React.useState("0");
+  const [startDate, setStartDate] = React.useState("");
+  const [startTime, setStartTime] = React.useState("08:00");
+  const [agreedTotal, setAgreedTotal] = React.useState("");
+  const [notes, setNotes] = React.useState("");
+  const [legOverrides, setLegOverrides] = React.useState<Record<number, string>>({});
   const [stops, setStops] = React.useState<Stop[]>([
     { key: 1, slug: "hosea-kutako", label: "", nights: 0 },
     { key: 2, slug: null, label: "", nights: 2 },
     { key: 3, slug: "hosea-kutako", label: "", nights: 0 },
   ]);
   const nextKey = React.useRef(4);
+
+  React.useEffect(() => {
+    const onAIQuote = (event: Event) => {
+      const draft = (event as CustomEvent<AIQuoteDraft>).detail;
+      if (!draft) return;
+
+      const nextStops = draft.stops
+        .filter((stop) => stop.slug)
+        .map((stop, index) => ({
+          key: index + 1,
+          slug: stop.slug,
+          label: stop.label ?? "",
+          nights: Math.max(0, stop.nights || 0),
+        }));
+
+      if (nextStops.length >= 2) {
+        setStops(nextStops);
+        nextKey.current = nextStops.length + 1;
+      }
+
+      if (draft.customer.fullName) setFullName(draft.customer.fullName);
+      if (draft.customer.whatsapp) setWhatsapp(draft.customer.whatsapp);
+      if (draft.customer.email) setEmail(draft.customer.email);
+      if (draft.startDate) setStartDate(draft.startDate);
+      if (draft.startTime) setStartTime(draft.startTime);
+      if (draft.passengers > 0) setPassengers(String(draft.passengers));
+      if (draft.luggageCount >= 0) setLuggageCount(String(draft.luggageCount));
+      if (draft.agreedTotal > 0) setAgreedTotal(String(draft.agreedTotal));
+      if (draft.notes) setNotes(draft.notes);
+      setLegOverrides({});
+    };
+
+    window.addEventListener("namibia-transport:ai-quote", onAIQuote);
+    return () =>
+      window.removeEventListener("namibia-transport:ai-quote", onAIQuote);
+  }, []);
 
   const [priceState, price, pricing] = React.useActionState<
     PriceState,
@@ -151,6 +198,25 @@ export function ItineraryBuilder({ places }: { places: PlaceOption[] }) {
     priced?.[0] ??
     null;
   const quote = selected?.quote ?? null;
+
+  React.useEffect(() => {
+    if (!quote) return;
+    setLegOverrides((current) => {
+      const next: Record<number, string> = {};
+      quote.legs.forEach((leg, index) => {
+        next[index] = current[index] ?? String(leg.price);
+      });
+      return next;
+    });
+  }, [quote]);
+
+  const effectiveLegPrices = quote
+    ? quote.legs.map((leg, index) => {
+        const value = Number(legOverrides[index] ?? leg.price);
+        return Number.isFinite(value) && value > 0 ? value : leg.price;
+      })
+    : [];
+  const effectiveTotal = effectiveLegPrices.reduce((sum, value) => sum + value, 0);
 
   return (
     <div className="grid gap-6">
@@ -356,9 +422,23 @@ export function ItineraryBuilder({ places }: { places: PlaceOption[] }) {
                 <span className="text-muted-foreground text-xs">
                   {leg.km} km · {formatDuration(leg.minutes)}
                 </span>
-                <span className="tabular w-24 text-right font-medium">
-                  {formatNad(leg.price)}
-                </span>
+                <div className="w-28">
+                  <Label htmlFor={`leg-price-${index}`} className="sr-only">
+                    Price for {leg.fromLabel} to {leg.toLabel}
+                  </Label>
+                  <Input
+                    id={`leg-price-${index}`}
+                    value={legOverrides[index] ?? String(leg.price)}
+                    onChange={(event) =>
+                      setLegOverrides((current) => ({
+                        ...current,
+                        [index]: event.target.value,
+                      }))
+                    }
+                    inputMode="decimal"
+                    className="h-9 text-right tabular"
+                  />
+                </div>
               </li>
             ))}
           </ul>
@@ -368,7 +448,14 @@ export function ItineraryBuilder({ places }: { places: PlaceOption[] }) {
               What the same trip costs if they drive it themselves
             </summary>
             <ul className="mt-2 grid gap-1.5">
-              {quote.selfDrive.map((option) => (
+              {effectiveTotal !== quote.total && (
+              <p className="text-muted-foreground mt-2 text-xs">
+                Operator-adjusted quote total: <strong>{formatNad(effectiveTotal)}</strong>.
+                The generated model total was {formatNad(quote.total)}.
+              </p>
+            )}
+
+            {quote.selfDrive.map((option) => (
                 <li
                   key={option.id}
                   className="flex flex-wrap items-baseline justify-between gap-x-4 text-sm"
@@ -401,7 +488,7 @@ export function ItineraryBuilder({ places }: { places: PlaceOption[] }) {
 
         <h2 className="text-sm font-semibold">Who it is for</h2>
         <div className="grid gap-4 sm:grid-cols-2">
-          <Field label="Full name" name="fullName" required />
+          <Field label="Full name" name="fullName" required value={fullName} onChange={setFullName} />
           <Field
             label="WhatsApp number"
             name="whatsapp"
@@ -410,37 +497,45 @@ export function ItineraryBuilder({ places }: { places: PlaceOption[] }) {
             value={whatsapp}
             onChange={setWhatsapp}
           />
-          <Field label="Email" name="email" type="email" hint="Optional." />
+          <Field label="Email" name="email" type="email" hint="Optional." value={email} onChange={setEmail} />
           <Field
             label="Passengers"
             name="passengers"
             type="number"
-            defaultValue="2"
+            value={passengers}
+            onChange={setPassengers}
           />
           <Field
             label="First leg departs"
             name="startDate"
             type="date"
             required
+            value={startDate}
+            onChange={setStartDate}
             hint="Later legs fall out of the nights above."
           />
-          <Field label="At" name="startTime" type="time" defaultValue="08:00" />
+          <Field label="At" name="startTime" type="time" value={startTime} onChange={setStartTime} />
           <Field
             label="Agreed total (N$)"
             name="agreedTotal"
             inputMode="decimal"
-            hint="Only if you settled on a different number. Blank uses the price above."
+            value={agreedTotal}
+            onChange={setAgreedTotal}
+            hint="Use this only when you want one overall agreed total. Individual leg prices above override the model."
           />
           <Field
             label="Large cases"
             name="luggageCount"
             type="number"
-            defaultValue="0"
+            value={luggageCount}
+            onChange={setLuggageCount}
           />
           <Field
             label="Note on the quote"
             name="notes"
             className="sm:col-span-2"
+            value={notes}
+            onChange={setNotes}
             hint="The traveller sees this — what is included, anything agreed on the call."
           />
         </div>
