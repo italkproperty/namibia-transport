@@ -301,6 +301,10 @@ export async function analyseQuoteConversation(
   }
 
   try {
+    const today = new Intl.DateTimeFormat("en-CA", {
+      timeZone: "Africa/Windhoek",
+    }).format(new Date());
+
     const system = [
       "You are Namibia Transport's internal quoting copilot.",
       "You read messy WhatsApp and email conversations and maintain a precise quote brief for an experienced human operator.",
@@ -344,9 +348,6 @@ export async function analyseQuoteConversation(
         ? [operatorMessage, ...(currentDraft?.existingBookingRefs ?? [])].join("\n")
         : conversation;
     const existingBookings = await findExistingBookings(historyLookupText);
-    const today = new Intl.DateTimeFormat("en-CA", {
-      timeZone: "Africa/Windhoek",
-    }).format(new Date());
 
     const history = mode === "chat"
       ? (() => {
