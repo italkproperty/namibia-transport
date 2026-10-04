@@ -8,6 +8,7 @@ import {
 } from "lucide-react";
 
 import { AssignDriver } from "@/components/admin/assign-driver";
+import { ShareBookingLink } from "@/components/admin/share-booking-link";
 import { BookingRowActions } from "@/components/admin/booking-actions";
 import { PaymentReconciliationMonitor } from "@/components/admin/payment-reconciliation-monitor";
 import { PendingTransfers } from "@/components/admin/pending-transfers";
@@ -44,6 +45,7 @@ import { mapsLink } from "@/lib/maps/bounds";
 import { assignmentsByBooking, listDrivers } from "@/lib/dispatch/queries";
 import { formatNad } from "@/lib/money";
 import { journeyLabel } from "@/lib/network/journey";
+import { SITE } from "@/lib/site";
 
 export const metadata: Metadata = {
   title: "Bookings",
@@ -537,6 +539,7 @@ export default async function AdminBookingsPage({ searchParams }: PageProps) {
                   <TableHead>Source</TableHead>
                   <TableHead>Return</TableHead>
                   <TableHead>Driver</TableHead>
+                  <TableHead>Share</TableHead>
                   <TableHead className="text-right">Void</TableHead>
                 </TableRow>
               </TableHeader>
@@ -636,6 +639,17 @@ export default async function AdminBookingsPage({ searchParams }: PageProps) {
                         bookingId={row.id}
                         drivers={assignable}
                         current={assignments.get(row.id)}
+                      />
+                    </TableCell>
+                    <TableCell>
+                      <ShareBookingLink
+                        url={
+                          row.groupRef
+                            ? `${SITE.url}/quote/${encodeURIComponent(row.groupRef)}`
+                            : `${SITE.url}/booking/${encodeURIComponent(row.ref)}`
+                        }
+                        label={row.groupRef ? "Share quote" : "Share"}
+                        customerName={row.customerName}
                       />
                     </TableCell>
                     <TableCell className="text-right">
