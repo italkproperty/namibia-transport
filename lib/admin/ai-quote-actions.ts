@@ -149,6 +149,7 @@ function extractSignals(text: string) {
 }
 
 async function findExistingBookings(text: string): Promise<MatchedBooking[]> {
+  try {
   if (!isDatabaseConfigured()) return [];
 
   const { refs, emails, phones } = extractSignals(text);
@@ -222,6 +223,10 @@ async function findExistingBookings(text: string): Promise<MatchedBooking[]> {
   }
 
   return [...byBooking.values()].slice(0, 20);
+  } catch (error) {
+    console.error("[ai-quote] customer history lookup failed; continuing without history", error);
+    return [];
+  }
 }
 
 function placeCatalogue() {
@@ -307,7 +312,7 @@ export async function analyseQuoteConversation(
       method: "POST",
       headers: {
         "content-type": "application/json",
-        "x-api-key": apiKey,
+        Authorization: `Bearer ${apiKey}`,
         "anthropic-version": "2023-06-01",
       },
       body: JSON.stringify({
@@ -328,13 +333,67 @@ export async function analyseQuoteConversation(
 
     const body = await response.json().catch(() => null);
     if (!response.ok) {
-      console.error("[ai-quote] Anthropic request failed", response.status, body);
+      const errorBody =
+        body &&
+        typeof body === "object" &&
+        "error" in body &&
+        body.error &&
+        typeof body.error === "object"
+          ? (body.error as { message?: unknown }).message
+          : undefined;
+      const apiMessage =
+        typeof errorBody === "string" ? errorBody.slice(0, 240) : undefined;
+      const requestId =
+        typeof body === "object" &&
+        body !== null &&
+        "request_id" in body &&
+        typeof (body as { request_id?: unknown }).request_id === "string"
+          ? (body as { request_id: string }).request_id
+          : response.headers.get("request-id");
+
+      console.error("[ai-quote] Anthropic request failed", {
+        status: response.status,
+        requestId,
+        body,
+      });
+
+      if (response.status === 401) {
+        return {
+          ok: false,
+          message:
+            "Claude rejected the API key. Check that ANTHROPIC_API_KEY_TRANSPORT is present in Vercel Production and redeploy.",
+        };
+      }
+      if (response.status === 402) {
+        return {
+          ok: false,
+          message: "Claude API billing/credits are not available for this account.",
+        };
+      }
+      if (response.status === 403) {
+        return {
+          ok: false,
+          message: "The Claude API key does not have permission to use this model/workspace.",
+        };
+      }
+      if (response.status === 429) {
+        return {
+          ok: false,
+          message: "Claude is rate-limited or the account has reached its usage limit. Please retry shortly.",
+        };
+      }
+      if (response.status >= 500) {
+        return {
+          ok: false,
+          message: "Claude is temporarily unavailable. Please retry in a moment.",
+        };
+      }
+
       return {
         ok: false,
-        message:
-          response.status === 401
-            ? "Claude rejected the API key. Check ANTHROPIC_API_KEY_TRANSPORT in Vercel."
-            : "Claude could not analyse this conversation. Try again.",
+        message: apiMessage
+          ? `Claude rejected the request: ${apiMessage}`
+          : `Claude rejected the request (HTTP ${response.status}).`,
       };
     }
 
@@ -371,10 +430,17 @@ export async function analyseQuoteConversation(
     };
   } catch (error) {
     console.error("[ai-quote] analysis failed", error);
+    const message = error instanceof Error ? error.message : String(error);
+    if (message.includes("timed out") || message.includes("Timeout")) {
+      return {
+        ok: false,
+        message: "Claude took too long to respond. Please retry with the relevant conversation only.",
+      };
+    }
     return {
       ok: false,
       message:
-        "Claude could not analyse this conversation right now. The quote form is still available manually.",
+        "The Claude request could not be completed. Check the deployment logs for [ai-quote] analysis failed.",
     };
   }
 }
