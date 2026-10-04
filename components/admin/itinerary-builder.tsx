@@ -120,6 +120,27 @@ export function ItineraryBuilder({ places }: { places: PlaceOption[] }) {
   );
   const [copied, setCopied] = React.useState(false);
 
+  const priced = priceState?.ok ? priceState.quotes : null;
+  const selected =
+    priced?.find((entry) => entry.vehicleClassId === vehicleClassId) ??
+    priced?.[0] ??
+    null;
+  const quote = selected?.quote ?? null;
+
+  React.useEffect(() => {
+    if (quote && !priceOverrideTouched) {
+      setAgreedTotal(String(quote.total));
+    }
+  }, [quote, priceOverrideTouched]);
+
+  const effectiveLegPrices = quote
+    ? quote.legs.map((leg, index) => {
+        const value = Number(legOverrides[index] ?? leg.price);
+        return Number.isFinite(value) && value > 0 ? value : leg.price;
+      })
+    : [];
+  const effectiveTotal = effectiveLegPrices.reduce((sum, value) => sum + value, 0);
+
   const payload = JSON.stringify(
     stops
       .filter((stop) => stop.slug)
@@ -222,8 +243,6 @@ export function ItineraryBuilder({ places }: { places: PlaceOption[] }) {
     );
   }
 
-  const priced = priceState?.ok ? priceState.quotes : null;
-
   /**
    * Which vehicle the operator is quoting. Defaults to the first class rather
    * than to nothing: an operator who prices a trip and then forgets to pick a
@@ -231,25 +250,6 @@ export function ItineraryBuilder({ places }: { places: PlaceOption[] }) {
    * which is how the last one came to say "Private Car" beside a figure
    * computed for something else.
    */
-  const selected =
-    priced?.find((entry) => entry.vehicleClassId === vehicleClassId) ??
-    priced?.[0] ??
-    null;
-  const quote = selected?.quote ?? null;
-
-  React.useEffect(() => {
-    if (quote && !priceOverrideTouched) {
-      setAgreedTotal(String(quote.total));
-    }
-  }, [quote, priceOverrideTouched]);
-
-  const effectiveLegPrices = quote
-    ? quote.legs.map((leg, index) => {
-        const value = Number(legOverrides[index] ?? leg.price);
-        return Number.isFinite(value) && value > 0 ? value : leg.price;
-      })
-    : [];
-  const effectiveTotal = effectiveLegPrices.reduce((sum, value) => sum + value, 0);
 
   return (
     <div className="grid gap-6">
