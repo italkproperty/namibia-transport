@@ -251,11 +251,11 @@ export function planItinerary(
     legStops,
     days,
     chauffeured: {
-      vehicleCost,
+      vehicleCost: totalVehicleCost,
       driverCost,
-      need,
-      price,
-      payout,
+      need: totalNeed,
+      price: totalPrice,
+      payout: totalPayout,
       contribution: totalPrice - totalPayout,
     },
   };
