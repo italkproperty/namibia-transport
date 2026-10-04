@@ -43,13 +43,34 @@ const DEFAULT_LOCAL_KM_PER_NIGHT = 40;
 
 export type ItineraryStop = { slug: string; nights: number };
 
+export type DriverPositioning = {
+  /** Driver's base before the first passenger pickup. */
+  originSlug: string;
+  /** Return the driver to the same base after the passenger itinerary. */
+  returnToOrigin: boolean;
+};
+
+export type PositioningLeg = {
+  fromSlug: string;
+  toSlug: string;
+  km: number;
+  tarKm: number;
+  minutes: number;
+  gravelKm: number;
+};
+
 export type Itinerary = {
   stops: { node: PlaceNode; nights: number }[];
   legs: Road[];
   km: number;
   tarKm: number;
   gravelKm: number;
-  /** Time behind the wheel on the transfer legs, in minutes. */
+  /** Internal driver positioning outside the passenger itinerary. */
+  positioningKm: number;
+  positioningGravelKm: number;
+  positioningDrivingMinutes: number;
+  positioningLegs: PositioningLeg[];
+  /** Time behind the wheel on the passenger transfer legs, in minutes. */
   drivingMinutes: number;
   /** Local running while on the ground, which a self-driver also does. */
   localKm: number;
@@ -94,6 +115,7 @@ const roundUp = (amount: number) =>
 export function planItinerary(
   stops: ItineraryStop[],
   runningCost: RunningCost = RUNNING_COST_PER_KM,
+  positioning?: DriverPositioning,
 ): Itinerary | null {
   if (stops.length < 2) return null;
 
@@ -153,9 +175,68 @@ export function planItinerary(
    * quoting a price we cannot honour.
    */
   const driverCost = days * DRIVER_DAY + nights * DRIVER_NIGHT;
-  const need = vehicleCost + driverCost;
-  const price = roundUp(need / (1 - CONTRIBUTION_RATE));
-  const payout = Math.round(price * (1 - CONTRIBUTION_RATE) * 100) / 100;
+
+  const positioningLegs: PositioningLeg[] = [];
+
+  if (positioning) {
+    const origin = findNode(positioning.originSlug);
+    if (!origin) return null;
+
+    const first = resolved[0]?.node;
+    const last = resolved[resolved.length - 1]?.node;
+    if (!first || !last) return null;
+
+    if (origin.slug !== first.slug) {
+      const road = findRoad(origin.slug, first.slug);
+      if (!road) return null;
+      positioningLegs.push({
+        fromSlug: road.origin.slug,
+        toSlug: road.destination.slug,
+        km: road.km,
+        tarKm: road.tarKm,
+        minutes: road.minutes,
+        gravelKm: road.gravelKm,
+      });
+    }
+
+    if (positioning.returnToOrigin && origin.slug !== last.slug) {
+      const road = findRoad(last.slug, origin.slug);
+      if (!road) return null;
+      positioningLegs.push({
+        fromSlug: road.origin.slug,
+        toSlug: road.destination.slug,
+        km: road.km,
+        tarKm: road.tarKm,
+        minutes: road.minutes,
+        gravelKm: road.gravelKm,
+      });
+    }
+  }
+
+  const positioningKm = positioningLegs.reduce((total, leg) => total + leg.km, 0);
+  const positioningGravelKm = positioningLegs.reduce(
+    (total, leg) => total + leg.gravelKm,
+    0,
+  );
+  const positioningDrivingMinutes = positioningLegs.reduce(
+    (total, leg) => total + leg.minutes,
+    0,
+  );
+
+  const positioningVehicleCost =
+    positioningLegs.reduce(
+      (total, leg) =>
+        total +
+        leg.tarKm * runningCost.tar +
+        leg.gravelKm * runningCost.gravel,
+      0,
+    );
+
+  const totalVehicleCost = vehicleCost + positioningVehicleCost;
+  const totalNeed = totalVehicleCost + driverCost;
+  const totalPrice = roundUp(totalNeed / (1 - CONTRIBUTION_RATE));
+  const totalPayout =
+    Math.round(totalPrice * (1 - CONTRIBUTION_RATE) * 100) / 100;
 
   return {
     stops: resolved,
@@ -163,18 +244,22 @@ export function planItinerary(
     km,
     tarKm: km - gravelKm,
     gravelKm,
+    positioningKm,
+    positioningGravelKm,
+    positioningDrivingMinutes,
+    positioningLegs,
     drivingMinutes,
     localKm,
     nights,
     legStops,
     days,
     chauffeured: {
-      vehicleCost,
+      vehicleCost: totalVehicleCost,
       driverCost,
-      need,
-      price,
-      payout,
-      contribution: price - payout,
+      need: totalNeed,
+      price: totalPrice,
+      payout: totalPayout,
+      contribution: totalPrice - totalPayout,
     },
   };
 }

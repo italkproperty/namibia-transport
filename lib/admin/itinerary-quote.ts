@@ -11,6 +11,7 @@ import {
   SELF_DRIVE_CLASSES,
   WAIVER_PER_DAY,
   type Itinerary,
+  type DriverPositioning,
 } from "@/lib/network/itinerary";
 import { findNode, type PlaceNode } from "@/lib/network/nodes";
 import { journeySlug } from "@/lib/network/journey";
@@ -86,6 +87,9 @@ export type ItineraryQuote = {
   drivingMinutes: number;
   /** The same trip if they hired a car and drove it themselves. */
   selfDrive: { id: string; label: string; total: number; note: string }[];
+  positioning: DriverPositioning | null;
+  positioningKm: number;
+  positioningDrivingMinutes: number;
 };
 
 function displayName(node: PlaceNode, label?: string): string {
@@ -104,10 +108,12 @@ function displayName(node: PlaceNode, label?: string): string {
 export function priceItinerary(
   stops: QuoteStop[],
   runningCost?: RunningCost,
+  positioning?: DriverPositioning,
 ): ItineraryQuote | null {
   const itinerary = planItinerary(
     stops.map((stop) => ({ slug: stop.slug, nights: stop.nights })),
     runningCost,
+    positioning,
   );
   if (!itinerary) return null;
 
@@ -175,6 +181,9 @@ export function priceItinerary(
     km: itinerary.km,
     drivingMinutes: itinerary.drivingMinutes,
     selfDrive,
+    positioning: positioning ?? null,
+    positioningKm: itinerary.positioningKm,
+    positioningDrivingMinutes: itinerary.positioningDrivingMinutes,
   };
 }
 
@@ -202,6 +211,7 @@ export type SaveItineraryInput = {
   vehicleClassId?: string | null;
   /** That class's per-kilometre costs, so the saved total matches the quoted one. */
   runningCost?: RunningCost;
+  positioning?: DriverPositioning;
   notes?: string;
 };
 
@@ -260,7 +270,11 @@ export async function saveItineraryQuote(
     return { ok: false, message: "No database is configured." };
   }
 
-  const quote = priceItinerary(input.stops, input.runningCost);
+  const quote = priceItinerary(
+    input.stops,
+    input.runningCost,
+    input.positioning,
+  );
   if (!quote) {
     return {
       ok: false,

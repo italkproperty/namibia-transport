@@ -131,6 +131,26 @@ if (big) {
   );
 }
 
+/* ----------------------------------------------- driver positioning */
+
+console.log("\ndriver positioning is internal, not a customer stop");
+
+const customerOnly: QuoteStop[] = [
+  { slug: "solitaire", label: "Namib Desert Lodge", nights: 0 },
+  { slug: "sossusvlei", label: "Sossusvlei / Deadvlei", nights: 0 },
+  { slug: "solitaire", label: "Namib Desert Lodge", nights: 0 },
+];
+
+const withoutPositioning = priceItinerary(customerOnly);
+const withPositioning = priceItinerary(customerOnly, undefined, {
+  originSlug: "windhoek",
+  returnToOrigin: true,
+});
+
+check("the customer itinerary remains three stops", withPositioning?.itinerary.stops.length === 3);
+check("Windhoek positioning creates internal legs without adding customer legs", withPositioning !== null && withPositioning.legs.length === 2 && withPositioning.positioningKm > 0 && withPositioning.positioningDrivingMinutes > 0, `positioning ${withPositioning?.positioningKm ?? 0} km`);
+check("the positioning-aware quote costs more than the customer-only route", withoutPositioning !== null && withPositioning !== null && withPositioning.total > withoutPositioning.total, `${withPositioning?.total ?? 0} vs ${withoutPositioning?.total ?? 0}`);
+check("the positioning route starts and ends at the driver base", withPositioning !== null && withPositioning.positioning?.originSlug === "windhoek" && withPositioning.positioning.returnToOrigin === true);
 /* -------------------------------------------------------- what it refuses */
 
 console.log("\nwhat it refuses to price");

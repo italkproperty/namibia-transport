@@ -2,6 +2,8 @@
 
 import * as React from "react";
 import {
+  ArrowDownIcon,
+  ArrowUpIcon,
   CheckCircle2Icon,
   CopyIcon,
   ExternalLinkIcon,
@@ -53,6 +55,11 @@ export function ItineraryBuilder({ places }: { places: PlaceOption[] }) {
   const [agreedTotal, setAgreedTotal] = React.useState("");
   const [notes, setNotes] = React.useState("");
   const [legOverrides, setLegOverrides] = React.useState<Record<number, string>>({});
+  const [driverPositioningOrigin, setDriverPositioningOrigin] = React.useState("windhoek");
+  const [includeDriverPositioning, setIncludeDriverPositioning] = React.useState(true);
+  const [returnDriverToBase, setReturnDriverToBase] = React.useState(true);
+  const [draggedKey, setDraggedKey] = React.useState<number | null>(null);
+  const [dragOverKey, setDragOverKey] = React.useState<number | null>(null);
   const [stops, setStops] = React.useState<Stop[]>([
     { key: 1, slug: "hosea-kutako", label: "", nights: 0 },
     { key: 2, slug: null, label: "", nights: 2 },
@@ -120,6 +127,31 @@ export function ItineraryBuilder({ places }: { places: PlaceOption[] }) {
     setStops((current) =>
       current.map((stop) => (stop.key === key ? { ...stop, ...patch } : stop)),
     );
+
+  const moveStop = (fromKey: number, toKey: number) => {
+    if (fromKey === toKey) return;
+    setStops((current) => {
+      const fromIndex = current.findIndex((stop) => stop.key === fromKey);
+      const toIndex = current.findIndex((stop) => stop.key === toKey);
+      if (fromIndex < 0 || toIndex < 0) return current;
+      const next = [...current];
+      const [moved] = next.splice(fromIndex, 1);
+      next.splice(toIndex, 0, moved);
+      return next;
+    });
+  };
+
+  const moveStopByOffset = (key: number, offset: number) => {
+    setStops((current) => {
+      const index = current.findIndex((stop) => stop.key === key);
+      const nextIndex = index + offset;
+      if (index < 0 || nextIndex < 0 || nextIndex >= current.length) return current;
+      const next = [...current];
+      const [moved] = next.splice(index, 1);
+      next.splice(nextIndex, 0, moved);
+      return next;
+    });
+  };
 
   if (saveState?.ok) {
     const message = `Hi — here is your quote from Namibia Transport. The full itinerary, the fare and how to pay are here: ${saveState.url}`;
@@ -226,14 +258,62 @@ export function ItineraryBuilder({ places }: { places: PlaceOption[] }) {
           {stops.map((stop, index) => (
             <li
               key={stop.key}
-              className="bg-card grid gap-2 rounded-lg border p-3 sm:grid-cols-[auto_1fr_10rem_5rem_auto] sm:items-center"
+              onDragOver={(event) => {
+                event.preventDefault();
+                if (draggedKey !== null && draggedKey !== stop.key) {
+                  setDragOverKey(stop.key);
+                }
+              }}
+              onDrop={(event) => {
+                event.preventDefault();
+                if (draggedKey !== null) moveStop(draggedKey, stop.key);
+                setDraggedKey(null);
+                setDragOverKey(null);
+              }}
+              className={`bg-card grid gap-2 rounded-lg border p-3 transition sm:grid-cols-[auto_1fr_10rem_5rem_auto] sm:items-center ${
+                dragOverKey === stop.key ? "border-brand ring-2 ring-brand/20" : ""
+              }`}
             >
-              <span
-                className="text-muted-foreground hidden sm:block"
-                aria-hidden
-              >
-                <GripVerticalIcon className="size-4" />
-              </span>
+              <div className="flex items-center gap-1">
+                <button
+                  type="button"
+                  draggable
+                  onDragStart={(event) => {
+                    setDraggedKey(stop.key);
+                    event.dataTransfer.effectAllowed = "move";
+                    event.dataTransfer.setData("text/plain", String(stop.key));
+                  }}
+                  onDragEnd={() => {
+                    setDraggedKey(null);
+                    setDragOverKey(null);
+                  }}
+                  aria-label={`Drag ${stop.label || "stop"} to reorder`}
+                  title="Drag to reorder"
+                  className="text-muted-foreground hover:text-foreground focus-ring hidden cursor-grab rounded p-1 active:cursor-grabbing sm:block"
+                >
+                  <GripVerticalIcon className="size-4" aria-hidden />
+                </button>
+                <div className="flex sm:hidden">
+                  <button
+                    type="button"
+                    onClick={() => moveStopByOffset(stop.key, -1)}
+                    disabled={index === 0}
+                    aria-label="Move stop up"
+                    className="text-muted-foreground hover:text-foreground focus-ring rounded p-1 disabled:opacity-30"
+                  >
+                    <ArrowUpIcon className="size-4" aria-hidden />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => moveStopByOffset(stop.key, 1)}
+                    disabled={index === stops.length - 1}
+                    aria-label="Move stop down"
+                    className="text-muted-foreground hover:text-foreground focus-ring rounded p-1 disabled:opacity-30"
+                  >
+                    <ArrowDownIcon className="size-4" aria-hidden />
+                  </button>
+                </div>
+              </div>
 
               <div className="min-w-0">
                 <Label
@@ -310,6 +390,10 @@ export function ItineraryBuilder({ places }: { places: PlaceOption[] }) {
           ))}
         </ul>
 
+        <p className="text-muted-foreground mt-2 text-xs">
+          Drag the grip to change the driving order. Use the arrows on smaller screens.
+        </p>
+
         <Button
           type="button"
           variant="outline"
@@ -328,9 +412,70 @@ export function ItineraryBuilder({ places }: { places: PlaceOption[] }) {
         </Button>
       </section>
 
+      <div className="bg-muted/40 rounded-lg border p-3">
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div>
+            <p className="text-sm font-semibold">Driver positioning</p>
+            <p className="text-muted-foreground mt-1 max-w-2xl text-xs leading-relaxed">
+              Internal logistics only. The customer itinerary stays separate.
+              This accounts for the driver&apos;s trip from base to the first pickup
+              and, when enabled, back to base after the last drop-off.
+            </p>
+          </div>
+          <label className="flex items-center gap-2 text-sm">
+            <input
+              type="checkbox"
+              checked={includeDriverPositioning}
+              onChange={(event) => setIncludeDriverPositioning(event.target.checked)}
+              className="size-4 rounded border"
+            />
+            Include in quote cost
+          </label>
+        </div>
+
+        {includeDriverPositioning && (
+          <div className="mt-3 grid gap-3 sm:grid-cols-[1fr_auto] sm:items-end">
+            <div>
+              <Label
+                htmlFor="driver-positioning-origin"
+                className="text-muted-foreground mb-1 text-xs"
+              >
+                Driver base
+              </Label>
+              <PlaceSearch
+                id="driver-positioning-origin"
+                places={places}
+                value={driverPositioningOrigin}
+                onSelect={setDriverPositioningOrigin}
+                placeholder="Where is the driver starting?"
+              />
+            </div>
+            <label className="flex items-center gap-2 pb-2 text-sm">
+              <input
+                type="checkbox"
+                checked={returnDriverToBase}
+                onChange={(event) => setReturnDriverToBase(event.target.checked)}
+                className="size-4 rounded border"
+              />
+              Return driver to base
+            </label>
+          </div>
+        )}
+      </div>
+
       {/* ------------------------------------------------------ the price */}
       <form action={price}>
         <input type="hidden" name="stops" value={payload} />
+        <input
+          type="hidden"
+          name="driverPositioningOrigin"
+          value={includeDriverPositioning ? driverPositioningOrigin : ""}
+        />
+        <input
+          type="hidden"
+          name="driverPositioningReturn"
+          value={includeDriverPositioning && returnDriverToBase ? "true" : "false"}
+        />
         <Button
           type="submit"
           variant="outline"
@@ -393,10 +538,21 @@ export function ItineraryBuilder({ places }: { places: PlaceOption[] }) {
             </p>
           </div>
           <p className="text-muted-foreground mt-1 text-xs">
-            {quote.days} days · {quote.nights} nights · {quote.km} km ·{" "}
-            {formatDuration(quote.drivingMinutes)} driving · {quote.gravelKm} km
+            {quote.days} days · {quote.nights} nights · {quote.km} km passenger
+            route · {formatDuration(quote.drivingMinutes)} driving · {quote.gravelKm} km
             gravel
           </p>
+          {quote.positioning && quote.positioningKm > 0 && (
+            <p className="text-muted-foreground mt-1 text-xs">
+              Includes driver positioning: {quote.positioningKm} km ·{" "}
+              {formatDuration(quote.positioningDrivingMinutes)} additional driving
+              from{" "}
+              {places.find(
+                (place) => place.slug === quote.positioning?.originSlug,
+              )?.name ?? quote.positioning.originSlug}
+              {quote.positioning.returnToOrigin ? " and back to base" : ""}.
+            </p>
+          )}
 
           <ul className="mt-3 divide-y border-t">
             {quote.legs.map((leg, index) => (
@@ -469,6 +625,16 @@ export function ItineraryBuilder({ places }: { places: PlaceOption[] }) {
       {/* ------------------------------------------------------- the save */}
       <form action={save} className="grid gap-4">
         <input type="hidden" name="stops" value={payload} />
+        <input
+          type="hidden"
+          name="driverPositioningOrigin"
+          value={includeDriverPositioning ? driverPositioningOrigin : ""}
+        />
+        <input
+          type="hidden"
+          name="driverPositioningReturn"
+          value={includeDriverPositioning && returnDriverToBase ? "true" : "false"}
+        />
         <input
           type="hidden"
           name="vehicleClassId"
