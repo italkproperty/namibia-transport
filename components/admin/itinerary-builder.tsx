@@ -120,12 +120,6 @@ export function ItineraryBuilder({ places }: { places: PlaceOption[] }) {
   );
   const [copied, setCopied] = React.useState(false);
 
-  React.useEffect(() => {
-    if (quote && !priceOverrideTouched) {
-      setAgreedTotal(String(quote.total));
-    }
-  }, [quote, priceOverrideTouched]);
-
   const payload = JSON.stringify(
     stops
       .filter((stop) => stop.slug)
@@ -242,6 +236,12 @@ export function ItineraryBuilder({ places }: { places: PlaceOption[] }) {
     priced?.[0] ??
     null;
   const quote = selected?.quote ?? null;
+
+  React.useEffect(() => {
+    if (quote && !priceOverrideTouched) {
+      setAgreedTotal(String(quote.total));
+    }
+  }, [quote, priceOverrideTouched]);
 
   const effectiveLegPrices = quote
     ? quote.legs.map((leg, index) => {
