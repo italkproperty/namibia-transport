@@ -74,12 +74,15 @@ export function computeFare(
 
 /** The price shown next to a class — same as the total, since a fare buys the vehicle. */
 export function unitFare(
-  route: Pick<RouteView, "fixedPrice">,
-  vehicleClass: Pick<VehicleClassView, "priceMultiplier">
+  route: Pick<RouteView, "fixedPrice" | "vehiclePrices">,
+  vehicleClass: Pick<VehicleClassView, "id" | "priceMultiplier">
 ): number {
-  return roundToRand(
-    Number(route.fixedPrice) * Number(vehicleClass.priceMultiplier)
-  );
+  const routePrice = route.vehiclePrices?.[vehicleClass.id];
+  return routePrice
+    ? roundToRand(Number(routePrice.customerPrice))
+    : roundToRand(
+        Number(route.fixedPrice) * Number(vehicleClass.priceMultiplier),
+      );
 }
 
 /**
