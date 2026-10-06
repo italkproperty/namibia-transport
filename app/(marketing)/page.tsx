@@ -11,6 +11,7 @@ import {
   SupportStrip,
 } from "@/components/marketing/trust";
 import { Button } from "@/components/ui/button";
+import { RealTripProof } from "@/components/marketing/real-trip-proof";
 import { parseTripParams } from "@/lib/booking/trip-params";
 import type { Metadata } from "next";
 
@@ -173,6 +174,9 @@ export default async function HomePage({ searchParams }: PageProps) {
 
         {/* ------------------------------------------------------- reviews */}
         <ReviewsWrapper />
+
+        {/* ------------------------------------------------ real trip proof */}
+        <RealTripProof />
 
         {/* ----------------------------------------------------- where next */}
         {/* Three rounded cards became a ruled list. They are navigation, not
