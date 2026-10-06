@@ -77,6 +77,25 @@ function catalogVehicleClassToView(
   };
 }
 
+/** Apply active route/class multiplier rules to the route view. */
+function applyVehiclePriceRules(
+  route: RouteView,
+  rules: Array<typeof pricingRules.$inferSelect>,
+): RouteView {
+  const vehiclePrices = { ...route.vehiclePrices };
+  for (const rule of rules) {
+    if (!rule.vehicleClassId || rule.ruleType !== "multiplier") continue;
+    if (vehiclePrices[rule.vehicleClassId]) continue;
+    const multiplier = Number(rule.amount);
+    if (!Number.isFinite(multiplier) || multiplier <= 0) continue;
+    vehiclePrices[rule.vehicleClassId] = {
+      customerPrice: String(Math.round(Number(route.fixedPrice) * multiplier)),
+      driverPayout: String(Math.round(Number(route.defaultDriverPayout) * multiplier)),
+    };
+  }
+  return { ...route, vehiclePrices };
+}
+
 /* ------------------------------------------------------------------- reads */
 
 export async function listRoutes(
@@ -192,11 +211,13 @@ export async function listVehicleClasses(): Promise<VehicleClassView[]> {
   }
 
   try {
-    const rows = await getDb()
-      .select()
-      .from(vehicleClasses)
-      .where(eq(vehicleClasses.isActive, true))
-      .orderBy(asc(vehicleClasses.sortOrder));
+    const rows = await withDeadline("vehicle catalogue", READ_DEADLINE_MS, () =>
+      getDb()
+        .select()
+        .from(vehicleClasses)
+        .where(eq(vehicleClasses.isActive, true))
+        .orderBy(asc(vehicleClasses.sortOrder)),
+    );
 
     return rows.length > 0 ? rows : fallback();
   } catch {
