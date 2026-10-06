@@ -84,7 +84,11 @@ console.log("\nthe fare never multiplies by the party");
 
 // The published airport fare is N$850 per vehicle and must never scale by party size.
 check("WDH -> Windhoek, sedan: N$850 whatever the party", price(airport, sedan) === 850);
-check("WDH -> Windhoek, SUV: N$1,190 whatever the party", price(airport, suv) === 1190);\ncheck(\n  "the airport route keeps a 30% contribution at N$850",\n  Number(airport.defaultDriverPayout) === 595,\n);
+check("WDH -> Windhoek, SUV: N$1,190 whatever the party", price(airport, suv) === 1190);
+check(
+  "the airport route keeps a 30% contribution at N$850",
+  Number(airport.defaultDriverPayout) === 595,
+);
 check("WDH -> Swakopmund, sedan: N$4,200", price(swakop, sedan) === 4200);
 check("WDH -> Swakopmund, SUV: N$5,880", price(swakop, suv) === 5880);
 check(
