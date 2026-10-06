@@ -127,6 +127,7 @@ export async function listRoutes(
           eq(pricingRules.isActive, true),
         ),
       )
+      .$dynamic()
       .orderBy(
         asc(routes.sortOrder),
         desc(pricingRules.priority),
