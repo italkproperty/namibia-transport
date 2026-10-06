@@ -4,8 +4,18 @@ import { useActionState } from "react";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { savePublishedRoutePrice, type SaveResult } from "@/lib/pricing/actions";
+import {
+  resetPublishedVehiclePrice,
+  savePublishedVehiclePrice,
+  type SaveResult,
+} from "@/lib/pricing/actions";
 import { formatNad } from "@/lib/money";
+
+type VehicleClass = {
+  id: string;
+  name: string;
+  priceMultiplier: string;
+};
 
 type PublishedRoute = {
   id: string;
@@ -15,102 +25,130 @@ type PublishedRoute = {
   category: string;
   fixedPrice: string;
   defaultDriverPayout: string;
+  vehiclePrices: Record<string, { customerPrice: string; driverPayout: string }>;
 };
 
-function RoutePriceRow({ route }: { route: PublishedRoute }) {
+function VehiclePriceEditor({
+  route,
+  vehicleClass,
+}: {
+  route: PublishedRoute;
+  vehicleClass: VehicleClass;
+}) {
   const [state, action, pending] = useActionState<SaveResult | null, FormData>(
-    savePublishedRoutePrice,
+    savePublishedVehiclePrice,
     null,
   );
+  const [resetState, resetAction, resetPending] = useActionState<
+    SaveResult | null,
+    FormData
+  >(resetPublishedVehiclePrice, null);
 
-  const price = Number(route.fixedPrice);
-  const payout = Number(route.defaultDriverPayout);
-  const contribution = price - payout;
-  const margin = price > 0 ? (contribution / price) * 100 : 0;
+  const override = route.vehiclePrices[vehicleClass.id];
+  const automaticPrice = Math.round(
+    Number(route.fixedPrice) * Number(vehicleClass.priceMultiplier),
+  );
+  const currentPrice = override
+    ? Number(override.customerPrice)
+    : automaticPrice;
 
   return (
-    <form
-      action={action}
-      className="grid gap-3 border-b py-3 last:border-0 md:grid-cols-[1.7fr_0.7fr_0.7fr_0.8fr_auto] md:items-center"
-    >
-      <input type="hidden" name="routeId" value={route.id} />
-
-      <div className="min-w-0">
-        <p className="text-sm font-medium">
-          {route.originLabel} → {route.destinationLabel}
-        </p>
-        <p className="text-muted-foreground mt-0.5 text-xs">
-          {route.category} · {route.slug}
-        </p>
+    <div className="rounded-lg border p-3">
+      <div className="flex items-baseline justify-between gap-2">
+        <p className="text-sm font-medium">{vehicleClass.name}</p>
+        <span
+          className={
+            override
+              ? "text-brand text-[0.68rem] font-medium uppercase"
+              : "text-muted-foreground text-[0.68rem] uppercase"
+          }
+        >
+          {override ? "Custom" : "Automatic"}
+        </span>
       </div>
 
-      <div>
-        <p className="text-muted-foreground text-xs">Published fare</p>
-        <Input
-          name="price"
-          type="number"
-          inputMode="numeric"
-          min={100}
-          max={50000}
-          step={10}
-          defaultValue={price}
-          className="mt-1 h-9"
-          aria-label={`Published fare for ${route.originLabel} to ${route.destinationLabel}`}
-        />
+      <form action={action} className="mt-2 flex items-end gap-2">
+        <input type="hidden" name="routeId" value={route.id} />
+        <input type="hidden" name="vehicleClassId" value={vehicleClass.id} />
+        <div className="min-w-0 flex-1">
+          <label
+            htmlFor={route.id + "-" + vehicleClass.id + "-price"}
+            className="text-muted-foreground text-xs"
+          >
+            Customer fare
+          </label>
+          <Input
+            id={route.id + "-" + vehicleClass.id + "-price"}
+            name="price"
+            type="number"
+            inputMode="numeric"
+            min={100}
+            max={50000}
+            step={10}
+            defaultValue={currentPrice}
+            className="mt-1 h-9"
+          />
+        </div>
+        <Button type="submit" size="sm" variant="secondary" disabled={pending}>
+          {pending ? "Saving…" : "Save"}
+        </Button>
+      </form>
+
+      <div className="text-muted-foreground mt-2 flex items-center justify-between gap-3 text-xs">
+        <span>
+          {override
+            ? "Automatic would be " + formatNad(String(automaticPrice))
+            : "Uses ×" + vehicleClass.priceMultiplier + " of " + formatNad(route.fixedPrice)}
+        </span>
+        {override && (
+          <form action={resetAction}>
+            <input type="hidden" name="routeId" value={route.id} />
+            <input type="hidden" name="vehicleClassId" value={vehicleClass.id} />
+            <button
+              type="submit"
+              disabled={resetPending}
+              className="underline underline-offset-2 hover:text-foreground"
+            >
+              {resetPending ? "Resetting…" : "Reset"}
+            </button>
+          </form>
+        )}
       </div>
 
-      <div>
-        <p className="text-muted-foreground text-xs">Driver payout</p>
-        <p className="tabular mt-1 text-sm font-medium">
-          {formatNad(route.defaultDriverPayout)}
+      {(state && !state.ok) || (resetState && !resetState.ok) ? (
+        <p role="alert" className="text-destructive mt-2 text-xs">
+          {state && !state.ok
+            ? state.message
+            : resetState && !resetState.ok
+              ? resetState.message
+              : null}
         </p>
-      </div>
-
-      <div>
-        <p className="text-muted-foreground text-xs">Our contribution</p>
-        <p className="tabular mt-1 text-sm font-medium">
-          {formatNad(String(contribution.toFixed(2)))}
-          <span className="text-muted-foreground ml-1 text-xs">
-            ({margin.toFixed(0)}%)
-          </span>
-        </p>
-      </div>
-
-      <Button type="submit" size="sm" variant="secondary" disabled={pending}>
-        {pending ? "Saving…" : "Save"}
-      </Button>
-
-      {state && !state.ok && (
-        <p role="alert" className="text-destructive text-xs md:col-span-5">
-          {state.message}
+      ) : null}
+      {(state?.ok || resetState?.ok) && (
+        <p role="status" className="text-brand mt-2 text-xs">
+          Saved. New bookings use the new fare; existing bookings keep their snapshot.
         </p>
       )}
-      {state?.ok && (
-        <p role="status" className="text-brand text-xs md:col-span-5">
-          Saved. New bookings use the new fare. Existing bookings keep their
-          snapshot.
-        </p>
-      )}
-    </form>
+    </div>
   );
 }
 
 export function RoutePricingForm({
   routes,
-  contributionRate,
+  classes,
 }: {
   routes: PublishedRoute[];
-  contributionRate: number;
+  classes: VehicleClass[];
 }) {
   return (
     <section className="bg-card rounded-xl border p-4">
       <div>
         <h2 className="text-sm font-semibold">Published route prices</h2>
         <p className="text-muted-foreground mt-1 max-w-3xl text-xs text-pretty">
-          This is the customer-facing price of record. Change a route here when
-          the commercial fare changes. The driver payout is recalculated from
-          the current {Math.round(contributionRate * 100)}% contribution target,
-          so price and economics cannot silently drift apart.
+          Edit the customer-facing fare for each vehicle class on each route.
+          If you leave a class on Automatic, it uses the class multiplier.
+          Custom fares are stored per route and vehicle, so changing the SUV
+          price does not change the Private Car or every other route.
         </p>
       </div>
 
@@ -119,12 +157,28 @@ export function RoutePricingForm({
           No active routes are available to edit.
         </p>
       ) : (
-        <div className="mt-3">
+        <div className="mt-4 space-y-4">
           {routes.map((route) => (
-            <RoutePriceRow
-              key={route.id}
-              route={route}
-            />
+            <div key={route.id} className="border-b pb-4 last:border-0 last:pb-0">
+              <div className="mb-3">
+                <p className="text-sm font-medium">
+                  {route.originLabel} → {route.destinationLabel}
+                </p>
+                <p className="text-muted-foreground mt-0.5 text-xs">
+                  {route.category} · {route.slug} · baseline {formatNad(route.fixedPrice)}
+                </p>
+              </div>
+
+              <div className="grid gap-3 md:grid-cols-2">
+                {classes.map((vehicleClass) => (
+                  <VehiclePriceEditor
+                    key={vehicleClass.id}
+                    route={route}
+                    vehicleClass={vehicleClass}
+                  />
+                ))}
+              </div>
+            </div>
           ))}
         </div>
       )}
