@@ -23,8 +23,7 @@ npm run dev
 
 ## Environment variables
 
-Set these in `.env.local` locally, and in **Vercel → Project → Settings →
-Environment Variables** for Preview and Production.
+Set these in `.env.local` locally, and in **Vercel → Project → Settings → Environment Variables** for Preview and Production.
 
 | Variable | Where to find it | Exposed to browser |
 | --- | --- | --- |
@@ -50,6 +49,17 @@ Environment Variables** for Preview and Production.
 | `PAYTODAY_FALLBACK_EMAIL` | Receipt address for bookings made without an e-mail | No |
 | `PAYTODAY_SDK_PATH` | Optional path to a vendored copy of the PayToday SDK | No |
 | `PAYTODAY_SDK_SHA256` | Optional digest pin for that SDK | No |
+| `NEXT_PUBLIC_GOOGLE_ADS_ID` | Google Ads/Tag Assistant → site-wide Google tag ID (currently `AW-18418844449`) | Yes |
+| `NEXT_PUBLIC_GOOGLE_ADS_CONVERSION_ID_BOOKING` | Google Ads → Goals → Conversions → booking conversion → Tag setup | Yes |
+| `NEXT_PUBLIC_GOOGLE_ADS_CONVERSION_LABEL_BOOKING` | Same Google Ads conversion action → Tag setup | Yes |
+| `NEXT_PUBLIC_GOOGLE_ADS_CONVERSION_ID_PAID` | Google Ads → Goals → Conversions → paid booking conversion → Tag setup | Yes |
+| `NEXT_PUBLIC_GOOGLE_ADS_CONVERSION_LABEL_PAID` | Same Google Ads conversion action → Tag setup | Yes |
+
+The Google Ads site tag ID and conversion-action IDs are deliberately separate.
+Do not copy the site tag ID into a conversion-action variable unless Google Ads
+actually gives you that value for the selected conversion action. A missing
+conversion label causes the application to send nothing rather than silently
+counting against the wrong action.
 
 `DATABASE_URL` is read at server start, so it must be present in every
 environment that builds or runs the app.
@@ -80,6 +90,7 @@ is IPv4 and works. The direct connection is fine from a local machine.
 | `npm run test:geometry` | Geometry-backfill tests, including the unreachable-Mapbox path |
 | `npm run test:polyline` | Polyline decoding — precision and coordinate order |
 | `npm run routes:measure` | Ask Mapbox for each route's real **distance and duration**. Road geometry backfills itself on first render, so this is only needed to correct the quoted figures |
+`
 
 ## Layout
 
