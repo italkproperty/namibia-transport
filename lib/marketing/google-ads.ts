@@ -1,50 +1,59 @@
-/**
- * The Google Ads tag, and what it is allowed to count.
+/** 
+ * Google Ads measurement configuration.
  *
- * Direct `gtag.js` rather than a Tag Manager container, deliberately. A GTM
- * container is a remote code execution channel by design: anyone who can sign
- * into the Tag Manager account can publish JavaScript onto `/book` and
- * `/booking/[ref]` — the pages where a traveller types their name and contact
- * details and then leaves for the gateway — with no deploy, no review and no
- * test run. That is a fair trade on a marketing site. It is not one on the
- * money path, and GTM would not have saved any work here anyway: a booking
- * submit is a Server Action result, not a DOM click a container can observe,
- * so the events would still be pushed from our own code.
+ * The Google tag ID identifies the site-wide Google tag (for example,
+ * AW-18418844449). Conversion actions are separate Google Ads resources and
+ * therefore have their own ID + label. Keeping those concerns separate avoids
+ * accidentally sending a conversion to the tag/account ID rather than to the
+ * intended conversion action.
  *
- * The identifiers are not secret — they are readable in any page source of
- * any site that advertises — so they take `NEXT_PUBLIC_` and are read here
- * once rather than typed into components.
- *
- * ## Why a missing label is silence rather than a guess
- *
- * A conversion label is created in the Google Ads UI and cannot be derived
- * from the account id. Until one is set, the matching event is not sent at
- * all: an event posted to the wrong label would be counted against the wrong
- * conversion action, and a bidding strategy learning from it would be worse
- * than one learning from nothing. `missingLabels()` exists so an operator can
- * be told which are unset, rather than discovering it as an empty report six
- * weeks later — which is exactly how the currency rates failed twice.
+ * Direct gtag.js is used deliberately instead of a Tag Manager container.
+ * Booking/payment conversions originate from application state and server
+ * results, so the application remains the source of truth for the money path.
  */
 
 export type ConversionKind = "booking_submitted" | "booking_paid";
 
-/**
- * Read at module scope on purpose.
- *
- * `NEXT_PUBLIC_` values are inlined at build, so `process.env.X` only works
- * where the compiler can see the literal key. A lookup by variable returns
- * undefined in the browser bundle, silently, which is the shape this project
- * has already been bitten by twice.
- */
 const ADS_ID = process.env.NEXT_PUBLIC_GOOGLE_ADS_ID?.trim() || null;
 
-const LABELS: Record<ConversionKind, string | null> = {
-  booking_submitted:
-    process.env.NEXT_PUBLIC_GOOGLE_ADS_LABEL_BOOKING?.trim() || null,
-  booking_paid: process.env.NEXT_PUBLIC_GOOGLE_ADS_LABEL_PAID?.trim() || null,
+type ConversionConfig = {
+  id: string | null;
+  label: string | null;
 };
 
-/** The account tag, e.g. `AW-18418844449`. Null when unconfigured. */
+/**
+ * New configuration:
+ *   NEXT_PUBLIC_GOOGLE_ADS_CONVERSION_ID_BOOKING
+ *   NEXT_PUBLIC_GOOGLE_ADS_CONVERSION_LABEL_BOOKING
+ *   NEXT_PUBLIC_GOOGLE_ADS_CONVERSION_ID_PAID
+ *   NEXT_PUBLIC_GOOGLE_ADS_CONVERSION_LABEL_PAID
+ *
+ * The old label variables remain as a compatibility fallback so an existing
+ * deployment does not silently stop reporting while Vercel is being migrated.
+ * The fallback uses the site tag ID as the conversion ID only for legacy
+ * configuration. New deployments should always set the explicit conversion ID.
+ */
+const CONVERSIONS: Record<ConversionKind, ConversionConfig> = {
+  booking_submitted: {
+    id:
+      process.env.NEXT_PUBLIC_GOOGLE_ADS_CONVERSION_ID_BOOKING?.trim() ||
+      ADS_ID,
+    label:
+      process.env.NEXT_PUBLIC_GOOGLE_ADS_CONVERSION_LABEL_BOOKING?.trim() ||
+      process.env.NEXT_PUBLIC_GOOGLE_ADS_LABEL_BOOKING?.trim() ||
+      null,
+  },
+  booking_paid: {
+    id:
+      process.env.NEXT_PUBLIC_GOOGLE_ADS_CONVERSION_ID_PAID?.trim() || ADS_ID,
+    label:
+      process.env.NEXT_PUBLIC_GOOGLE_ADS_CONVERSION_LABEL_PAID?.trim() ||
+      process.env.NEXT_PUBLIC_GOOGLE_ADS_LABEL_PAID?.trim() ||
+      null,
+  },
+};
+
+/** The site-wide Google tag, e.g. `AW-18418844449`. */
 export function adsId(): string | null {
   return ADS_ID;
 }
@@ -54,20 +63,21 @@ export function isAdsConfigured(): boolean {
 }
 
 /**
- * `AW-18418844449/AbC-D_efGh`, the value gtag wants in `send_to`.
+ * Return the exact Google Ads conversion destination:
+ * `AW-XXXXXXXXXXX/LABEL`.
  *
- * Null when either half is missing, which is the whole point: half of this
- * string is not a usable destination, and sending to the account id alone
- * counts the event against no conversion action while looking like it worked.
+ * Null means the conversion action is not fully configured, so the application
+ * intentionally sends nothing rather than guessing or counting against the
+ * wrong conversion action.
  */
 export function sendTo(kind: ConversionKind): string | null {
-  const label = LABELS[kind];
-  return ADS_ID && label ? `${ADS_ID}/${label}` : null;
+  const { id, label } = CONVERSIONS[kind];
+  return id && label ? `${id}/${label}` : null;
 }
 
-/** Which conversion actions cannot be reported yet, for an operator to see. */
+/** Which conversion actions cannot be reported yet. */
 export function missingLabels(): ConversionKind[] {
-  return (Object.keys(LABELS) as ConversionKind[]).filter(
-    (kind) => LABELS[kind] === null,
+  return (Object.keys(CONVERSIONS) as ConversionKind[]).filter(
+    (kind) => CONVERSIONS[kind].id === null || CONVERSIONS[kind].label === null,
   );
 }
