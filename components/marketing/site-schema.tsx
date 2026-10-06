@@ -38,6 +38,17 @@ export function SiteSchema() {
     name: SITE.name,
     url: SITE.url,
     description: SITE.description,
+    /**
+     * The mark Google reads for a knowledge panel, and the same file the
+     * Business Profile carries — one logo in one place, so the entity Google
+     * assembles from the site and the one it assembles from Maps are visibly
+     * the same company.
+     *
+     * Square and on its own dark ground rather than transparent: every
+     * surface that shows it crops to a circle, and a transparent mark drawn
+     * in near-white would disappear against the white card it lands on.
+     */
+    logo: `${SITE.url}/brand/logo-square-dark.png`,
     areaServed: { "@type": "Country", name: "Namibia" },
     knowsLanguage: ["en"],
     ...(contactPoint.length > 0 ? { contactPoint } : {}),
