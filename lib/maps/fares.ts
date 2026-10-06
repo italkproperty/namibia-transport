@@ -1,9 +1,10 @@
 import "server-only";
 
-import { asc, eq } from "drizzle-orm";
+import { and, asc, desc, eq } from "drizzle-orm";
 
 import { getDb, isDatabaseConfigured } from "@/db";
-import { routes, vehicleClasses } from "@/db/schema";
+import { READ_DEADLINE_MS, withDeadline } from "@/lib/deadline";
+import { pricingRules, routes, vehicleClasses } from "@/db/schema";
 import {
   CATALOG_ROUTES,
   CATALOG_ROUTES_BY_SLUG,
@@ -58,6 +59,7 @@ function catalogRouteToView(route: CatalogRoute): RouteView {
     destinationLat: route.destinationLat ?? null,
     destinationLng: route.destinationLng ?? null,
     routeGeometry: null,
+    vehiclePrices: {},
   };
 }
 
@@ -95,10 +97,26 @@ export async function listRoutes(
   }
 
   try {
-    const query = getDb().select().from(routes).orderBy(asc(routes.sortOrder));
-    const rows = await (activeOnly
-      ? query.where(eq(routes.isActive, true))
-      : query);
+    let query = getDb()
+      .select({ route: routes, rule: pricingRules })
+      .from(routes)
+      .leftJoin(
+        pricingRules,
+        and(
+          eq(pricingRules.routeId, routes.id),
+          eq(pricingRules.ruleType, "multiplier"),
+          eq(pricingRules.isActive, true),
+        ),
+      )
+      .orderBy(
+        asc(routes.sortOrder),
+        desc(pricingRules.priority),
+        desc(pricingRules.updatedAt),
+      );
+
+    if (activeOnly) query = query.where(eq(routes.isActive, true));
+
+    const rows = await withDeadline("route catalogue", READ_DEADLINE_MS, () => query);
 
     // An empty table means "not seeded yet", not "no routes exist".
     if (rows.length === 0) {
@@ -106,7 +124,21 @@ export async function listRoutes(
       return fallback();
     }
 
-    return { routes: rows, source: "database" };
+    const byRoute = new Map<string, RouteView>();
+    for (const row of rows) {
+      const base = byRoute.get(row.route.id) ?? {
+        ...row.route,
+        vehiclePrices: {},
+      } as RouteView;
+      byRoute.set(
+        row.route.id,
+        row.rule
+          ? applyVehiclePriceRules(base, [row.rule])
+          : base,
+      );
+    }
+
+    return { routes: [...byRoute.values()], source: "database" };
   } catch (error) {
     noteFallback(`the database is unreachable: ${describe(error)}`);
     return fallback();
@@ -125,13 +157,26 @@ export async function getRouteBySlug(slug: string): Promise<RouteView | null> {
   }
 
   try {
-    const [row] = await getDb()
-      .select()
-      .from(routes)
-      .where(eq(routes.slug, slug))
-      .limit(1);
+    const [row] = await withDeadline("route lookup", READ_DEADLINE_MS, () =>
+      getDb()
+        .select({ route: routes, rule: pricingRules })
+        .from(routes)
+        .leftJoin(
+          pricingRules,
+          and(
+            eq(pricingRules.routeId, routes.id),
+            eq(pricingRules.ruleType, "multiplier"),
+            eq(pricingRules.isActive, true),
+          ),
+        )
+        .where(eq(routes.slug, slug))
+        .orderBy(desc(pricingRules.priority), desc(pricingRules.updatedAt))
+        .limit(1),
+    );
 
-    return row ?? fallback();
+    return row
+      ? applyVehiclePriceRules({ ...row.route, vehiclePrices: {} }, row.rule ? [row.rule] : [])
+      : fallback();
   } catch (error) {
     noteFallback(`the database is unreachable: ${describe(error)}`);
     return fallback();
