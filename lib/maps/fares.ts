@@ -176,7 +176,7 @@ export async function getRouteBySlug(slug: string): Promise<RouteView | null> {
   }
 
   try {
-    const [row] = await withDeadline("route lookup", READ_DEADLINE_MS, () =>
+    const rows = await withDeadline("route lookup", READ_DEADLINE_MS, () =>
       getDb()
         .select({ route: routes, rule: pricingRules })
         .from(routes)
@@ -189,13 +189,16 @@ export async function getRouteBySlug(slug: string): Promise<RouteView | null> {
           ),
         )
         .where(eq(routes.slug, slug))
-        .orderBy(desc(pricingRules.priority), desc(pricingRules.updatedAt))
-        .limit(1),
+        .orderBy(desc(pricingRules.priority), desc(pricingRules.updatedAt)),
     );
 
-    return row
-      ? applyVehiclePriceRules({ ...row.route, vehiclePrices: {} }, row.rule ? [row.rule] : [])
-      : fallback();
+    if (rows.length === 0) return fallback();
+
+    const route = { ...rows[0].route, vehiclePrices: {} } as RouteView;
+    return applyVehiclePriceRules(
+      route,
+      rows.flatMap((row) => (row.rule ? [row.rule] : [])),
+    );
   } catch (error) {
     noteFallback(`the database is unreachable: ${describe(error)}`);
     return fallback();
