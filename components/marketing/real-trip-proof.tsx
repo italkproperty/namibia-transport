@@ -17,6 +17,8 @@ export function RealTripProof() {
               alt="Namibia Transport vehicle on a Namibian mountain road during a customer journey"
               fill
               sizes="(max-width: 1024px) 100vw, 54vw"
+              unoptimized
+              priority
               className="object-cover"
             />
             <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/75 via-black/20 to-transparent p-6 pt-24 text-white">
