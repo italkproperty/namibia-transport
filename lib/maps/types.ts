@@ -32,7 +32,7 @@ export type RouteView = {
   destinationLng: number | null;
   routeGeometry: string | null;
   /** Per-vehicle customer price overrides, keyed by vehicle class ID. */
-  vehiclePrices: Record<string, { customerPrice: string; driverPayout: string; source: "default" | "override" }>;
+  vehiclePrices: Record<string, { customerPrice: string; driverPayout: string }>;
 };
 
 export type VehicleClassView = {
