@@ -13,7 +13,7 @@ export function RealTripProof() {
         <div className="grid lg:grid-cols-[1.08fr_0.92fr]">
           <div className="relative min-h-[360px] bg-muted lg:min-h-[470px]">
             <Image
-              src="/proof/ping-tomo-vehicle.svg"
+              src="/proof/ping-tomo-vehicle.webp"
               alt="Namibia Transport vehicle on a Namibian mountain road during a customer journey"
               fill
               sizes="(max-width: 1024px) 100vw, 54vw"
