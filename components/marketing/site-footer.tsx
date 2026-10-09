@@ -105,6 +105,14 @@ export function SiteFooter({ routes = [] }: { routes?: RouteView[] }) {
               </li>
               <li>
                 <Link
+                  href="/south-african-travellers"
+                  className="text-muted-foreground hover:text-foreground transition"
+                >
+                  For South African travellers
+                </Link>
+              </li>
+              <li>
+                <Link
                   href="/methodology"
                   className="text-muted-foreground hover:text-foreground transition"
                 >
