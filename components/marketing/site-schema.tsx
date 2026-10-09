@@ -31,8 +31,7 @@ export function SiteSchema() {
     },
   ].filter(Boolean);
 
-  const schema = {
-    "@context": "https://schema.org",
+  const organization = {
     "@type": "Organization",
     "@id": `${SITE.url}/#organization`,
     name: SITE.name,
@@ -55,6 +54,21 @@ export function SiteSchema() {
     ...(company.registration
       ? { identifier: company.registration }
       : {}),
+  };
+
+  const schema = {
+    "@context": "https://schema.org",
+    "@graph": [
+      {
+        "@type": "WebSite",
+        "@id": `${SITE.url}/#website`,
+        name: SITE.name,
+        alternateName: "namibiatransport.com",
+        url: SITE.url,
+        publisher: { "@id": `${SITE.url}/#organization` },
+      },
+      { ...organization },
+    ],
   };
 
   return (
