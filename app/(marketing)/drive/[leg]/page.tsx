@@ -236,6 +236,31 @@ export default async function LegPage({ params }: PageProps) {
               : `${road.gravelKm} km of that is gravel — ${gravelShare}% of the drive — which is why it takes longer than the distance suggests.`}
           </p>
 
+          <div className="mt-5 rounded-xl border bg-card p-4 sm:flex sm:items-center sm:justify-between sm:gap-4">
+            <div>
+              <p className="text-sm font-semibold">
+                Rather have a driver?
+              </p>
+              <p className="text-muted-foreground mt-1 text-sm">
+                Book a private transfer for this route. The fare is fixed for
+                the whole vehicle before you commit.
+              </p>
+              <p className="text-brand mt-2 text-lg font-semibold tabular">
+                {formatNad(out.route.fixedPrice)}
+                <span className="text-muted-foreground text-xs font-normal">
+                  {" "}per vehicle
+                </span>
+              </p>
+            </div>
+            <Link
+              href={`/journey?from=${leg.a.slug}&to=${leg.b.slug}`}
+              className="press bg-brand text-brand-foreground mt-3 inline-flex min-h-11 shrink-0 items-center justify-center gap-2 rounded-lg px-4 py-2 text-sm font-semibold sm:mt-0"
+            >
+              Get a transfer quote
+              <ArrowRightIcon className="size-4" aria-hidden />
+            </Link>
+          </div>
+
           <div className="mt-6">
             <RouteMap route={out.route} />
           </div>
