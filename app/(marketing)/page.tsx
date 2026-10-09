@@ -107,13 +107,13 @@ export default async function HomePage({ searchParams }: PageProps) {
             </p>
 
             <h1 className="mt-4 max-w-3xl text-4xl leading-[1.05] font-semibold tracking-[-0.03em] sm:text-5xl lg:text-6xl">
-              Know who is meeting you before you land.
+              Private Transfers Across Namibia
             </h1>
 
             <p className="text-background/70 mt-5 max-w-xl text-base leading-relaxed text-pretty sm:text-lg">
-              Fixed prices across Namibia. Your driver waits inside arrivals
-              with your name on a board, and a late landing never becomes a
-              waiting fee.
+              Fixed-price airport transfers and private intercity journeys across Namibia.
+              Get your price upfront, know who is meeting you, and book your
+              journey with confidence.
             </p>
 
             {/* Renders only once real published reviews exist. */}
