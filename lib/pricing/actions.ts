@@ -201,7 +201,7 @@ export async function savePublishedRoutePrice(
 }
 
 /** Save a route-specific vehicle price as a multiplier rule. */
-export async function savePublishedVehiclePrice(
+async function savePublishedVehiclePriceUnsafe(
   _prev: SaveResult | null,
   form: FormData,
 ): Promise<SaveResult> {
@@ -294,6 +294,22 @@ export async function savePublishedVehiclePrice(
   } catch (error) {
     console.error("[pricing] vehicle fare save failed", error);
     return { ok: false, message: "The database refused the vehicle fare change, so nothing was saved." };
+  }
+}
+
+/** Public action boundary: a failed save must return an inline error, never crash the pricing page. */
+export async function savePublishedVehiclePrice(
+  prev: SaveResult | null,
+  form: FormData,
+): Promise<SaveResult> {
+  try {
+    return await savePublishedVehiclePriceUnsafe(prev, form);
+  } catch (error) {
+    console.error("[pricing] vehicle fare action crashed", error);
+    return {
+      ok: false,
+      message: "The fare could not be saved because the server or database failed. No successful save was confirmed; please try again shortly.",
+    };
   }
 }
 
