@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 import { and, eq } from "drizzle-orm";
 
 import { getDb, isDatabaseConfigured } from "@/db";
-import { pricingSettings, routes, vehicleClasses } from "@/db/schema";
+import { pricingRules, pricingSettings, routes, vehicleClasses } from "@/db/schema";
 import { getAdminGateState } from "@/lib/admin/auth";
 import { DEFAULT_CONSTANTS } from "./cost-model";
 import { CLASS_BOUNDS, CONSTANT_BOUNDS, checkBound, type FieldError } from "./settings";
