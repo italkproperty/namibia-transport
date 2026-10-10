@@ -1,10 +1,10 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { eq } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 
 import { getDb, isDatabaseConfigured } from "@/db";
-import { pricingSettings, routes, vehicleClasses } from "@/db/schema";
+import { pricingRules, pricingSettings, routes, vehicleClasses } from "@/db/schema";
 import { getAdminGateState } from "@/lib/admin/auth";
 import { DEFAULT_CONSTANTS } from "./cost-model";
 import { CLASS_BOUNDS, CONSTANT_BOUNDS, checkBound, type FieldError } from "./settings";
@@ -197,6 +197,141 @@ export async function savePublishedRoutePrice(
       ok: false,
       message: "The database refused the fare change, so nothing was saved.",
     };
+  }
+}
+
+/** Save a route-specific vehicle price as a multiplier rule. */
+export async function savePublishedVehiclePrice(
+  _prev: SaveResult | null,
+  form: FormData,
+): Promise<SaveResult> {
+  const gate = await getAdminGateState();
+  if (gate.state !== "signed-in") return { ok: false, message: "Sign in to change pricing." };
+  if (!isDatabaseConfigured()) return { ok: false, message: "No database is configured on this deployment." };
+
+  const routeId = String(form.get("routeId") ?? "").trim();
+  const vehicleClassId = String(form.get("vehicleClassId") ?? "").trim();
+  const rawPrice = String(form.get("price") ?? "").trim();
+
+  if (!routeId || !vehicleClassId) {
+    return { ok: false, message: "Choose a route and vehicle class." };
+  }
+  if (!/^\d+(?:\.\d{1,2})?$/.test(rawPrice)) {
+    return { ok: false, message: "Enter a fare as a whole Namibian dollar amount." };
+  }
+
+  const price = Number(rawPrice);
+  if (!Number.isFinite(price) || !Number.isInteger(price) || price < 100 || price > 50000) {
+    return { ok: false, message: "Vehicle fares must be whole rands between N$100 and N$50,000." };
+  }
+
+  try {
+    const db = getDb();
+    const [route] = await db
+      .select({ fixedPrice: routes.fixedPrice, defaultDriverPayout: routes.defaultDriverPayout, slug: routes.slug })
+      .from(routes)
+      .where(eq(routes.id, routeId))
+      .limit(1);
+
+    const [vehicleClass] = await db
+      .select({ id: vehicleClasses.id, name: vehicleClasses.name })
+      .from(vehicleClasses)
+      .where(eq(vehicleClasses.id, vehicleClassId))
+      .limit(1);
+
+    if (!route || !vehicleClass) {
+      return { ok: false, message: "That route or vehicle class no longer exists." };
+    }
+
+    const base = Number(route.fixedPrice);
+    if (!Number.isFinite(base) || base <= 0) {
+      return { ok: false, message: "That route has no valid baseline fare." };
+    }
+
+    const multiplier = price / base;
+    if (!Number.isFinite(multiplier) || multiplier <= 0 || multiplier > 99.9999) {
+      return { ok: false, message: "That fare cannot be represented safely." };
+    }
+
+    const storedMultiplier = Number(multiplier.toFixed(4));
+    const checkPrice = Math.round(base * storedMultiplier);
+    if (checkPrice !== price) {
+      return {
+        ok: false,
+        message: "That fare cannot be represented exactly by the route pricing rule. Try a nearby whole-rand amount.",
+      };
+    }
+
+    await db
+      .update(pricingRules)
+      .set({ isActive: false, updatedAt: new Date() })
+      .where(
+        and(
+          eq(pricingRules.routeId, routeId),
+          eq(pricingRules.vehicleClassId, vehicleClassId),
+          eq(pricingRules.ruleType, "multiplier"),
+          eq(pricingRules.isActive, true),
+        ),
+      );
+
+    await db.insert(pricingRules).values({
+      name: `${route.slug} — ${vehicleClass.name} published fare`,
+      routeId,
+      vehicleClassId,
+      ruleType: "multiplier",
+      amount: storedMultiplier.toFixed(4),
+      priority: 100,
+      isActive: true,
+      updatedAt: new Date(),
+    });
+
+    revalidatePath("/admin/pricing");
+    revalidatePath("/");
+    revalidatePath("/book");
+    revalidatePath("/transfers");
+    revalidatePath(`/transfers/${route.slug}`);
+    return { ok: true };
+  } catch (error) {
+    console.error("[pricing] vehicle fare save failed", error);
+    return { ok: false, message: "The database refused the vehicle fare change, so nothing was saved." };
+  }
+}
+
+/** Remove a route-specific vehicle fare and return to the class multiplier. */
+export async function resetPublishedVehiclePrice(
+  _prev: SaveResult | null,
+  form: FormData,
+): Promise<SaveResult> {
+  const gate = await getAdminGateState();
+  if (gate.state !== "signed-in") return { ok: false, message: "Sign in to change pricing." };
+  if (!isDatabaseConfigured()) return { ok: false, message: "No database is configured on this deployment." };
+
+  const routeId = String(form.get("routeId") ?? "").trim();
+  const vehicleClassId = String(form.get("vehicleClassId") ?? "").trim();
+
+  if (!routeId || !vehicleClassId) return { ok: false, message: "Choose a route and vehicle class." };
+
+  try {
+    await getDb()
+      .update(pricingRules)
+      .set({ isActive: false, updatedAt: new Date() })
+      .where(
+        and(
+          eq(pricingRules.routeId, routeId),
+          eq(pricingRules.vehicleClassId, vehicleClassId),
+          eq(pricingRules.ruleType, "multiplier"),
+          eq(pricingRules.isActive, true),
+        ),
+      );
+
+    revalidatePath("/admin/pricing");
+    revalidatePath("/");
+    revalidatePath("/book");
+    revalidatePath("/transfers");
+    return { ok: true };
+  } catch (error) {
+    console.error("[pricing] vehicle fare reset failed", error);
+    return { ok: false, message: "The database refused the reset." };
   }
 }
 

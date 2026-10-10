@@ -41,6 +41,7 @@ export function computeFare(
     | "currency"
     | "distanceKm"
     | "durationMin"
+    | "vehiclePrices"
   >,
   vehicleClass: Pick<VehicleClassView, "id" | "slug" | "priceMultiplier">
 ): FareQuote {
@@ -51,10 +52,13 @@ export function computeFare(
     );
   }
 
-  const customerPrice = roundToRand(Number(route.fixedPrice) * multiplier);
-  const driverPayout = roundToRand(
-    Number(route.defaultDriverPayout) * multiplier
-  );
+  const routePrice = route.vehiclePrices?.[vehicleClass.id];
+  const customerPrice = routePrice
+    ? roundToRand(Number(routePrice.customerPrice))
+    : roundToRand(Number(route.fixedPrice) * multiplier);
+  const driverPayout = routePrice
+    ? roundToRand(Number(routePrice.driverPayout))
+    : roundToRand(Number(route.defaultDriverPayout) * multiplier);
 
   return {
     routeId: route.id,
@@ -70,12 +74,15 @@ export function computeFare(
 
 /** The price shown next to a class — same as the total, since a fare buys the vehicle. */
 export function unitFare(
-  route: Pick<RouteView, "fixedPrice">,
-  vehicleClass: Pick<VehicleClassView, "priceMultiplier">
+  route: Pick<RouteView, "fixedPrice" | "vehiclePrices">,
+  vehicleClass: Pick<VehicleClassView, "id" | "priceMultiplier">
 ): number {
-  return roundToRand(
-    Number(route.fixedPrice) * Number(vehicleClass.priceMultiplier)
-  );
+  const routePrice = route.vehiclePrices?.[vehicleClass.id];
+  return routePrice
+    ? roundToRand(Number(routePrice.customerPrice))
+    : roundToRand(
+        Number(route.fixedPrice) * Number(vehicleClass.priceMultiplier),
+      );
 }
 
 /**

@@ -105,6 +105,7 @@ function toRouteView(road: Road): RouteView {
     destinationLat: road.destination.lat,
     destinationLng: road.destination.lng,
     routeGeometry: null,
+    vehiclePrices: {},
   };
 }
 

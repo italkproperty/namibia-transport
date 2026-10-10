@@ -31,6 +31,8 @@ export type RouteView = {
   destinationLat: number | null;
   destinationLng: number | null;
   routeGeometry: string | null;
+  /** Per-vehicle customer price overrides, keyed by vehicle class ID. */
+  vehiclePrices: Record<string, { customerPrice: string; driverPayout: string }>;
 };
 
 export type VehicleClassView = {

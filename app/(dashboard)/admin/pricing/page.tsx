@@ -104,8 +104,13 @@ export default async function AdminPricingPage({
             category: route.category,
             fixedPrice: route.fixedPrice,
             defaultDriverPayout: route.defaultDriverPayout,
+            vehiclePrices: route.vehiclePrices,
           }))}
-          contributionRate={config.constants.contributionRate}
+          classes={classes.map((c) => ({
+            id: c.id,
+            name: c.name,
+            priceMultiplier: c.priceMultiplier,
+          }))}
         />
 
         {/* ------------------------------------------------- the constants */}

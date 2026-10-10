@@ -1,9 +1,10 @@
 import "server-only";
 
-import { asc, eq } from "drizzle-orm";
+import { and, asc, desc, eq } from "drizzle-orm";
 
 import { getDb, isDatabaseConfigured } from "@/db";
-import { routes, vehicleClasses } from "@/db/schema";
+import { READ_DEADLINE_MS, withDeadline } from "@/lib/deadline";
+import { pricingRules, routes, vehicleClasses } from "@/db/schema";
 import {
   CATALOG_ROUTES,
   CATALOG_ROUTES_BY_SLUG,
@@ -58,6 +59,7 @@ function catalogRouteToView(route: CatalogRoute): RouteView {
     destinationLat: route.destinationLat ?? null,
     destinationLng: route.destinationLng ?? null,
     routeGeometry: null,
+    vehiclePrices: {},
   };
 }
 
@@ -73,6 +75,25 @@ function catalogVehicleClassToView(
     luggageCapacity: vehicleClass.luggageCapacity ?? 2,
     priceMultiplier: (vehicleClass.priceMultiplier as string) ?? "1.00",
   };
+}
+
+/** Apply active route/class multiplier rules to the route view. */
+function applyVehiclePriceRules(
+  route: RouteView,
+  rules: Array<typeof pricingRules.$inferSelect>,
+): RouteView {
+  const vehiclePrices = { ...route.vehiclePrices };
+  for (const rule of rules) {
+    if (!rule.vehicleClassId || rule.ruleType !== "multiplier") continue;
+    if (vehiclePrices[rule.vehicleClassId]) continue;
+    const multiplier = Number(rule.amount);
+    if (!Number.isFinite(multiplier) || multiplier <= 0) continue;
+    vehiclePrices[rule.vehicleClassId] = {
+      customerPrice: String(Math.round(Number(route.fixedPrice) * multiplier)),
+      driverPayout: String(Math.round(Number(route.defaultDriverPayout) * multiplier)),
+    };
+  }
+  return { ...route, vehiclePrices };
 }
 
 /* ------------------------------------------------------------------- reads */
@@ -95,10 +116,27 @@ export async function listRoutes(
   }
 
   try {
-    const query = getDb().select().from(routes).orderBy(asc(routes.sortOrder));
-    const rows = await (activeOnly
-      ? query.where(eq(routes.isActive, true))
-      : query);
+    let query = getDb()
+      .select({ route: routes, rule: pricingRules })
+      .from(routes)
+      .leftJoin(
+        pricingRules,
+        and(
+          eq(pricingRules.routeId, routes.id),
+          eq(pricingRules.ruleType, "multiplier"),
+          eq(pricingRules.isActive, true),
+        ),
+      )
+      .$dynamic()
+      .orderBy(
+        asc(routes.sortOrder),
+        desc(pricingRules.priority),
+        desc(pricingRules.updatedAt),
+      );
+
+    if (activeOnly) query = query.where(eq(routes.isActive, true));
+
+    const rows = await withDeadline("route catalogue", READ_DEADLINE_MS, () => query);
 
     // An empty table means "not seeded yet", not "no routes exist".
     if (rows.length === 0) {
@@ -106,7 +144,21 @@ export async function listRoutes(
       return fallback();
     }
 
-    return { routes: rows, source: "database" };
+    const byRoute = new Map<string, RouteView>();
+    for (const row of rows) {
+      const base = byRoute.get(row.route.id) ?? {
+        ...row.route,
+        vehiclePrices: {},
+      } as RouteView;
+      byRoute.set(
+        row.route.id,
+        row.rule
+          ? applyVehiclePriceRules(base, [row.rule])
+          : base,
+      );
+    }
+
+    return { routes: [...byRoute.values()], source: "database" };
   } catch (error) {
     noteFallback(`the database is unreachable: ${describe(error)}`);
     return fallback();
@@ -125,13 +177,29 @@ export async function getRouteBySlug(slug: string): Promise<RouteView | null> {
   }
 
   try {
-    const [row] = await getDb()
-      .select()
-      .from(routes)
-      .where(eq(routes.slug, slug))
-      .limit(1);
+    const rows = await withDeadline("route lookup", READ_DEADLINE_MS, () =>
+      getDb()
+        .select({ route: routes, rule: pricingRules })
+        .from(routes)
+        .leftJoin(
+          pricingRules,
+          and(
+            eq(pricingRules.routeId, routes.id),
+            eq(pricingRules.ruleType, "multiplier"),
+            eq(pricingRules.isActive, true),
+          ),
+        )
+        .where(eq(routes.slug, slug))
+        .orderBy(desc(pricingRules.priority), desc(pricingRules.updatedAt)),
+    );
 
-    return row ?? fallback();
+    if (rows.length === 0) return fallback();
+
+    const route = { ...rows[0].route, vehiclePrices: {} } as RouteView;
+    return applyVehiclePriceRules(
+      route,
+      rows.flatMap((row) => (row.rule ? [row.rule] : [])),
+    );
   } catch (error) {
     noteFallback(`the database is unreachable: ${describe(error)}`);
     return fallback();
@@ -147,11 +215,13 @@ export async function listVehicleClasses(): Promise<VehicleClassView[]> {
   }
 
   try {
-    const rows = await getDb()
-      .select()
-      .from(vehicleClasses)
-      .where(eq(vehicleClasses.isActive, true))
-      .orderBy(asc(vehicleClasses.sortOrder));
+    const rows = await withDeadline("vehicle catalogue", READ_DEADLINE_MS, () =>
+      getDb()
+        .select()
+        .from(vehicleClasses)
+        .where(eq(vehicleClasses.isActive, true))
+        .orderBy(asc(vehicleClasses.sortOrder)),
+    );
 
     return rows.length > 0 ? rows : fallback();
   } catch {
