@@ -23,14 +23,24 @@ let messenger: Messenger | undefined;
 export function getMessenger(): Messenger {
   if (messenger) return messenger;
 
-  if (process.env.MESSENGER_PROVIDER?.trim() === "smtp") {
-    const config = readSmtpConfig();
-    if (config) {
-      messenger = new SmtpMessenger(config);
-      return messenger;
-    }
-    console.warn(
-      "[messaging] MESSENGER_PROVIDER=smtp but SMTP_HOST, SMTP_USER, SMTP_PASSWORD or MAIL_FROM is missing — falling back to the stub.",
+  const provider = process.env.MESSENGER_PROVIDER?.trim();
+  const config = readSmtpConfig();
+
+  // Prefer real email whenever SMTP credentials are configured. Requiring a
+  // separate provider flag made a fully configured mailbox silently use the
+  // logging-only stub when that one flag was missing.
+  if ((provider === "smtp" || !provider) && config) {
+    messenger = new SmtpMessenger(config);
+    return messenger;
+  }
+
+  if (provider === "smtp" && !config) {
+    console.error(
+      "[messaging] MESSENGER_PROVIDER=smtp but SMTP_HOST, SMTP_USER, SMTP_PASSWORD or MAIL_FROM is missing — email is disabled.",
+    );
+  } else if (!provider && !config) {
+    console.error(
+      "[messaging] No SMTP credentials are configured; booking emails will not be sent. Configure SMTP_HOST, SMTP_PORT, SMTP_USER, SMTP_PASSWORD and MAIL_FROM in Vercel.",
     );
   }
 
