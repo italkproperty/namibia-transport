@@ -410,7 +410,7 @@ async function sendConfirmations({
     `Pickup notes: ${emptyToNull(values.notes) || "None"}`,
     "",
     "Open the Namibia Transport admin panel to review and manage this booking.",
-  ].join("\\n");
+  ].join("\n");
 
   try {
     const result = await messenger.send({
