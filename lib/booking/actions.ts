@@ -385,6 +385,49 @@ async function sendConfirmations({
     console.error("[booking] WhatsApp confirmation failed", error);
   }
 
+  // Notify the operations inbox independently of the customer's email address.
+  // A booking must be visible to the team even when the traveller supplied
+  // only WhatsApp or their own confirmation email is unavailable.
+  const operationsEmail = process.env.BOOKING_NOTIFICATION_EMAIL?.trim() || "bookings@namibiatransport.com";
+  const operationsBody = [
+    "NEW WEBSITE BOOKING",
+    "",
+    `Booking reference: ${booking.ref}`,
+    `Status: pending payment`,
+    `Customer: ${customer.fullName}`,
+    `Customer email: ${customer.email || "Not provided"}`,
+    `Customer WhatsApp: ${customer.whatsapp || "Not provided"}`,
+    `Journey: ${routeLabel}`,
+    `Pickup: ${values.pickupLabel}`,
+    `Drop-off: ${values.dropoffLabel}`,
+    `Pickup date/time: ${formatDateTime(scheduledAt)}`,
+    `Vehicle: ${vehicleClass.name}`,
+    `Passengers: ${values.passengers}`,
+    `Luggage pieces: ${values.luggageCount}`,
+    `Flight number: ${emptyToNull(values.flightNumber) || "Not provided"}`,
+    `Customer fare: ${formatNad(fare.customerPrice)}`,
+    `Payment link: ${checkoutUrl || "Not generated — follow up with customer"}`,
+    `Pickup notes: ${emptyToNull(values.notes) || "None"}`,
+    "",
+    "Open the Namibia Transport admin panel to review and manage this booking.",
+  ].join("\\n");
+
+  try {
+    const result = await messenger.send({
+      to: { fullName: "Namibia Transport Bookings", email: operationsEmail },
+      channel: "email",
+      subject: `New booking ${booking.ref}: ${routeLabel}`,
+      body: operationsBody,
+    });
+    if (!result.delivered) {
+      console.error(`[booking] operations notification was not delivered for ${booking.ref} (provider=${result.provider})`);
+    } else {
+      console.info(`[booking] operations notification sent for ${booking.ref} via ${result.provider}`);
+    }
+  } catch (error) {
+    console.error(`[booking] operations notification failed for ${booking.ref}`, error);
+  }
+
   if (!customer.email) return;
 
   try {
