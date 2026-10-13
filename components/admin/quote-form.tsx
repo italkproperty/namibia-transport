@@ -56,7 +56,7 @@ export function QuoteForm({
   const [vehicleClassId, setVehicleClassId] = React.useState("");
 
   if (state?.ok) {
-    const message = `Hi — here is your quote from Namibia Transport. You can see the full details, confirm, and pay by bank transfer here: ${state.url}`;
+    const message = `Hi — here is your quote from Namibia Transport. Review your trip and pay securely by card on this link: ${state.url}`;
     return (
       <div className="bg-card rounded-xl border p-6">
         <p className="text-success flex items-center gap-2 font-medium">
@@ -64,8 +64,7 @@ export function QuoteForm({
           Quote {state.ref} created
         </p>
         <p className="text-muted-foreground mt-2 text-sm leading-relaxed">
-          This is a live booking page. The traveller sees the trip, the fare and
-          the bank details, and can tell you when they have paid.
+          This is your customer payment page. They can review the trip and open secure card checkout from the link. Bank-transfer instructions remain available separately where configured.
         </p>
 
         <div className="bg-muted mt-4 flex items-center gap-2 rounded-lg p-3">
