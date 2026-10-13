@@ -206,7 +206,7 @@ export async function createCustomQuote(
     return {
       ok: true,
       ref: row.ref,
-      url: `${SITE.url.replace(/\/+$/, "")}/booking/${row.ref}`,
+      url: `${SITE.url.replace(/\/+$/, "")}/pay/${row.ref}`,
     };
   } catch (error) {
     console.error("[admin] custom quote failed", error);
