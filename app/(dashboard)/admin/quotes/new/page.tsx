@@ -63,6 +63,9 @@ export default async function NewQuotePage() {
             price comes from the road model — distance, surface and the nights a
             driver is away — and comes back as one link to send.
           </p>
+          <Link href="/admin/quotes/charter" className="mt-3 inline-flex items-center rounded-md border px-3 py-2 text-sm font-medium hover:bg-muted">
+            Open verified charter quote planner
+          </Link>
         </div>
 
         {pending.length > 0 && (
