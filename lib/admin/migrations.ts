@@ -28,6 +28,18 @@ const CHECKS: { column: string; table: string; file: string; what: string }[] =
       file: "db/manual/RUN-ME.sql",
       what: "driver photographs on the booking page",
     },
+    {
+      table: "pricing_settings",
+      column: "charter_target_contribution_margin",
+      file: "db/manual/RUN-ME.sql",
+      what: "charter contribution-margin and payment-fee settings",
+    },
+    {
+      table: "charter_vehicle_cost_profiles",
+      column: "vehicle_class_id",
+      file: "db/manual/RUN-ME.sql",
+      what: "separate charter fuel and non-fuel vehicle profiles",
+    },
   ];
 
 export type PendingMigration = { file: string; what: string; column: string };

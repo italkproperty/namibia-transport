@@ -206,6 +206,46 @@ INSERT INTO "routes" ("id","slug","origin_label","destination_label","category",
 UPDATE "routes" SET "fixed_price"=950.00,"default_driver_payout"=665.00,"updated_at"=now() WHERE "slug"='hosea-kutako-to-windhoek';
 UPDATE "pricing_rules" SET "is_active"=false,"updated_at"=now() WHERE "route_id" IN (SELECT "id" FROM "routes" WHERE "slug" IN ('hosea-kutako-to-windhoek','windhoek-to-hosea-kutako')) AND "rule_type"='multiplier' AND "is_active"=true;
 
+
+/* ---------------------------------------------- 15 October 2026 (charter) -- */
+-- Isolated charter cost assumptions. These columns and profiles do not feed
+-- the legacy fare model or alter any published airport-transfer price.
+ALTER TABLE "pricing_settings"
+  ADD COLUMN IF NOT EXISTS "charter_target_contribution_margin" numeric(4,3) NOT NULL DEFAULT 0.250,
+  ADD COLUMN IF NOT EXISTS "charter_payment_fee_rate" numeric(4,3) NOT NULL DEFAULT 0.048;
+
+CREATE TABLE IF NOT EXISTS "charter_vehicle_cost_profiles" (
+  "id" uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  "vehicle_class_id" uuid NOT NULL REFERENCES "vehicle_classes"("id") ON DELETE CASCADE,
+  "fuel_type" text NOT NULL CHECK ("fuel_type" IN ('diesel', 'petrol')),
+  "litres_per_100_km" numeric(5,2) NOT NULL CHECK ("litres_per_100_km" BETWEEN 2 AND 40),
+  "fuel_price_per_litre" numeric(6,2) NOT NULL CHECK ("fuel_price_per_litre" BETWEEN 10 AND 80),
+  "non_fuel_running_cost_per_km" numeric(6,2) NOT NULL CHECK ("non_fuel_running_cost_per_km" BETWEEN 0 AND 20),
+  "created_at" timestamptz NOT NULL DEFAULT now(),
+  "updated_at" timestamptz NOT NULL DEFAULT now(),
+  CONSTRAINT "charter_vehicle_cost_profiles_vehicle_class_key" UNIQUE ("vehicle_class_id")
+);
+
+DO $
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_constraint
+    WHERE conname = 'pricing_settings_charter_margin_check'
+  ) THEN
+    ALTER TABLE "pricing_settings"
+      ADD CONSTRAINT "pricing_settings_charter_margin_check"
+      CHECK ("charter_target_contribution_margin" BETWEEN 0.050 AND 0.750);
+  END IF;
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_constraint
+    WHERE conname = 'pricing_settings_charter_fee_check'
+  ) THEN
+    ALTER TABLE "pricing_settings"
+      ADD CONSTRAINT "pricing_settings_charter_fee_check"
+      CHECK ("charter_payment_fee_rate" BETWEEN 0.000 AND 0.150);
+  END IF;
+END $;
+
 COMMIT;
 
 /*

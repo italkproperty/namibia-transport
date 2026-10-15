@@ -236,6 +236,37 @@ export const vehicleClasses = pgTable(
   (t) => [uniqueIndex("vehicle_classes_slug_key").on(t.slug)],
 );
 
+/**
+ * Separate, configurable cost inputs for the new charter quote engine.
+ * These values intentionally do not feed the existing public fare model.
+ */
+export const charterVehicleCostProfiles = pgTable(
+  "charter_vehicle_cost_profiles",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    vehicleClassId: uuid("vehicle_class_id")
+      .notNull()
+      .references(() => vehicleClasses.id, { onDelete: "cascade" }),
+    fuelType: text("fuel_type").notNull(),
+    litresPer100Km: numeric("litres_per_100_km", {
+      precision: 5,
+      scale: 2,
+    }).notNull(),
+    fuelPricePerLitre: numeric("fuel_price_per_litre", {
+      precision: 6,
+      scale: 2,
+    }).notNull(),
+    nonFuelRunningCostPerKm: numeric("non_fuel_running_cost_per_km", {
+      precision: 6,
+      scale: 2,
+    }).notNull(),
+    ...timestamps,
+  },
+  (t) => [
+    uniqueIndex("charter_vehicle_cost_profiles_vehicle_class_key").on(t.vehicleClassId),
+  ],
+);
+
 export const addOns = pgTable(
   "add_ons",
   {
@@ -381,6 +412,15 @@ export const pricingSettings = pgTable("pricing_settings", {
   priceStep: numeric("price_step", { precision: 8, scale: 2 })
     .notNull()
     .default("50.00"),
+  /** Charter-only commercial assumptions; do not affect published route fares. */
+  charterTargetContributionMargin: numeric("charter_target_contribution_margin", {
+    precision: 4,
+    scale: 3,
+  }).notNull().default("0.250"),
+  charterPaymentFeeRate: numeric("charter_payment_fee_rate", {
+    precision: 4,
+    scale: 3,
+  }).notNull().default("0.048"),
   ...timestamps,
 });
 

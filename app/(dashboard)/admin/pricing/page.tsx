@@ -4,6 +4,7 @@ import { AdminShell } from "@/components/admin/shell";
 import { PricingForm } from "@/components/admin/pricing-form";
 import { RoutePricingForm } from "@/components/admin/route-pricing-form";
 import { VehicleCostForm } from "@/components/admin/vehicle-cost-form";
+import { CharterCostSettingsForm } from "@/components/admin/charter-cost-settings-form";
 import { listRoutes, listVehicleClasses } from "@/lib/maps";
 import { formatNad } from "@/lib/money";
 import { BASELINE_PROFILE, type PricingConstants } from "@/lib/pricing/cost-model";
@@ -11,6 +12,8 @@ import { previewJourneys, worstSwing } from "@/lib/pricing/preview";
 import { CONSTANT_BOUNDS, getPricingConfig, profileFor } from "@/lib/pricing/settings";
 import { getRates } from "@/lib/currency-rates";
 import { CURRENCIES } from "@/lib/currency";
+import { getCharterCostSettings } from "@/lib/charter/settings";
+import { pendingMigrations } from "@/lib/admin/migrations";
 
 export const metadata: Metadata = {
   title: "Pricing",
@@ -36,11 +39,18 @@ export default async function AdminPricingPage({
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
   const params = await searchParams;
-  const [config, classes, routeCatalog] = await Promise.all([
+  const [config, classes, routeCatalog, charterSettings, pending] = await Promise.all([
     getPricingConfig(),
     listVehicleClasses(),
     listRoutes({ activeOnly: true }),
+    getCharterCostSettings(),
+    pendingMigrations(),
   ]);
+
+  const charterMigrationReady = !pending.some((item) =>
+    item.column === "pricing_settings.charter_target_contribution_margin" ||
+    item.column === "charter_vehicle_cost_profiles.vehicle_class_id"
+  );
 
   const first = (key: string) => {
     const value = params[key];
@@ -220,6 +230,26 @@ export default async function AdminPricingPage({
             ))}
           </div>
         </section>
+
+        {/* -------------------------------------- isolated charter costing */}
+        <CharterCostSettingsForm
+          migrationReady={charterMigrationReady}
+          targetContributionMargin={charterSettings.targetContributionMargin}
+          paymentFeeRate={charterSettings.paymentFeeRate}
+          profiles={classes.map((vehicleClass) => {
+            const profile = charterSettings.profiles.find(
+              (item) => item.vehicleClassId === vehicleClass.id,
+            );
+            return {
+              id: vehicleClass.id,
+              name: vehicleClass.name,
+              fuelType: profile?.fuelType ?? null,
+              litresPer100Km: profile?.litresPer100Km ?? null,
+              fuelPricePerLitre: profile?.fuelPricePerLitre ?? null,
+              nonFuelRunningCostPerKm: profile?.nonFuelRunningCostPerKm ?? null,
+            };
+          })}
+        />
 
         {/* ---------------------------------------------- the currency gap */}
         {missingRates.length > 0 && (
