@@ -2,7 +2,7 @@
 
 ## Status
 
-Stage 1 design and Stage 2/3 calculation foundation. This document does not claim production deployment or database migration.
+Stage 1 design, calculation foundation, and a route-to-cost integration adapter. The admin UI, persisted quote snapshots, configurable fuel profiles, and database migration are still pending. This document does not claim production deployment.
 
 ## Design principles
 
@@ -49,8 +49,8 @@ The server recomputes all totals. Client-supplied amounts are never trusted. Ser
 ## Rollout plan
 
 1. Inventory current route, quote, booking, payment, schema and Vercel deployment paths.
-2. Add destination resolution and multi-waypoint road routing with provenance and safe fallback.
-3. Add fuel-aware, itemised costing and configurable vehicle/supplier profiles.
+2. Add destination resolution and multi-waypoint road routing with provenance and safe fallback. (Foundation implemented; UI integration pending.)
+3. Add fuel-aware, itemised costing and configurable vehicle/supplier profiles. (Pure cost engine and verified-route adapter implemented; persisted profiles and admin UI pending.)
 4. Add quote versions, manual price overrides, margin controls and approval history.
 5. Connect AI extraction to the same structured itinerary and costing pipeline.
 6. Run typecheck, all existing tests, new cost/routing tests, database migration checks, security review and Vercel Preview before release.
