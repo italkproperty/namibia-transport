@@ -37,6 +37,18 @@ const CHECKS: { column: string; table: string; file: string; what: string }[] =
       file: "db/manual/RUN-ME.sql",
       what: "separate charter fuel and non-fuel vehicle profiles",
     },
+    {
+      table: "charter_quotes",
+      column: "quote_number",
+      file: "db/manual/RUN-ME.sql",
+      what: "persisted charter quote drafts and version history",
+    },
+    {
+      table: "charter_quote_versions",
+      column: "quote_id",
+      file: "db/manual/RUN-ME.sql",
+      what: "immutable charter quote version snapshots",
+    },
   ];
 
 export type PendingMigration = { file: string; what: string; column: string };
@@ -57,7 +69,9 @@ export async function pendingMigrations(): Promise<PendingMigration[]> {
               ('bookings', 'group_ref'),
               ('drivers', 'photo_url'),
               ('pricing_settings', 'charter_target_contribution_margin'),
-              ('charter_vehicle_cost_profiles', 'vehicle_class_id')
+              ('charter_vehicle_cost_profiles', 'vehicle_class_id'),
+              ('charter_quotes', 'quote_number'),
+              ('charter_quote_versions', 'quote_id')
           ) AS expected(table_name, column_name)
           LEFT JOIN information_schema.columns AS actual
             ON actual.table_schema = 'public'
