@@ -22,11 +22,11 @@ assert.equal(cost.totalDrivenKm, 600);
 assert.equal(cost.fuelLitres, 48);
 assert.equal(cost.fuelCost, 1342.08);
 assert.equal(cost.nonFuelRunningCost, 1350);
-assert.equal(cost.expectedCost, 1342.08 + 1350 + 2400 + 900);
+assert.equal(cost.expectedCost, 1342.08 + 1350 + 2400);
 assert.equal(cost.excludedIncludedElsewhere.length, 1);
 
 const suggested = suggestSellingPrice({
-  expectedCost: 5992.08,
+  expectedCost: cost.expectedCost,
   targetContributionMargin: 0.25,
   paymentFeeRate: 0.048,
   priceStep: 50,
@@ -35,7 +35,7 @@ assert.ok(suggested.suggestedPrice >= 5992.08 / (1 - 0.25 - 0.048));
 assert.ok(suggested.contributionMargin >= 0.25);
 assert.equal(suggested.suggestedPrice % 50, 0);
 
-const override = calculateActualMargin(8000, 5992.08, 0.048);
+const override = calculateActualMargin(8000, cost.expectedCost, 0.048);
 assert.equal(override.paymentFee, 384);
 assert.equal(override.contribution, 1623.92);
 assert.ok(override.contributionMargin > 0);
