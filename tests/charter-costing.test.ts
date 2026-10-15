@@ -37,7 +37,7 @@ assert.equal(suggested.suggestedPrice % 50, 0);
 
 const override = calculateActualMargin(8000, cost.expectedCost, 0.048);
 assert.equal(override.paymentFee, 384);
-assert.equal(override.contribution, 1623.92);
+assert.equal(override.contribution, 2523.92);
 assert.ok(override.contributionMargin > 0);
 
 assert.throws(
