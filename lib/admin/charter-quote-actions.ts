@@ -169,10 +169,6 @@ export async function saveCharterQuoteDraftAction(_previous: SaveCharterDraftSta
       otherCosts: bounded("otherCosts", 100000),
     };
     const calculated = await calculateRequest(trustedRequest);
-    if (calculated.result.belowTargetMargin) {
-      return { ok: false, message: "This price is below the configured target margin. Review the costs/settings before saving this draft." };
-    }
-
     const year = new Date().getFullYear();
     const suffix = randomBytes(4).toString("hex").toUpperCase();
     const quoteNumber = `NT-CQ-${year}-${suffix}`;
@@ -187,6 +183,7 @@ export async function saveCharterQuoteDraftAction(_previous: SaveCharterDraftSta
         paymentFeeRate: calculated.settings.paymentFeeRate,
       },
       result: calculated.result,
+      requiresMarginReview: calculated.result.belowTargetMargin,
       customer: { name: customerName, email: customerEmail || null, whatsapp: customerWhatsapp || null },
       changeReason: changeReason || null,
       calculatedAt: new Date().toISOString(),
