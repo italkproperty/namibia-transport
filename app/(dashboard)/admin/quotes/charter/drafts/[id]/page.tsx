@@ -30,15 +30,21 @@ type QuoteSnapshot = {
     parkFees?: number;
     otherCosts?: number;
   };
-  route?: { totalDistanceKm?: number; totalDurationMin?: number; legs?: { distanceKm?: number; durationMin?: number }[] };
+  route?: { totalDistanceKm?: number; totalDurationMinutes?: number; legs?: { distanceKm?: number; durationMinutes?: number }[] };
   vehicle?: { name?: string };
   settings?: { targetContributionMargin?: number; paymentFeeRate?: number };
   result?: {
     finalPrice?: number;
     belowTargetMargin?: boolean;
-    costs?: { label?: string; amount?: number; total?: number; cost?: number }[];
-    suggested?: { price?: number; contribution?: number; contributionMargin?: number };
-    actual?: { price?: number; contribution?: number; contributionMargin?: number };
+    costs?: {
+      fuelCost?: number;
+      nonFuelRunningCost?: number;
+      expectedCost?: number;
+      itemisedCosts?: { id?: string; label?: string; amount?: number; unit?: string }[];
+      excludedIncludedElsewhere?: { id?: string; label?: string }[];
+    };
+    suggested?: { suggestedPrice?: number; contribution?: number; contributionMargin?: number };
+    actual?: { contribution?: number; contributionMargin?: number };
   };
   requiresMarginReview?: boolean;
   customer?: { name?: string; email?: string | null; whatsapp?: string | null };
@@ -83,14 +89,14 @@ export default async function CharterQuoteDraftDetailPage({
     [quote] = await withDeadline("charter quote detail", READ_DEADLINE_MS, () =>
       db.select().from(charterQuotes).where(eq(charterQuotes.id, id)).limit(1),
     );
-    if (!quote) notFound();
-    versions = await withDeadline("charter quote versions", READ_DEADLINE_MS, () =>
-      db.select().from(charterQuoteVersions)
-        .where(eq(charterQuoteVersions.quoteId, id))
-        .orderBy(desc(charterQuoteVersions.version)),
-    );
+    if (quote) {
+      versions = await withDeadline("charter quote versions", READ_DEADLINE_MS, () =>
+        db.select().from(charterQuoteVersions)
+          .where(eq(charterQuoteVersions.quoteId, id))
+          .orderBy(desc(charterQuoteVersions.version)),
+      );
+    }
   } catch (error) {
-    if (error instanceof Error && error.message === "NEXT_NOT_FOUND") throw error;
     console.error("[charter-quotes] detail unavailable", error);
     return (
       <AdminShell active="/admin/quotes">
@@ -101,13 +107,18 @@ export default async function CharterQuoteDraftDetailPage({
     );
   }
 
+  if (!quote) notFound();
+
   const itinerary = readObject(quote.itinerarySnapshot);
   const stops = Array.isArray(itinerary.stops) ? itinerary.stops as StopSnapshot[] : [];
   const costSnapshot = readObject(quote.costSnapshot);
   const pricingSnapshot = readObject(quote.pricingSnapshot);
   const snapshot = versions[0]?.snapshot as QuoteSnapshot | undefined;
   const route = snapshot?.route ?? readObject(itinerary.route) as QuoteSnapshot["route"];
-  const costs = snapshot?.result?.costs ?? [];
+  const costBreakdown = readObject(snapshot?.result?.costs ?? costSnapshot.costs);
+  const itemisedCosts = Array.isArray(costBreakdown.itemisedCosts)
+    ? costBreakdown.itemisedCosts as { id?: string; label?: string; amount?: number; unit?: string }[]
+    : [];
   const profile = readObject(costSnapshot.vehicleCostProfile);
   const settings = readObject(pricingSnapshot.settings);
   const suggested = readObject(pricingSnapshot.suggested);
@@ -161,7 +172,7 @@ export default async function CharterQuoteDraftDetailPage({
           ) : <p className="mt-2 text-sm text-muted-foreground">No stop labels were found in the saved snapshot.</p>}
           <div className="mt-4 grid gap-3 border-t pt-4 sm:grid-cols-3">
             <Metric label="Road distance" value={Number.isFinite(Number(route?.totalDistanceKm)) ? `${Number(route?.totalDistanceKm).toFixed(1)} km` : "—"} />
-            <Metric label="Estimated driving time" value={minutes(route?.totalDurationMin)} />
+            <Metric label="Estimated driving time" value={minutes(route?.totalDurationMinutes)} />
             <Metric label="Vehicle class" value={snapshot?.vehicle?.name || String(profile.vehicleClassName ?? "Saved vehicle profile")} />
           </div>
         </section>
@@ -172,22 +183,25 @@ export default async function CharterQuoteDraftDetailPage({
           <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
             <Metric label="Target contribution margin" value={Number.isFinite(Number(settings.targetContributionMargin ?? snapshot?.settings?.targetContributionMargin)) ? `${(Number(settings.targetContributionMargin ?? snapshot?.settings?.targetContributionMargin) * 100).toFixed(1)}%` : "—"} />
             <Metric label="Payment fee" value={Number.isFinite(Number(settings.paymentFeeRate ?? snapshot?.settings?.paymentFeeRate)) ? `${(Number(settings.paymentFeeRate ?? snapshot?.settings?.paymentFeeRate) * 100).toFixed(2)}%` : "—"} />
-            <Metric label="Suggested price" value={amount(suggested.price ?? snapshot?.result?.suggested?.price)} />
+            <Metric label="Suggested price" value={amount(suggested.suggestedPrice ?? snapshot?.result?.suggested?.suggestedPrice)} />
             <Metric label="Final price" value={formatNad(quote.total)} />
           </div>
-          {costs.length > 0 && (
-            <div className="mt-5 overflow-x-auto">
-              <table className="w-full min-w-[30rem] text-sm">
-                <thead><tr className="border-b text-left text-xs text-muted-foreground"><th className="py-2 pr-3">Cost item</th><th className="py-2 text-right">Amount</th></tr></thead>
-                <tbody>{costs.map((cost, index) => (
+          <div className="mt-5 overflow-x-auto">
+            <table className="w-full min-w-[30rem] text-sm">
+              <thead><tr className="border-b text-left text-xs text-muted-foreground"><th className="py-2 pr-3">Cost item</th><th className="py-2 text-right">Amount</th></tr></thead>
+              <tbody>
+                <tr className="border-b"><td className="py-2 pr-3">Fuel</td><td className="py-2 text-right tabular-nums">{amount(costBreakdown.fuelCost)}</td></tr>
+                <tr className="border-b"><td className="py-2 pr-3">Non-fuel running cost</td><td className="py-2 text-right tabular-nums">{amount(costBreakdown.nonFuelRunningCost)}</td></tr>
+                {itemisedCosts.map((cost, index) => (
                   <tr key={`${index}-${cost.label ?? "cost"}`} className="border-b last:border-0">
                     <td className="py-2 pr-3">{cost.label || `Cost item ${index + 1}`}</td>
-                    <td className="py-2 text-right tabular-nums">{amount(cost.amount ?? cost.total ?? cost.cost)}</td>
+                    <td className="py-2 text-right tabular-nums">{amount(cost.amount)}</td>
                   </tr>
-                ))}</tbody>
-              </table>
-            </div>
-          )}
+                ))}
+                <tr className="font-semibold"><td className="py-2 pr-3">Total expected operating cost</td><td className="py-2 text-right tabular-nums">{amount(costBreakdown.expectedCost)}</td></tr>
+              </tbody>
+            </table>
+          </div>
           <div className="mt-4 grid gap-3 sm:grid-cols-2">
             <Metric label="Fuel type" value={String(profile.fuelType ?? "—")} />
             <Metric label="Fuel consumption" value={Number.isFinite(Number(profile.litresPer100Km)) ? `${profile.litresPer100Km} L/100 km` : "—"} />
