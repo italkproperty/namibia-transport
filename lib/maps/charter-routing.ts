@@ -43,6 +43,8 @@ export type VerifiedItineraryRoute = {
   retrievedAt: string;
   totalDistanceKm: number;
   totalDurationMinutes: number;
+  /** Full itinerary overview geometry, not falsely represented as each leg. */
+  geometry: string | null;
   legs: VerifiedRouteLeg[];
   snappedWaypoints: LatLng[];
 };
@@ -272,6 +274,7 @@ export async function routeCharterItinerary(
     retrievedAt: new Date().toISOString(),
     totalDistanceKm: Math.round((route.distance / 1000) * 10) / 10,
     totalDurationMinutes: Math.round(route.duration / 60),
+    geometry: route.geometry ?? null,
     legs,
     snappedWaypoints: (body.waypoints ?? []).flatMap((waypoint) => {
       const coords = waypoint.location;
