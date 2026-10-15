@@ -74,7 +74,7 @@ export async function saveCharterCostSettings(
     };
   });
 
-  if (Object.keys(fieldErrors).length > 0) {
+  if (Object.keys(fieldErrors).length > 0 || "error" in margin || "error" in fee) {
     return { ok: false, message: "Nothing was saved. Correct the highlighted fields.", fieldErrors };
   }
   if (classes.length === 0) {
