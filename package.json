@@ -31,6 +31,7 @@
     "test:transfer": "tsx --conditions=react-server tests/transfer.test.ts",
     "test:itinerary-quote": "tsx --conditions=react-server tests/itinerary-quote.test.ts",
     "test:charter-costing": "tsx --conditions=react-server tests/charter-costing.test.ts",
+    "test:charter-routing": "tsx --conditions=react-server tests/charter-routing.test.ts",
     "test:details": "tsx --conditions=react-server tests/details.test.ts",
     "test:validity": "tsx --conditions=react-server tests/validity.test.ts",
     "test:currency": "tsx --conditions=react-server tests/currency.test.ts",
