@@ -31,7 +31,7 @@ const suggested = suggestSellingPrice({
   paymentFeeRate: 0.048,
   priceStep: 50,
 });
-assert.ok(suggested.suggestedPrice >= 5992.08 / (1 - 0.25 - 0.048));
+assert.ok(suggested.suggestedPrice >= cost.expectedCost / (1 - 0.25 - 0.048));
 assert.ok(suggested.contributionMargin >= 0.25);
 assert.equal(suggested.suggestedPrice % 50, 0);
 
