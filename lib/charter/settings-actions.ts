@@ -43,8 +43,8 @@ export async function saveCharterCostSettings(
   }
 
   const fieldErrors: Record<string, string> = {};
-  const margin = boundedNumber(form, "targetContributionMargin", "Target contribution margin", 0.05, 0.75);
-  const fee = boundedNumber(form, "paymentFeeRate", "Payment fee rate", 0, 0.15);
+  const margin = boundedNumber(form, "targetContributionMargin", "Target contribution margin (%)", 5, 75);
+  const fee = boundedNumber(form, "paymentFeeRate", "Payment fee (%)", 0, 15);
   if ("error" in margin) fieldErrors.targetContributionMargin = margin.error;
   if ("error" in fee) fieldErrors.paymentFeeRate = fee.error;
 
@@ -83,8 +83,8 @@ export async function saveCharterCostSettings(
     await db.transaction(async (tx) => {
       await tx.insert(pricingSettings).values({
         id: 1,
-        charterTargetContributionMargin: margin.value.toFixed(3),
-        charterPaymentFeeRate: fee.value.toFixed(3),
+        charterTargetContributionMargin: (margin.value / 100).toFixed(3),
+        charterPaymentFeeRate: (fee.value / 100).toFixed(3),
       }).onConflictDoUpdate({
         target: pricingSettings.id,
         set: {
