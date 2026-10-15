@@ -88,8 +88,8 @@ export async function saveCharterCostSettings(
       }).onConflictDoUpdate({
         target: pricingSettings.id,
         set: {
-          charterTargetContributionMargin: margin.value.toFixed(3),
-          charterPaymentFeeRate: fee.value.toFixed(3),
+          charterTargetContributionMargin: (margin.value / 100).toFixed(3),
+          charterPaymentFeeRate: (fee.value / 100).toFixed(3),
           updatedAt: new Date(),
         },
       });
