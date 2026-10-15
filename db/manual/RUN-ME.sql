@@ -246,6 +246,52 @@ BEGIN
   END IF;
 END $;
 
+
+/* ---------------------------------------------- 15 October 2026 (quotes) -- */
+-- Persisted charter quote drafts and immutable version snapshots. These tables
+-- are additive and are not used by the existing airport-transfer fare flow.
+CREATE TABLE IF NOT EXISTS "charter_quotes" (
+  "id" uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  "quote_number" text NOT NULL,
+  "public_token" text,
+  "status" text NOT NULL DEFAULT 'draft'
+    CHECK ("status" IN ('draft', 'approved', 'sent', 'accepted', 'rejected', 'expired', 'cancelled')),
+  "customer_name" text NOT NULL,
+  "customer_email" text,
+  "customer_whatsapp" text,
+  "vehicle_class_id" uuid REFERENCES "vehicle_classes"("id") ON DELETE SET NULL,
+  "itinerary_snapshot" jsonb NOT NULL,
+  "cost_snapshot" jsonb NOT NULL,
+  "pricing_snapshot" jsonb NOT NULL,
+  "total" numeric(10,2) NOT NULL CHECK ("total" > 0),
+  "currency" char(3) NOT NULL DEFAULT 'NAD',
+  "current_version" integer NOT NULL DEFAULT 1 CHECK ("current_version" > 0),
+  "valid_until" timestamptz,
+  "issued_at" timestamptz,
+  "created_at" timestamptz NOT NULL DEFAULT now(),
+  "updated_at" timestamptz NOT NULL DEFAULT now(),
+  CONSTRAINT "charter_quotes_number_key" UNIQUE ("quote_number"),
+  CONSTRAINT "charter_quotes_public_token_key" UNIQUE ("public_token")
+);
+CREATE INDEX IF NOT EXISTS "charter_quotes_status_created_idx"
+  ON "charter_quotes" ("status", "created_at" DESC);
+
+CREATE TABLE IF NOT EXISTS "charter_quote_versions" (
+  "id" uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  "quote_id" uuid NOT NULL REFERENCES "charter_quotes"("id") ON DELETE CASCADE,
+  "version" integer NOT NULL CHECK ("version" > 0),
+  "status" text NOT NULL
+    CHECK ("status" IN ('draft', 'approved', 'sent', 'accepted', 'rejected', 'expired', 'cancelled')),
+  "snapshot" jsonb NOT NULL,
+  "total" numeric(10,2) NOT NULL CHECK ("total" > 0),
+  "change_reason" text,
+  "actor" text NOT NULL DEFAULT 'admin',
+  "created_at" timestamptz NOT NULL DEFAULT now(),
+  CONSTRAINT "charter_quote_versions_quote_version_key" UNIQUE ("quote_id", "version")
+);
+CREATE INDEX IF NOT EXISTS "charter_quote_versions_quote_created_idx"
+  ON "charter_quote_versions" ("quote_id", "created_at" DESC);
+
 COMMIT;
 
 /*

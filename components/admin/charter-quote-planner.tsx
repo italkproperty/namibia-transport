@@ -7,8 +7,10 @@ import { Input } from "@/components/ui/input";
 import { formatNad } from "@/lib/money";
 import {
   priceCharterItineraryAction,
+  saveCharterQuoteDraftAction,
   searchCharterDestinationAction,
   type CharterPriceState,
+  type SaveCharterDraftState,
 } from "@/lib/admin/charter-quote-actions";
 import type { ResolvedDestination, DestinationCandidate } from "@/lib/maps/charter-routing";
 
@@ -79,6 +81,7 @@ function DestinationField({
 export function CharterQuotePlanner({ vehicles }: { vehicles: VehicleOption[] }) {
   const [stops, setStops] = React.useState<(ResolvedDestination | null)[]>([null, null]);
   const [state, action, pending] = React.useActionState<CharterPriceState, FormData>(priceCharterItineraryAction, null);
+  const [savedDraft, saveAction, saving] = React.useActionState<SaveCharterDraftState, FormData>(saveCharterQuoteDraftAction, null);
   const [vehicleClassId, setVehicleClassId] = React.useState(vehicles.find((item) => item.hasProfile)?.id ?? "");
   const [positioningKm, setPositioningKm] = React.useState("0");
   const [localKm, setLocalKm] = React.useState("0");
@@ -151,7 +154,23 @@ export function CharterQuotePlanner({ vehicles }: { vehicles: VehicleOption[] })
             <div className="flex justify-between gap-3 font-medium"><span>Contribution margin target met</span><span>{state.result.belowTargetMargin ? "No — review required" : "Yes"}</span></div>
           </div>
           {state.result.belowTargetMargin && <p className="rounded-md border border-amber-400/50 bg-amber-50 p-3 text-sm text-amber-900">This price is below the configured target margin. Do not send it without reviewing the economics.</p>}
-          <p className="text-xs text-muted-foreground">Routing source: Mapbox. Retrieved {new Date(state.result.route.retrievedAt).toLocaleString()}. This is a pricing preview only; customer details, approval history, saved quote versions and a payment link are not yet persisted by this planner.</p>
+          <p className="text-xs text-muted-foreground">Routing source: Mapbox. Retrieved {new Date(state.result.route.retrievedAt).toLocaleString()}. Saving creates a private draft and immutable version-1 cost/price snapshot. It does not approve, issue, or send the quote.</p>
+          <form action={saveAction} className="space-y-3 border-t pt-4">
+            <input type="hidden" name="request" value={JSON.stringify(state.request)} />
+            <div>
+              <h3 className="text-sm font-semibold">Save as a private draft</h3>
+              <p className="mt-1 text-xs text-muted-foreground">The server recalculates the route and price before saving. Enter at least one customer contact method.</p>
+            </div>
+            <div className="grid gap-3 sm:grid-cols-2">
+              <div className="space-y-1"><label htmlFor="draft-customer-name" className="text-sm font-medium">Customer name / organisation</label><Input id="draft-customer-name" name="customerName" required minLength={2} maxLength={160} placeholder="Customer name" /></div>
+              <div className="space-y-1"><label htmlFor="draft-customer-email" className="text-sm font-medium">Email</label><Input id="draft-customer-email" name="customerEmail" type="email" maxLength={254} placeholder="name@example.com" /></div>
+              <div className="space-y-1"><label htmlFor="draft-customer-whatsapp" className="text-sm font-medium">WhatsApp</label><Input id="draft-customer-whatsapp" name="customerWhatsapp" maxLength={40} placeholder="+264…" /></div>
+              <div className="space-y-1"><label htmlFor="draft-change-reason" className="text-sm font-medium">Internal note / pricing rationale (optional)</label><Input id="draft-change-reason" name="changeReason" maxLength={500} placeholder="e.g. initial quote draft" /></div>
+            </div>
+            <Button type="submit" disabled={saving}>{saving ? "Saving private draft…" : "Save private quote draft"}</Button>
+          </form>
+          {savedDraft && !savedDraft.ok && <p role="alert" className="rounded-md border border-destructive/40 p-3 text-sm text-destructive">{savedDraft.message}</p>}
+          {savedDraft?.ok && <div role="status" className="rounded-md border border-emerald-500/30 bg-emerald-50 p-3 text-sm text-emerald-950"><p className="font-semibold">Draft saved: {savedDraft.quoteNumber}</p><p className="mt-1">Version 1 is stored privately. It has not been approved or sent to the customer.</p><p className="mt-2 text-xs">Draft record: {savedDraft.id}</p></div>}
         </div>
       )}
     </section>

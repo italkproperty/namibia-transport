@@ -50,9 +50,14 @@ export default async function AdminQuotesPage() {
               agreed as one number — write one by hand and send the link.
             </p>
           </div>
-          <Button asChild size="sm" className="press shrink-0">
-            <Link href="/admin/quotes/new">Quote a trip by hand</Link>
-          </Button>
+          <div className="flex flex-wrap gap-2">
+            <Button asChild size="sm" variant="outline" className="press shrink-0">
+              <Link href="/admin/quotes/charter/drafts">Charter drafts</Link>
+            </Button>
+            <Button asChild size="sm" className="press shrink-0">
+              <Link href="/admin/quotes/new">Quote a trip by hand</Link>
+            </Button>
+          </div>
         </div>
 
         <div className="grid gap-4 sm:grid-cols-3">
