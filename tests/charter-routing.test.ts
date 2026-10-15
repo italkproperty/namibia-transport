@@ -3,6 +3,7 @@ import {
   CharterRoutingError,
   routeCharterItinerary,
   searchCharterDestinations,
+  type ResolvedDestination,
 } from "../lib/maps/charter-routing";
 
 async function main() {
@@ -16,15 +17,14 @@ async function main() {
     (error: unknown) =>
       error instanceof CharterRoutingError && error.code === "route_not_found",
   );
+
+  const stops: ResolvedDestination[] = Array.from({ length: 26 }, (_, index) => ({
+    label: `Stop ${index + 1}`,
+    coordinates: { lat: -22 + index / 100, lng: 17 + index / 100 },
+    source: "operator_confirmed",
+  }));
   await assert.rejects(
-    () => routeCharterItinerary([
-      { label: "Windhoek", coordinates: { lat: -22.56, lng: 17.06 }, source: "operator_confirmed" },
-      { label: "Sossusvlei", coordinates: { lat: -24.73, lng: 15.29 }, source: "operator_confirmed" },
-    ].concat(Array.from({ length: 24 }, (_, index) => ({
-      label: `Stop ${index + 3}`,
-      coordinates: { lat: -22 + index / 100, lng: 17 + index / 100 },
-      source: "operator_confirmed" as const,
-    })))),
+    () => routeCharterItinerary(stops),
     (error: unknown) =>
       error instanceof CharterRoutingError && error.code === "too_many_stops",
   );
