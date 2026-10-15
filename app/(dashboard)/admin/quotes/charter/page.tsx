@@ -35,11 +35,14 @@ export default async function CharterQuotePage() {
           <ArrowLeftIcon className="size-3.5" aria-hidden />
           Standard quote builder
         </Link>
-        <div>
-          <h1 className="mt-2 text-xl">Charter quote planner</h1>
-          <p className="mt-1 max-w-2xl text-sm text-muted-foreground">
-            A separate route and cost model for bespoke multi-stop charters. This does not change existing public transfer fares.
-          </p>
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div>
+            <h1 className="mt-2 text-xl">Charter quote planner</h1>
+            <p className="mt-1 max-w-2xl text-sm text-muted-foreground">
+              A separate route and cost model for bespoke multi-stop charters. This does not change existing public transfer fares.
+            </p>
+          </div>
+          <Link href="/admin/quotes/charter/drafts" className="rounded-md border px-3 py-2 text-sm hover:bg-muted">Saved charter drafts</Link>
         </div>
         {!settings.stored && (
           <div className="rounded-lg border border-amber-400/50 bg-amber-50 p-4 text-sm text-amber-950">
