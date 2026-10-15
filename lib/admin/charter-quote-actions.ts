@@ -170,8 +170,6 @@ export async function saveCharterQuoteDraftAction(_previous: SaveCharterDraftSta
     };
     const calculated = await calculateRequest(trustedRequest);
     const year = new Date().getFullYear();
-    const suffix = randomBytes(4).toString("hex").toUpperCase();
-    const quoteNumber = `NT-CQ-${year}-${suffix}`;
     const snapshot = {
       schemaVersion: 1,
       request: trustedRequest,
@@ -189,31 +187,48 @@ export async function saveCharterQuoteDraftAction(_previous: SaveCharterDraftSta
       calculatedAt: new Date().toISOString(),
     };
     const db = getDb();
-    const created = await db.transaction(async (tx) => {
-      const [quote] = await tx.insert(charterQuotes).values({
-        quoteNumber,
-        status: "draft",
-        customerName,
-        customerEmail: customerEmail || null,
-        customerWhatsapp: customerWhatsapp || null,
-        vehicleClassId: calculated.vehicle.id,
-        itinerarySnapshot: { stops: trustedRequest.stops, route: calculated.route },
-        costSnapshot: { vehicleCostProfile: calculated.profile, costs: calculated.result.costs },
-        pricingSnapshot: { settings: snapshot.settings, suggested: calculated.result.suggested, actual: calculated.result.actual },
-        total: calculated.result.finalPrice.toFixed(2),
-        currentVersion: 1,
-      }).returning({ id: charterQuotes.id, quoteNumber: charterQuotes.quoteNumber });
-      await tx.insert(charterQuoteVersions).values({
-        quoteId: quote.id,
-        version: 1,
-        status: "draft",
-        snapshot,
-        total: calculated.result.finalPrice.toFixed(2),
-        changeReason: changeReason || "Initial draft",
-        actor: "admin",
-      });
-      return quote;
-    });
+    let created: { id: string; quoteNumber: string } | undefined;
+    // A quote-number uniqueness collision is rare, but retry that specific
+    // conflict so an otherwise valid draft save does not fail unnecessarily.
+    for (let attempt = 0; attempt < 3; attempt += 1) {
+      const suffix = randomBytes(8).toString("hex").toUpperCase();
+      const quoteNumber = `NT-CQ-${year}-${suffix}`;
+      try {
+        created = await db.transaction(async (tx) => {
+          const [quote] = await tx.insert(charterQuotes).values({
+            quoteNumber,
+            status: "draft",
+            customerName,
+            customerEmail: customerEmail || null,
+            customerWhatsapp: customerWhatsapp || null,
+            vehicleClassId: calculated.vehicle.id,
+            itinerarySnapshot: { stops: trustedRequest.stops, route: calculated.route },
+            costSnapshot: { vehicleCostProfile: calculated.profile, costs: calculated.result.costs },
+            pricingSnapshot: { settings: snapshot.settings, suggested: calculated.result.suggested, actual: calculated.result.actual },
+            total: calculated.result.finalPrice.toFixed(2),
+            currentVersion: 1,
+          }).returning({ id: charterQuotes.id, quoteNumber: charterQuotes.quoteNumber });
+          await tx.insert(charterQuoteVersions).values({
+            quoteId: quote.id,
+            version: 1,
+            status: "draft",
+            snapshot,
+            total: calculated.result.finalPrice.toFixed(2),
+            changeReason: changeReason || "Initial draft",
+            actor: "admin",
+          });
+          return quote;
+        });
+        break;
+      } catch (error) {
+        const dbError = error as { code?: string; constraint?: string; cause?: { code?: string; constraint?: string } };
+        const code = dbError.code ?? dbError.cause?.code;
+        const constraint = dbError.constraint ?? dbError.cause?.constraint;
+        if (code === "23505" && constraint === "charter_quotes_number_key" && attempt < 2) continue;
+        throw error;
+      }
+    }
+    if (!created) throw new Error("Could not allocate a unique charter quote number. Please try saving again.");
     revalidatePath("/admin/quotes");
     revalidatePath("/admin/quotes/charter/drafts");
     return { ok: true, id: created.id, quoteNumber: created.quoteNumber };
