@@ -70,7 +70,7 @@ export default async function CharterQuoteDraftsPage() {
                   const itinerary = quote.itinerarySnapshot as Snapshot;
                   const labels = (itinerary?.stops ?? []).map((stop) => stop.label).filter(Boolean);
                   return <tr key={quote.id} className="border-b last:border-0">
-                    <td className="p-3 font-medium">{quote.quoteNumber}</td>
+                    <td className="p-3 font-medium"><Link href={`/admin/quotes/charter/drafts/${quote.id}`} className="hover:underline">{quote.quoteNumber}</Link></td>
                     <td className="p-3 text-muted-foreground">{formatDate(quote.createdAt)}</td>
                     <td className="p-3">{quote.customerName}<span className="block text-xs text-muted-foreground">{quote.customerEmail || quote.customerWhatsapp || "No contact"}</span></td>
                     <td className="max-w-80 p-3">{labels.length ? labels.join(" → ") : "Saved itinerary"} </td>
