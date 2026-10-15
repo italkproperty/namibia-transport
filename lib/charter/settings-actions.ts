@@ -2,6 +2,8 @@
 
 import { revalidatePath } from "next/cache";
 
+import { eq } from "drizzle-orm";
+
 import { getDb, isDatabaseConfigured } from "@/db";
 import { charterVehicleCostProfiles, pricingSettings, vehicleClasses } from "@/db/schema";
 import { getAdminGateState } from "@/lib/admin/auth";
@@ -50,7 +52,7 @@ export async function saveCharterCostSettings(
 
   const db = getDb();
   const classes = await db.select({ id: vehicleClasses.id, name: vehicleClasses.name })
-    .from(vehicleClasses).where(vehicleClasses.isActive);
+    .from(vehicleClasses).where(eq(vehicleClasses.isActive, true));
   const profiles = classes.map((vehicleClass) => {
     const prefix = `profile:${vehicleClass.id}:`;
     const fuelType = read(form, `${prefix}fuelType`);
