@@ -263,7 +263,7 @@ export async function routeCharterItinerary(
       toIndex: index + 1,
       distanceKm: Math.round((leg.distance / 1000) * 10) / 10,
       durationMinutes: Math.round(leg.duration / 60),
-      geometry: route.geometry ?? null,
+      geometry: null,
     };
   });
 
