@@ -267,6 +267,70 @@ export const charterVehicleCostProfiles = pgTable(
   ],
 );
 
+/**
+ * Persisted bespoke charter quote. The itinerary and cost/pricing inputs are
+ * snapshotted as JSON so later changes to routes, fuel prices, or settings
+ * cannot silently rewrite an already prepared offer. Customer-facing tokens
+ * are nullable until a quote is explicitly issued.
+ */
+export const charterQuotes = pgTable(
+  "charter_quotes",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    quoteNumber: text("quote_number").notNull(),
+    publicToken: text("public_token"),
+    status: text("status").notNull().default("draft"),
+    customerName: text("customer_name").notNull(),
+    customerEmail: text("customer_email"),
+    customerWhatsapp: text("customer_whatsapp"),
+    vehicleClassId: uuid("vehicle_class_id").references(() => vehicleClasses.id, {
+      onDelete: "set null",
+    }),
+    itinerarySnapshot: jsonb("itinerary_snapshot").notNull(),
+    costSnapshot: jsonb("cost_snapshot").notNull(),
+    pricingSnapshot: jsonb("pricing_snapshot").notNull(),
+    total: money("total").notNull(),
+    currency: currency(),
+    currentVersion: integer("current_version").notNull().default(1),
+    validUntil: timestamp("valid_until", { withTimezone: true }),
+    issuedAt: timestamp("issued_at", { withTimezone: true }),
+    ...timestamps,
+  },
+  (t) => [
+    uniqueIndex("charter_quotes_number_key").on(t.quoteNumber),
+    uniqueIndex("charter_quotes_public_token_key").on(t.publicToken),
+    index("charter_quotes_status_created_idx").on(t.status, t.createdAt.desc()),
+  ],
+);
+
+/**
+ * Append-only commercial history. Each version captures the exact customer
+ * terms and internal cost ledger used for that version; app code only inserts
+ * versions and never updates or deletes them.
+ */
+export const charterQuoteVersions = pgTable(
+  "charter_quote_versions",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    quoteId: uuid("quote_id")
+      .notNull()
+      .references(() => charterQuotes.id, { onDelete: "cascade" }),
+    version: integer("version").notNull(),
+    status: text("status").notNull(),
+    snapshot: jsonb("snapshot").notNull(),
+    total: money("total").notNull(),
+    changeReason: text("change_reason"),
+    actor: text("actor").notNull().default("admin"),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (t) => [
+    uniqueIndex("charter_quote_versions_quote_version_key").on(t.quoteId, t.version),
+    index("charter_quote_versions_quote_created_idx").on(t.quoteId, t.createdAt.desc()),
+  ],
+);
+
 export const addOns = pgTable(
   "add_ons",
   {
@@ -886,6 +950,9 @@ export type Booking = typeof bookings.$inferSelect;
 export type NewBooking = typeof bookings.$inferInsert;
 export type Payment = typeof payments.$inferSelect;
 export type NewPayment = typeof payments.$inferInsert;
+
+export type CharterQuote = typeof charterQuotes.$inferSelect;
+export type CharterQuoteVersion = typeof charterQuoteVersions.$inferSelect;
 
 export type CorporateEnquiry = typeof corporateEnquiries.$inferSelect;
 export type CorporateQuote = typeof corporateQuotes.$inferSelect;
