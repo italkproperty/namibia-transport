@@ -51,8 +51,17 @@ export async function saveCharterCostSettings(
   if ("error" in fee) fieldErrors.paymentFeeRate = fee.error;
 
   const db = getDb();
-  const classes = await db.select({ id: vehicleClasses.id, name: vehicleClasses.name })
-    .from(vehicleClasses).where(eq(vehicleClasses.isActive, true));
+  let classes: { id: string; name: string }[];
+  try {
+    classes = await db.select({ id: vehicleClasses.id, name: vehicleClasses.name })
+      .from(vehicleClasses).where(eq(vehicleClasses.isActive, true));
+  } catch (error) {
+    console.error("[charter-pricing] vehicle class lookup failed", error);
+    return {
+      ok: false,
+      message: "Vehicle profiles could not be loaded. Check the database connection and migration.",
+    };
+  }
   const profiles = classes.map((vehicleClass) => {
     const prefix = `profile:${vehicleClass.id}:`;
     const fuelType = read(form, `${prefix}fuelType`);
