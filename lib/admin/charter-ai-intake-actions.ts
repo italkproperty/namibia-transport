@@ -84,7 +84,18 @@ export async function analyseCharterConversationAction(
       console.error("[charter-ai-intake] Anthropic error", response.status, detail.slice(0, 500));
       return { ok: false, message: response.status === 401 ? "Claude rejected the API key. Check ANTHROPIC_API_KEY_TRANSPORT in Vercel." : "AI could not analyse the conversation right now. Please try again." };
     }
-    const payload = await response.json() as { stop_reason?: string; content?: { type?: string; text?: string }[] };
+    const rawBody = await response.text();
+    let payload: { stop_reason?: string; content?: { type?: string; text?: string }[]; error?: { type?: string; message?: string } };
+    try {
+      payload = JSON.parse(rawBody) as typeof payload;
+    } catch {
+      console.error("[charter-ai-intake] Anthropic returned non-JSON success response", {
+        contentType: response.headers.get("content-type"),
+        bodyLength: rawBody.length,
+        bodyStart: rawBody.slice(0, 160),
+      });
+      return { ok: false, message: "Claude returned an unexpected response. Please retry; if it continues, check the Vercel function logs for [charter-ai-intake]." };
+    }
     const text = payload.content?.filter((part) => part.type === "text").map((part) => part.text ?? "").join("\n").trim() ?? "";
     if (payload.stop_reason === "max_tokens") {
       console.error("[charter-ai-intake] Claude response reached max_tokens", { textLength: text.length });
@@ -108,6 +119,14 @@ export async function analyseCharterConversationAction(
     return { ok: true, intake: parsed };
   } catch (error) {
     console.error("[charter-ai-intake] analysis failed", error);
-    return { ok: false, message: error instanceof Error && error.name === "TimeoutError" ? "AI analysis timed out. Try a shorter conversation." : "Could not read the AI response. Please try again." };
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    console.error("[charter-ai-intake] analysis failed", {
+      name: error instanceof Error ? error.name : "UnknownError",
+      message: errorMessage.slice(0, 240),
+    });
+    if (error instanceof Error && (error.name === "TimeoutError" || error.name === "AbortError")) {
+      return { ok: false, message: "AI analysis timed out. Try a shorter conversation." };
+    }
+    return { ok: false, message: "The AI request failed before its response could be processed. Retry once; if it continues, check the Vercel function logs for [charter-ai-intake]." };
   }
 }
