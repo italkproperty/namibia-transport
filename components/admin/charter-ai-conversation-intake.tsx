@@ -13,6 +13,7 @@ export function CharterAiConversationIntake() {
   const [feedbackHistory, setFeedbackHistory] = React.useState<string[]>([]);
   const [pendingFeedback, setPendingFeedback] = React.useState<string | null>(null);
   const [copied, setCopied] = React.useState(false);
+  const lastHandledState = React.useRef<CharterConversationIntakeState>(null);
   const storageKey = "namibia-transport:charter-ai-intake:v1";
 
   React.useEffect(() => {
@@ -38,7 +39,9 @@ export function CharterAiConversationIntake() {
   }, [conversation, activeIntake, feedbackHistory]);
 
   React.useEffect(() => {
-    if (pending || !state?.ok) return;
+    if (pending || !state || state === lastHandledState.current) return;
+    lastHandledState.current = state;
+    if (!state.ok) return;
     setActiveIntake(state.intake);
     if (pendingFeedback) {
       setFeedbackHistory((current) => [...current, pendingFeedback].slice(-12));
