@@ -37,102 +37,88 @@ export async function saveCharterCostSettings(
   form: FormData,
 ): Promise<CharterSettingsSaveResult> {
   const gate = await getAdminGateState();
-  if (gate.state !== "signed-in") {
-    return { ok: false, message: "Sign in to change charter cost settings." };
-  }
-  if (!isDatabaseConfigured()) {
-    return { ok: false, message: "No database is configured on this deployment." };
-  }
+  if (gate.state !== "signed-in") return { ok: false, message: "Sign in to change charter cost settings." };
+  if (!isDatabaseConfigured()) return { ok: false, message: "No database is configured on this deployment." };
 
   const fieldErrors: Record<string, string> = {};
   const margin = boundedNumber(form, "targetContributionMargin", "Target contribution margin (%)", 5, 75);
   const fee = boundedNumber(form, "paymentFeeRate", "Payment fee (%)", 0, 15);
   if ("error" in margin) fieldErrors.targetContributionMargin = margin.error;
   if ("error" in fee) fieldErrors.paymentFeeRate = fee.error;
-
-  const db = getDb();
-  let classes: { id: string; name: string }[];
-  try {
-    classes = await db.select({ id: vehicleClasses.id, name: vehicleClasses.name })
-      .from(vehicleClasses).where(eq(vehicleClasses.isActive, true));
-  } catch (error) {
-    console.error("[charter-pricing] vehicle class lookup failed", error);
-    return {
-      ok: false,
-      message: "Vehicle profiles could not be loaded. Check the database connection and migration.",
-    };
-  }
-  const profiles = classes.map((vehicleClass) => {
-    const prefix = `profile:${vehicleClass.id}:`;
-    const fuelType = read(form, `${prefix}fuelType`);
-    const consumption = boundedNumber(form, `${prefix}litresPer100Km`, "Fuel consumption", 2, 40);
-    const fuelPrice = boundedNumber(form, `${prefix}fuelPricePerLitre`, "Fuel price per litre", 10, 80);
-    const nonFuel = boundedNumber(form, `${prefix}nonFuelRunningCostPerKm`, "Non-fuel running cost per kilometre", 0, 20);
-    if (fuelType !== "diesel" && fuelType !== "petrol") {
-      fieldErrors[`${prefix}fuelType`] = "Choose diesel or petrol.";
-    }
-    if ("error" in consumption) fieldErrors[`${prefix}litresPer100Km`] = consumption.error;
-    if ("error" in fuelPrice) fieldErrors[`${prefix}fuelPricePerLitre`] = fuelPrice.error;
-    if ("error" in nonFuel) fieldErrors[`${prefix}nonFuelRunningCostPerKm`] = nonFuel.error;
-    return {
-      vehicleClassId: vehicleClass.id,
-      fuelType,
-      litresPer100Km: "value" in consumption ? consumption.value : null,
-      fuelPricePerLitre: "value" in fuelPrice ? fuelPrice.value : null,
-      nonFuelRunningCostPerKm: "value" in nonFuel ? nonFuel.value : null,
-    };
-  });
-
-  if (Object.keys(fieldErrors).length > 0 || "error" in margin || "error" in fee) {
-    return { ok: false, message: "Nothing was saved. Correct the highlighted fields.", fieldErrors };
-  }
-  if (classes.length === 0) {
-    return { ok: false, message: "No active vehicle classes were found." };
-  }
+  if (Object.keys(fieldErrors).length) return { ok: false, message: "Nothing was saved. Correct the highlighted fields.", fieldErrors };
 
   try {
-    await db.transaction(async (tx) => {
-      await tx.insert(pricingSettings).values({
-        id: 1,
+    const db = getDb();
+    await db.insert(pricingSettings).values({
+      id: 1,
+      charterTargetContributionMargin: (margin.value / 100).toFixed(3),
+      charterPaymentFeeRate: (fee.value / 100).toFixed(3),
+    }).onConflictDoUpdate({
+      target: pricingSettings.id,
+      set: {
         charterTargetContributionMargin: (margin.value / 100).toFixed(3),
         charterPaymentFeeRate: (fee.value / 100).toFixed(3),
-      }).onConflictDoUpdate({
-        target: pricingSettings.id,
-        set: {
-          charterTargetContributionMargin: (margin.value / 100).toFixed(3),
-          charterPaymentFeeRate: (fee.value / 100).toFixed(3),
-          updatedAt: new Date(),
-        },
-      });
-
-      for (const profile of profiles) {
-        await tx.insert(charterVehicleCostProfiles).values({
-          vehicleClassId: profile.vehicleClassId,
-          fuelType: profile.fuelType,
-          litresPer100Km: profile.litresPer100Km!.toFixed(2),
-          fuelPricePerLitre: profile.fuelPricePerLitre!.toFixed(2),
-          nonFuelRunningCostPerKm: profile.nonFuelRunningCostPerKm!.toFixed(2),
-        }).onConflictDoUpdate({
-          target: charterVehicleCostProfiles.vehicleClassId,
-          set: {
-            fuelType: profile.fuelType,
-            litresPer100Km: profile.litresPer100Km!.toFixed(2),
-            fuelPricePerLitre: profile.fuelPricePerLitre!.toFixed(2),
-            nonFuelRunningCostPerKm: profile.nonFuelRunningCostPerKm!.toFixed(2),
-            updatedAt: new Date(),
-          },
-        });
-      }
+        updatedAt: new Date(),
+      },
     });
   } catch (error) {
-    console.error("[charter-pricing] save failed", error);
-    return {
-      ok: false,
-      message: "The database refused the change. Confirm db/manual/RUN-ME.sql has been applied.",
-    };
+    console.error("[charter-pricing] global settings save failed", error);
+    return { ok: false, message: "The database refused the change. Confirm db/manual/RUN-ME.sql has been applied." };
   }
 
   revalidatePath("/admin/pricing");
-  revalidatePath("/admin/quotes/new");
+  revalidatePath("/admin/quotes/charter");
+  return { ok: true };
+}
+
+/** Save one vehicle profile independently so an incomplete SUV profile cannot block a Polo save (or vice versa). */
+export async function saveCharterVehicleCostProfile(
+  _previous: CharterSettingsSaveResult | null,
+  form: FormData,
+): Promise<CharterSettingsSaveResult> {
+  const gate = await getAdminGateState();
+  if (gate.state !== "signed-in") return { ok: false, message: "Sign in to change charter vehicle costs." };
+  if (!isDatabaseConfigured()) return { ok: false, message: "No database is configured on this deployment." };
+
+  const vehicleClassId = read(form, "vehicleClassId");
+  const fuelType = read(form, "fuelType");
+  const consumption = boundedNumber(form, "litresPer100Km", "Fuel consumption", 2, 40);
+  const fuelPrice = boundedNumber(form, "fuelPricePerLitre", "Fuel price per litre", 10, 80);
+  const nonFuel = boundedNumber(form, "nonFuelRunningCostPerKm", "Non-fuel running cost per kilometre", 0, 20);
+  const fieldErrors: Record<string, string> = {};
+  if (!vehicleClassId) fieldErrors.vehicleClassId = "Choose a vehicle class.";
+  if (fuelType !== "diesel" && fuelType !== "petrol") fieldErrors.fuelType = "Choose diesel or petrol.";
+  if ("error" in consumption) fieldErrors.litresPer100Km = consumption.error;
+  if ("error" in fuelPrice) fieldErrors.fuelPricePerLitre = fuelPrice.error;
+  if ("error" in nonFuel) fieldErrors.nonFuelRunningCostPerKm = nonFuel.error;
+  if (Object.keys(fieldErrors).length) return { ok: false, message: "Nothing was saved. Correct the highlighted fields.", fieldErrors };
+
+  try {
+    const db = getDb();
+    const [vehicle] = await db.select({ id: vehicleClasses.id }).from(vehicleClasses).where(eq(vehicleClasses.id, vehicleClassId)).limit(1);
+    if (!vehicle) return { ok: false, message: "That vehicle class no longer exists. Refresh the pricing page." };
+    await db.insert(charterVehicleCostProfiles).values({
+      vehicleClassId,
+      fuelType,
+      litresPer100Km: consumption.value.toFixed(2),
+      fuelPricePerLitre: fuelPrice.value.toFixed(2),
+      nonFuelRunningCostPerKm: nonFuel.value.toFixed(2),
+    }).onConflictDoUpdate({
+      target: charterVehicleCostProfiles.vehicleClassId,
+      set: {
+        fuelType,
+        litresPer100Km: consumption.value.toFixed(2),
+        fuelPricePerLitre: fuelPrice.value.toFixed(2),
+        nonFuelRunningCostPerKm: nonFuel.value.toFixed(2),
+        updatedAt: new Date(),
+      },
+    });
+  } catch (error) {
+    console.error("[charter-pricing] vehicle profile save failed", error);
+    return { ok: false, message: "This vehicle profile was not saved. Confirm db/manual/RUN-ME.sql has been applied." };
+  }
+
+  revalidatePath("/admin/pricing");
+  revalidatePath("/admin/quotes/charter");
   return { ok: true };
 }
