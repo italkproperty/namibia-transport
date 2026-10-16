@@ -74,8 +74,21 @@ function validateStops(value: unknown): ResolvedDestination[] {
 async function calculateRequest(request: CharterDraftRequest) {
   const [settings, classes] = await Promise.all([getCharterCostSettings(), listVehicleClasses()]);
   const vehicle = classes.find((item) => item.id === request.vehicleClassId);
-  const profile = settings.profiles.find((item) => item.vehicleClassId === request.vehicleClassId);
   if (!vehicle) throw new Error("Select a valid vehicle class.");
+  // Emergency code-level fallback for the SUV while the pricing screen's
+  // database save is unreliable. These match the values entered on the
+  // operator's pricing screen (6.4 L/100 km, N$27/litre, N$0/km other costs),
+  // using diesel as the selected operating assumption. No database or
+  // published airport-transfer fare is changed by this fallback.
+  const storedProfile = settings.profiles.find((item) => item.vehicleClassId === request.vehicleClassId);
+  const isSuv = vehicle.slug === "suv-4x4" || /suv|4x4/i.test(vehicle.name);
+  const profile = storedProfile ?? (isSuv ? {
+    vehicleClassId: vehicle.id,
+    fuelType: "diesel" as const,
+    litresPer100Km: 6.4,
+    fuelPricePerLitre: 27,
+    nonFuelRunningCostPerKm: 0,
+  } : null);
   if (!profile) throw new Error(`No charter cost profile is saved for ${vehicle.name}. Go to Admin → Pricing and save its fuel and running-cost assumptions first.`);
   const route = await routeCharterItinerary(request.stops);
   const result = priceCharterItinerary({
