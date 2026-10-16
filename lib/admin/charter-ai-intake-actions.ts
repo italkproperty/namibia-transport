@@ -81,8 +81,19 @@ export async function analyseCharterConversationAction(
     });
     if (!response.ok) {
       const detail = await response.text().catch(() => "");
-      console.error("[charter-ai-intake] Anthropic error", response.status, detail.slice(0, 500));
-      return { ok: false, message: response.status === 401 ? "Claude rejected the API key. Check ANTHROPIC_API_KEY_TRANSPORT in Vercel." : "AI could not analyse the conversation right now. Please try again." };
+      const requestId = response.headers.get("request-id") ?? response.headers.get("x-request-id");
+      console.error("[charter-ai-intake] Anthropic HTTP error", {
+        status: response.status,
+        requestId,
+        contentType: response.headers.get("content-type"),
+        detail: detail.slice(0, 300),
+      });
+      if (response.status === 401) return { ok: false, message: "Claude rejected the API key. Check ANTHROPIC_API_KEY_TRANSPORT in Vercel." };
+      if (response.status === 402) return { ok: false, message: "Claude API billing or credits are unavailable for this account." };
+      if (response.status === 403) return { ok: false, message: "The Claude API key does not have permission to use the configured model." };
+      if (response.status === 429) return { ok: false, message: "Claude is rate-limited or the account has reached its usage limit. Retry shortly." };
+      if (response.status >= 500) return { ok: false, message: "Claude's API is temporarily unavailable. Retry shortly." };
+      return { ok: false, message: `Claude rejected the request (HTTP ${response.status})${requestId ? `; reference ${requestId}` : ""}. Check the Vercel function logs for [charter-ai-intake].`;
     }
     const rawBody = await response.text();
     let payload: { stop_reason?: string; content?: { type?: string; text?: string }[]; error?: { type?: string; message?: string } };
@@ -90,9 +101,9 @@ export async function analyseCharterConversationAction(
       payload = JSON.parse(rawBody) as typeof payload;
     } catch {
       console.error("[charter-ai-intake] Anthropic returned non-JSON success response", {
+        requestId: response.headers.get("request-id") ?? response.headers.get("x-request-id"),
         contentType: response.headers.get("content-type"),
         bodyLength: rawBody.length,
-        bodyStart: rawBody.slice(0, 160),
       });
       return { ok: false, message: "Claude returned an unexpected response. Please retry; if it continues, check the Vercel function logs for [charter-ai-intake]." };
     }
@@ -118,15 +129,19 @@ export async function analyseCharterConversationAction(
     }
     return { ok: true, intake: parsed };
   } catch (error) {
-    console.error("[charter-ai-intake] analysis failed", error);
-    const errorMessage = error instanceof Error ? error.message : String(error);
-    console.error("[charter-ai-intake] analysis failed", {
-      name: error instanceof Error ? error.name : "UnknownError",
-      message: errorMessage.slice(0, 240),
-    });
-    if (error instanceof Error && (error.name === "TimeoutError" || error.name === "AbortError")) {
-      return { ok: false, message: "AI analysis timed out. Try a shorter conversation." };
+    const name = error instanceof Error ? error.name : "UnknownError";
+    const message = error instanceof Error ? error.message : String(error);
+    // Log error class and a bounded message only. Never log the pasted customer thread or model output.
+    console.error("[charter-ai-intake] analysis failed", { name, message: message.slice(0, 200) });
+    if (name === "TimeoutError" || name === "AbortError") {
+      return { ok: false, message: "AI analysis timed out while waiting for Claude. Try the relevant customer messages only." };
     }
-    return { ok: false, message: "The AI request failed before its response could be processed. Retry once; if it continues, check the Vercel function logs for [charter-ai-intake]." };
+    if (name === "TypeError" && /fetch|network|connect|socket/i.test(message)) {
+      return { ok: false, message: "The server could not connect to Claude's API. Check the Vercel function logs for [charter-ai-intake]." };
+    }
+    if (name === "SyntaxError") {
+      return { ok: false, message: "The server received a response it could not parse. Check the Vercel function logs for [charter-ai-intake]." };
+    }
+    return { ok: false, message: `AI intake failed in the server (${name}). Check the Vercel function logs for [charter-ai-intake].` };
   }
 }
