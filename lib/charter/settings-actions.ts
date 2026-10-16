@@ -45,7 +45,7 @@ export async function saveCharterCostSettings(
   const fee = boundedNumber(form, "paymentFeeRate", "Payment fee (%)", 0, 15);
   if ("error" in margin) fieldErrors.targetContributionMargin = margin.error;
   if ("error" in fee) fieldErrors.paymentFeeRate = fee.error;
-  if (Object.keys(fieldErrors).length) return { ok: false, message: "Nothing was saved. Correct the highlighted fields.", fieldErrors };
+  if (Object.keys(fieldErrors).length || "error" in margin || "error" in fee) return { ok: false, message: "Nothing was saved. Correct the highlighted fields.", fieldErrors };
 
   try {
     const db = getDb();
@@ -91,7 +91,7 @@ export async function saveCharterVehicleCostProfile(
   if ("error" in consumption) fieldErrors.litresPer100Km = consumption.error;
   if ("error" in fuelPrice) fieldErrors.fuelPricePerLitre = fuelPrice.error;
   if ("error" in nonFuel) fieldErrors.nonFuelRunningCostPerKm = nonFuel.error;
-  if (Object.keys(fieldErrors).length) return { ok: false, message: "Nothing was saved. Correct the highlighted fields.", fieldErrors };
+  if (Object.keys(fieldErrors).length || "error" in consumption || "error" in fuelPrice || "error" in nonFuel) return { ok: false, message: "Nothing was saved. Correct the highlighted fields.", fieldErrors };
 
   try {
     const db = getDb();
