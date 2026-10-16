@@ -29,6 +29,7 @@ export type CharterDraftRequest = {
   vehicleClassId: string;
   positioningKm: number;
   localKm: number;
+  nonFuelCostPerKm: number;
   vehicleDays: number;
   vehicleDailyRate: number;
   driverDays: number;
@@ -45,7 +46,7 @@ export type CharterDraftRequest = {
 };
 
 export type CharterPriceState =
-  | { ok: true; result: ReturnType<typeof priceCharterItinerary>; vehicleName: string; request: CharterDraftRequest; fuelAssumptions: { fuelType: "diesel" | "petrol"; litresPer100Km: number; pricePerLitre: number }; signedCalculation: string }
+  | { ok: true; result: ReturnType<typeof priceCharterItinerary>; vehicleName: string; request: CharterDraftRequest; routeLegs: { from: string; to: string; distanceKm: number; durationMinutes: number; fuelCost: number; nonFuelCost: number }[]; fuelAssumptions: { fuelType: "diesel" | "petrol"; litresPer100Km: number; pricePerLitre: number }; signedCalculation: string }
   | { ok: false; message: string }
   | null;
 
@@ -113,14 +114,15 @@ async function calculateRequest(request: CharterDraftRequest) {
     ...rawProfile,
     litresPer100Km: Math.max(rawProfile.litresPer100Km, 12),
     fuelPricePerLitre: Math.max(rawProfile.fuelPricePerLitre, 28.45),
-  } : rawProfile;
+    nonFuelRunningCostPerKm: request.nonFuelCostPerKm,
+  } : { ...rawProfile, nonFuelRunningCostPerKm: request.nonFuelCostPerKm };
   const route = await routeCharterItinerary(request.stops);
   const result = priceCharterItinerary({
     route,
     positioningKm: request.positioningKm,
     localKm: request.localKm,
     fuel: { fuelType: profile.fuelType, litresPer100Km: profile.litresPer100Km, pricePerLitre: profile.fuelPricePerLitre },
-    nonFuelRunningCostPerKm: profile.nonFuelRunningCostPerKm,
+    nonFuelRunningCostPerKm: request.nonFuelCostPerKm,
     items: [
       { id: "vehicle-utilisation", label: "SUV / 4x4 vehicle utilisation", quantity: request.vehicleDays, unitCost: request.vehicleDailyRate, unit: "day" },
       { id: "driver-days", label: "Driver days", quantity: request.driverDays, unitCost: request.driverDailyRate, unit: "day" },
@@ -210,6 +212,7 @@ export async function priceCharterItineraryAction(_previous: CharterPriceState, 
       vehicleClassId: String(form.get("vehicleClassId") ?? ""),
       positioningKm: readNumber(form, "positioningKm", "Empty positioning kilometres", 100000),
       localKm: readNumber(form, "localKm", "Local excursion kilometres", 100000),
+      nonFuelCostPerKm: readNumber(form, "nonFuelCostPerKm", "Non-fuel running cost per kilometre", 100),
       vehicleDays: readNumber(form, "vehicleDays", "Vehicle utilisation days", 365),
       vehicleDailyRate: readNumber(form, "vehicleDailyRate", "Vehicle utilisation daily rate"),
       driverDays: readNumber(form, "driverDays", "Driver days", 365),
@@ -243,7 +246,18 @@ export async function priceCharterItineraryAction(_previous: CharterPriceState, 
     };
     const calculated = await calculateRequest(request);
     const signedCalculation = signCalculation({ version: 1, issuedAt: Date.now(), request, calculated });
-    return { ok: true, result: calculated.result, vehicleName: calculated.vehicle.name, request, fuelAssumptions: { fuelType: calculated.profile.fuelType, litresPer100Km: calculated.profile.litresPer100Km, pricePerLitre: calculated.profile.fuelPricePerLitre }, signedCalculation };
+    return { ok: true, result: calculated.result, vehicleName: calculated.vehicle.name, request, routeLegs: calculated.route.legs.map((leg) => {
+      const km = leg.distanceKm;
+      const litres = km * calculated.profile.litresPer100Km / 100;
+      return {
+        from: request.stops[leg.fromIndex]?.label ?? `Stop ${leg.fromIndex + 1}`,
+        to: request.stops[leg.toIndex]?.label ?? `Stop ${leg.toIndex + 1}`,
+        distanceKm: km,
+        durationMinutes: leg.durationMinutes,
+        fuelCost: Math.round(litres * calculated.profile.fuelPricePerLitre * 100) / 100,
+        nonFuelCost: Math.round(km * request.nonFuelCostPerKm * 100) / 100,
+      };
+    }), fuelAssumptions: { fuelType: calculated.profile.fuelType, litresPer100Km: calculated.profile.litresPer100Km, pricePerLitre: calculated.profile.fuelPricePerLitre }, signedCalculation };
   } catch (error) {
     return { ok: false, message: error instanceof Error ? error.message : "The charter itinerary could not be priced." };
   }
