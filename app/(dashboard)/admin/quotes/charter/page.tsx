@@ -4,6 +4,7 @@ import { ArrowLeftIcon } from "lucide-react";
 
 import { AdminShell } from "@/components/admin/shell";
 import { CharterQuotePlanner } from "@/components/admin/charter-quote-planner";
+import { CharterAiConversationIntake } from "@/components/admin/charter-ai-conversation-intake";
 import { listVehicleClasses } from "@/lib/maps";
 import { getCharterCostSettings } from "@/lib/charter/settings";
 
@@ -49,6 +50,7 @@ export default async function CharterQuotePage() {
             Charter settings have not been saved yet. Open <Link className="underline font-medium" href="/admin/pricing">Admin → Pricing</Link> and save the charter vehicle profiles before pricing.
           </div>
         )}
+        <CharterAiConversationIntake />
         <CharterQuotePlanner vehicles={vehicles} />
       </div>
     </AdminShell>
