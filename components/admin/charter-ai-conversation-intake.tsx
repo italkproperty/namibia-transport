@@ -28,7 +28,7 @@ export function CharterAiConversationIntake() {
         <div className="rounded-lg bg-primary/10 p-2"><SparklesIcon className="size-5" /></div>
         <div>
           <h2 className="text-base font-semibold">AI conversation intake</h2>
-          <p className="mt-1 text-sm text-muted-foreground">Paste the customer's WhatsApp or email thread. AI extracts the trip brief, dates, route, passengers, preferences and unanswered questions for review before you build the charter quote.</p>
+          <p className="mt-1 text-sm text-muted-foreground">Paste the customer&apos;s WhatsApp or email thread. AI extracts the trip brief, dates, route, passengers, preferences and unanswered questions for review before you build the charter quote.</p>
         </div>
       </div>
       <form action={action} className="space-y-3">
