@@ -64,7 +64,7 @@ function validateStops(value: unknown): ResolvedDestination[] {
         !Number.isFinite(stop.coordinates.lng) ||
         stop.coordinates.lat < -90 || stop.coordinates.lat > 90 ||
         stop.coordinates.lng < -180 || stop.coordinates.lng > 180 ||
-        stop.source !== "mapbox_geocoding" || typeof stop.providerId !== "string" || !stop.providerId) {
+        !["mapbox_geocoding", "openstreetmap_geocoding", "namibia_destination_catalog"].includes(stop.source) || typeof stop.providerId !== "string" || !stop.providerId) {
       throw new Error("One or more stops are invalid. Search and select each destination again.");
     }
   }

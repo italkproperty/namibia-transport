@@ -68,7 +68,7 @@ function DestinationField({
         <div className="space-y-2">
           <p className="text-xs text-muted-foreground">Choose the correct match. A firm price uses the selected map coordinates.</p>
           {candidates.map((candidate) => (
-            <button key={candidate.id} type="button" onClick={() => { onSelect({ label: candidate.fullAddress ? `${candidate.name}, ${candidate.fullAddress}` : candidate.name, coordinates: candidate.coordinates, source: "mapbox_geocoding", providerId: candidate.id }); setQuery(candidate.fullAddress ? `${candidate.name}, ${candidate.fullAddress}` : candidate.name); setCandidates([]); setError(""); }} className="block w-full rounded-md border p-2 text-left hover:bg-muted">
+            <button key={candidate.id} type="button" onClick={() => { onSelect({ label: candidate.fullAddress ? `${candidate.name}, ${candidate.fullAddress}` : candidate.name, coordinates: candidate.coordinates, source: candidate.source, providerId: candidate.id }); setQuery(candidate.fullAddress ? `${candidate.name}, ${candidate.fullAddress}` : candidate.name); setCandidates([]); setError(""); }} className="block w-full rounded-md border p-2 text-left hover:bg-muted">
               <span className="block text-sm font-medium">{candidate.name}</span>
               {candidate.fullAddress && <span className="block text-xs text-muted-foreground">{candidate.fullAddress}</span>}
               <span className="block text-[11px] text-muted-foreground">{candidate.coordinates.lat.toFixed(5)}, {candidate.coordinates.lng.toFixed(5)}</span>
