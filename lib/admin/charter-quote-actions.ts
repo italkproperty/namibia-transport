@@ -36,7 +36,6 @@ export type CharterDraftRequest = {
   driverDailyRate: number;
   accommodationNights: number;
   accommodationRate: number;
-  parkFees: number;
   driverPerDiemDays: number;
   driverPerDiemRate: number;
   parkFees: number;
@@ -219,7 +218,6 @@ export async function priceCharterItineraryAction(_previous: CharterPriceState, 
       driverDailyRate: readNumber(form, "driverDailyRate", "Driver daily rate"),
       accommodationNights: readNumber(form, "accommodationNights", "Accommodation nights", 365),
       accommodationRate: readNumber(form, "accommodationRate", "Accommodation rate"),
-      parkFees: readNumber(form, "parkFees", "Park and permit fees"),
       driverPerDiemDays: readNumber(form, "driverPerDiemDays", "Driver per diem days", 365),
       driverPerDiemRate: readNumber(form, "driverPerDiemRate", "Driver per diem rate"),
       parkFees: readNumber(form, "parkFees", "National park and conservation fees"),
