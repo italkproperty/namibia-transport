@@ -80,8 +80,20 @@ async function calculateRequest(request: CharterDraftRequest) {
   // operator's pricing screen (6.4 L/100 km, N$27/litre, N$0/km other costs),
   // using diesel as the selected operating assumption. No database or
   // published airport-transfer fare is changed by this fallback.
-  const storedProfile = settings.profiles.find((item) => item.vehicleClassId === request.vehicleClassId);
   const isSuv = vehicle.slug === "suv-4x4" || /suv|4x4/i.test(vehicle.name);
+  const configuredProfile = settings.profiles.find((item) => item.vehicleClassId === request.vehicleClassId);
+  // Reject obviously malformed stored fuel assumptions. A 1,991 km itinerary
+  // at 38.5 L/100 km produces 767 L, which is not a credible default for this
+  // SUV costing profile and inflates the customer price dramatically.
+  const storedProfile = configuredProfile &&
+    configuredProfile.litresPer100Km >= 3 &&
+    configuredProfile.litresPer100Km <= 25 &&
+    configuredProfile.fuelPricePerLitre > 0 &&
+    configuredProfile.fuelPricePerLitre <= 100 &&
+    configuredProfile.nonFuelRunningCostPerKm >= 0 &&
+    configuredProfile.nonFuelRunningCostPerKm <= 100
+      ? configuredProfile
+      : null;
   const profile = storedProfile ?? (isSuv ? {
     vehicleClassId: vehicle.id,
     fuelType: "diesel" as const,
