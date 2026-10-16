@@ -3,7 +3,6 @@
 import * as React from "react";
 import { SparklesIcon, ClipboardCopyIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Textarea } from "@/components/ui/textarea";
 import { analyseCharterConversationAction, type CharterConversationIntakeState } from "@/lib/admin/charter-ai-intake-actions";
 
 export function CharterAiConversationIntake() {
@@ -33,7 +32,7 @@ export function CharterAiConversationIntake() {
         </div>
       </div>
       <form action={action} className="space-y-3">
-        <Textarea name="conversation" value={conversation} onChange={(event) => setConversation(event.target.value)} rows={8} maxLength={40000} placeholder="Paste the full customer conversation here…" required />
+        <textarea name="conversation" value={conversation} onChange={(event) => setConversation(event.target.value)} rows={8} maxLength={40000} placeholder="Paste the full customer conversation here…" required className="border-input placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-ring/50 aria-invalid:ring-destructive/20 aria-invalid:border-destructive w-full min-w-0 rounded-md border bg-transparent px-3 py-2 text-sm shadow-xs outline-none focus-visible:ring-[3px]" />
         <div className="flex flex-wrap items-center justify-between gap-2">
           <p className="text-xs text-muted-foreground">{conversation.length.toLocaleString()} / 40,000 characters · AI will not invent a final price or resolve conflicting dates.</p>
           <Button type="submit" disabled={pending || conversation.trim().length < 30}><SparklesIcon className="mr-2 size-4" />{pending ? "Analysing conversation…" : "Extract charter brief"}</Button>
