@@ -94,10 +94,16 @@ export function CharterQuotePlanner({ vehicles }: { vehicles: VehicleOption[] })
   const [positioningKm, setPositioningKm] = React.useState("0");
   const [localKm, setLocalKm] = React.useState("0");
   const [vehicleDays, setVehicleDays] = React.useState("10");
-  const [vehicleDailyRate, setVehicleDailyRate] = React.useState("3000");
-  const [driverDays, setDriverDays] = React.useState("1");
+  const [vehicleDailyRate, setVehicleDailyRate] = React.useState("3500");
+  const [driverDays, setDriverDays] = React.useState("10");
+  const [supplierItems, setSupplierItems] = React.useState<{ label: string; quantity: string; unitCost: string; unit: string }[]>([
+    { label: "", quantity: "1", unitCost: "0", unit: "trip" },
+  ]);
 
   const serialisedStops = JSON.stringify(stops.filter((stop): stop is ResolvedDestination => Boolean(stop)));
+  const serialisedSupplierItems = JSON.stringify(supplierItems.filter((item) => item.label.trim()).map((item) => ({
+    label: item.label.trim(), quantity: Number(item.quantity || 0), unitCost: Number(item.unitCost || 0), unit: item.unit || "item",
+  })));
   const updateStop = (index: number, stop: ResolvedDestination | null) => setStops((current) => current.map((item, i) => i === index ? stop : item));
 
   React.useEffect(() => {
@@ -166,6 +172,7 @@ export function CharterQuotePlanner({ vehicles }: { vehicles: VehicleOption[] })
 
       <form action={action} className="space-y-5">
         <input type="hidden" name="stops" value={serialisedStops} />
+        <input type="hidden" name="supplierItems" value={serialisedSupplierItems} />
         <div className="space-y-3">
           {stops.map((stop, index) => (
             <DestinationField key={index} index={index} value={stop} initialQuery={stopQueries[index] ?? ""} onSelect={(value) => updateStop(index, value)} canRemove={stops.length > 2} onRemove={() => { setStops((current) => current.filter((_, i) => i !== index)); setStopQueries((current) => current.filter((_, i) => i !== index)); }} />
@@ -192,25 +199,39 @@ export function CharterQuotePlanner({ vehicles }: { vehicles: VehicleOption[] })
           <div className="space-y-1">
             <label htmlFor="localKm" className="text-sm font-medium">Local excursions / driving (km)</label>
             <Input id="localKm" name="localKm" type="number" min="0" step="1" value={localKm} onChange={(event) => setLocalKm(event.target.value)} />
+            <p className="text-xs text-muted-foreground">Passenger route + positioning + local kilometres all incur fuel. Confirm positioning with the actual depot/pickup/drop-off plan.</p>
           </div>
         </div>
 
         <div>
           <h3 className="text-sm font-semibold">Vehicle utilisation and additional trip costs</h3>
-          <p className="mb-3 mt-1 text-xs text-muted-foreground">Vehicle utilisation is charged per day separately from fuel and driver costs. For this provisional SUV charter, use N$3,000/day unless the actual supplier agreement differs.</p>
+          <p className="mb-3 mt-1 text-xs text-muted-foreground">SUV utilisation defaults to N$3,500 per service day. Fuel and a separate per-kilometre wear/maintenance allowance are calculated independently; set the per-km rate only for costs not already covered by the vehicle rate.</p>
           <div className="mb-3 grid gap-3 sm:grid-cols-2">
             <div className="space-y-1"><label htmlFor="vehicleDays" className="text-xs font-medium">Vehicle utilisation days</label><Input id="vehicleDays" name="vehicleDays" type="number" min="1" max="365" step="1" value={vehicleDays} onChange={(event) => setVehicleDays(event.target.value)} /></div>
             <div className="space-y-1"><label htmlFor="vehicleDailyRate" className="text-xs font-medium">SUV / 4x4 utilisation per day (N$)</label><Input id="vehicleDailyRate" name="vehicleDailyRate" type="number" min="0" step="1" value={vehicleDailyRate} onChange={(event) => setVehicleDailyRate(event.target.value)} /></div>
           </div>
-          <h3 className="text-sm font-semibold">Driver and other trip costs</h3>
+          <h3 className="text-sm font-semibold">Driver, accommodation and destination costs</h3>
           <p className="mb-3 mt-1 text-xs text-muted-foreground">Enter the total days/nights and rate. Fuel and non-fuel vehicle running costs are calculated separately.</p>
           <div className="grid gap-3 sm:grid-cols-2">
             <div className="space-y-1"><label htmlFor="driverDays" className="text-xs font-medium">Driver days</label><Input id="driverDays" name="driverDays" type="number" min="1" step="1" value={driverDays} onChange={(event) => setDriverDays(event.target.value)} /></div>
-            <div className="space-y-1"><label htmlFor="driverDailyRate" className="text-xs font-medium">Driver cost per day (N$)</label><Input id="driverDailyRate" name="driverDailyRate" type="number" min="0" step="1" defaultValue="0" /></div>
-            <div className="space-y-1"><label htmlFor="accommodationNights" className="text-xs font-medium">Driver accommodation nights</label><Input id="accommodationNights" name="accommodationNights" type="number" min="0" step="1" defaultValue="0" /></div>
-            <div className="space-y-1"><label htmlFor="accommodationRate" className="text-xs font-medium">Accommodation per night (N$)</label><Input id="accommodationRate" name="accommodationRate" type="number" min="0" step="1" defaultValue="0" /></div>
-            <div className="space-y-1"><label htmlFor="parkFees" className="text-xs font-medium">Park / permit fees (N$ total)</label><Input id="parkFees" name="parkFees" type="number" min="0" step="1" defaultValue="0" /></div>
-            <div className="space-y-1"><label htmlFor="otherCosts" className="text-xs font-medium">Other supplier costs (N$ total)</label><Input id="otherCosts" name="otherCosts" type="number" min="0" step="1" defaultValue="0" /></div>
+            <div className="space-y-1"><label htmlFor="driverDailyRate" className="text-xs font-medium">Driver / guide cost per day (N$)</label><Input id="driverDailyRate" name="driverDailyRate" type="number" min="0" step="1" defaultValue="950" /></div>
+            <div className="space-y-1"><label htmlFor="accommodationNights" className="text-xs font-medium">Driver accommodation nights</label><Input id="accommodationNights" name="accommodationNights" type="number" min="0" step="1" defaultValue="9" /></div>
+            <div className="space-y-1"><label htmlFor="accommodationRate" className="text-xs font-medium">Driver accommodation per night (N$)</label><Input id="accommodationRate" name="accommodationRate" type="number" min="0" step="1" defaultValue="900" /><p className="text-xs text-muted-foreground">Provisional allowance only; replace with staff-rate/lodge supplier confirmation.</p></div>
+            <div className="space-y-1"><label htmlFor="driverPerDiemDays" className="text-xs font-medium">Driver meals / per diem days</label><Input id="driverPerDiemDays" name="driverPerDiemDays" type="number" min="0" step="1" defaultValue="10" /></div>
+            <div className="space-y-1"><label htmlFor="driverPerDiemRate" className="text-xs font-medium">Driver meals / per diem per day (N$)</label><Input id="driverPerDiemRate" name="driverPerDiemRate" type="number" min="0" step="1" defaultValue="250" /></div>
+            <div className="space-y-1"><label htmlFor="parkFees" className="text-xs font-medium">Confirmed national park / conservation fees (N$ total)</label><Input id="parkFees" name="parkFees" type="number" min="0" step="1" defaultValue="0" /><p className="text-xs text-muted-foreground">Only add fees payable by this charter; do not duplicate lodge-included guest activities or fees.</p></div>
+            <div className="space-y-1"><label htmlFor="activityFees" className="text-xs font-medium">Non-included activities (N$ total)</label><Input id="activityFees" name="activityFees" type="number" min="0" step="1" defaultValue="0" /></div>
+            <div className="space-y-1"><label htmlFor="permitsAndTolls" className="text-xs font-medium">Permits, tolls and access fees (N$ total)</label><Input id="permitsAndTolls" name="permitsAndTolls" type="number" min="0" step="1" defaultValue="0" /></div>
+          </div>
+          <div className="mt-4 space-y-2">
+            <div className="flex items-center justify-between gap-3"><h4 className="text-sm font-semibold">Named supplier line items</h4><Button type="button" variant="outline" size="sm" disabled={supplierItems.length >= 10} onClick={() => setSupplierItems((items) => [...items, { label: "", quantity: "1", unitCost: "0", unit: "trip" }])}><PlusIcon className="mr-1 size-4" />Add line</Button></div>
+            <p className="text-xs text-muted-foreground">Name each real supplier charge (for example, a confirmed guide fee or access transfer). Blank rows are excluded. No catch-all supplier amount.</p>
+            {supplierItems.map((item, index) => <div key={index} className="grid gap-2 rounded-md border p-3 sm:grid-cols-[minmax(0,2fr)_minmax(0,0.7fr)_minmax(0,1fr)_auto]">
+              <Input aria-label={`Supplier item ${index + 1} name`} placeholder="Supplier / service name" value={item.label} onChange={(event) => setSupplierItems((items) => items.map((row, i) => i === index ? { ...row, label: event.target.value } : row))} maxLength={100} />
+              <Input aria-label={`Supplier item ${index + 1} quantity`} type="number" min="0" step="0.1" value={item.quantity} onChange={(event) => setSupplierItems((items) => items.map((row, i) => i === index ? { ...row, quantity: event.target.value } : row))} />
+              <Input aria-label={`Supplier item ${index + 1} rate`} type="number" min="0" step="0.01" value={item.unitCost} onChange={(event) => setSupplierItems((items) => items.map((row, i) => i === index ? { ...row, unitCost: event.target.value } : row))} />
+              <Button type="button" variant="ghost" size="icon" aria-label={`Remove supplier item ${index + 1}`} disabled={supplierItems.length === 1} onClick={() => setSupplierItems((items) => items.filter((_, i) => i !== index))}><TrashIcon className="size-4" /></Button>
+            </div>)}
           </div>
         </div>
         <Button type="submit" disabled={pending || stops.some((stop) => !stop) || !vehicles.some((vehicle) => vehicle.id === vehicleClassId && (vehicle.hasProfile || /suv|4x4/i.test(vehicle.name)))}>{pending ? "Calculating verified route…" : "Calculate charter cost and price"}</Button>
