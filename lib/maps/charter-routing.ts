@@ -38,7 +38,7 @@ export type DestinationCandidate = {
 export type ResolvedDestination = {
   label: string;
   coordinates: LatLng;
-  source: "operator_confirmed" | "mapbox_geocoding";
+  source: "operator_confirmed" | "mapbox_geocoding" | "openstreetmap_geocoding" | "namibia_destination_catalog";
   providerId?: string;
 };
 
@@ -103,7 +103,7 @@ export async function searchCharterDestinations(query: string): Promise<Destinat
     throw new CharterRoutingError("invalid_query", "Enter at least three characters for the destination search.");
   }
 
-  const normalise = (value: string) => value.toLowerCase().normalize("NFD").replace(/[\\u0300-\\u036f]/g, "").replace(/[^a-z0-9]+/g, " ").trim();
+    const normalise = (value: string) => value.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9]+/g, " ").trim();
   const q = normalise(cleanQuery);
   const curated = NAMIBIA_DESTINATIONS.filter((item) => {
     const searchable = normalise(`${item.name} ${item.fullAddress ?? ""}`);
@@ -116,7 +116,7 @@ export async function searchCharterDestinations(query: string): Promise<Destinat
   let mapboxCandidates: DestinationCandidate[] = [];
   if (token) {
     const url = new URL(GEOCODING_BASE);
-    url.searchParams.set("q", /\\bnamibia\\b/i.test(cleanQuery) ? cleanQuery : `${cleanQuery}, Namibia`);
+            url.searchParams.set("q", /\bnamibia\b/i.test(cleanQuery) ? cleanQuery : cleanQuery + ", Namibia");
     url.searchParams.set("country", "NA");
     url.searchParams.set("language", "en");
     url.searchParams.set("limit", "5");
@@ -142,7 +142,7 @@ export async function searchCharterDestinations(query: string): Promise<Destinat
   const osmCandidates: DestinationCandidate[] = [];
   try {
     const url = new URL("https://nominatim.openstreetmap.org/search");
-    url.searchParams.set("q", /\\bnamibia\\b/i.test(cleanQuery) ? cleanQuery : `${cleanQuery}, Namibia`);
+            url.searchParams.set("q", /\bnamibia\b/i.test(cleanQuery) ? cleanQuery : cleanQuery + ", Namibia");
     url.searchParams.set("countrycodes", "na");
     url.searchParams.set("format", "jsonv2");
     url.searchParams.set("addressdetails", "1");
