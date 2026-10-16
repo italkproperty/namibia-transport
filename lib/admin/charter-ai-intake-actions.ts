@@ -82,7 +82,7 @@ export async function analyseCharterConversationAction(
     if (!response.ok) {
       const detail = await response.text().catch(() => "");
       console.error("[charter-ai-intake] Anthropic error", response.status, detail.slice(0, 500));
-      return { ok: false, message: response.status === 401 ? "The Anthropic API key was rejected. Check ANTHROPIC_API_KEY in Vercel." : "AI could not analyse the conversation right now. Please try again." };
+      return { ok: false, message: response.status === 401 ? "Claude rejected the API key. Check ANTHROPIC_API_KEY_TRANSPORT in Vercel." : "AI could not analyse the conversation right now. Please try again." };
     }
     const payload = await response.json() as { content?: { type?: string; text?: string }[] };
     const text = payload.content?.filter((part) => part.type === "text").map((part) => part.text ?? "").join("\n").trim() ?? "";
