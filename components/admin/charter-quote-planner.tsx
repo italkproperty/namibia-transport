@@ -93,6 +93,8 @@ export function CharterQuotePlanner({ vehicles }: { vehicles: VehicleOption[] })
   const [vehicleClassId, setVehicleClassId] = React.useState(vehicles.find((item) => item.hasProfile)?.id ?? "");
   const [positioningKm, setPositioningKm] = React.useState("0");
   const [localKm, setLocalKm] = React.useState("0");
+  const [vehicleDays, setVehicleDays] = React.useState("10");
+  const [vehicleDailyRate, setVehicleDailyRate] = React.useState("3000");
   const [driverDays, setDriverDays] = React.useState("1");
 
   const serialisedStops = JSON.stringify(stops.filter((stop): stop is ResolvedDestination => Boolean(stop)));
@@ -142,7 +144,11 @@ export function CharterQuotePlanner({ vehicles }: { vehicles: VehicleOption[] })
       }
       const start = typeof intake.requestedStartDate === "string" ? Date.parse(intake.requestedStartDate + "T00:00:00Z") : NaN;
       const end = typeof intake.requestedEndDate === "string" ? Date.parse(intake.requestedEndDate + "T00:00:00Z") : NaN;
-      if (Number.isFinite(start) && Number.isFinite(end) && end >= start) setDriverDays(String(Math.floor((end - start) / 86400000) + 1));
+      if (Number.isFinite(start) && Number.isFinite(end) && end >= start) {
+        const inclusiveDays = String(Math.floor((end - start) / 86400000) + 1);
+        setDriverDays(inclusiveDays);
+        setVehicleDays(inclusiveDays);
+      }
       setChangeReason("Prepared from AI intake. Confirm dates, route, inclusions and price against the original conversation.");
       setAiBrief(intake);
       document.getElementById("charter-quote-planner")?.scrollIntoView({ behavior: "smooth", block: "start" });
@@ -181,7 +187,7 @@ export function CharterQuotePlanner({ vehicles }: { vehicles: VehicleOption[] })
           <div className="space-y-1">
             <label htmlFor="positioningKm" className="text-sm font-medium">Empty positioning distance (km)</label>
             <Input id="positioningKm" name="positioningKm" type="number" min="0" step="1" value={positioningKm} onChange={(event) => setPositioningKm(event.target.value)} />
-            <p className="text-xs text-muted-foreground">Only kilometres outside the customer route. Do not count the same distance twice.</p>
+            <p className="text-xs text-muted-foreground">Include empty depot → pickup and post-drop return/repositioning. Do not duplicate any passenger-route kilometres.</p>
           </div>
           <div className="space-y-1">
             <label htmlFor="localKm" className="text-sm font-medium">Local excursions / driving (km)</label>
@@ -190,7 +196,13 @@ export function CharterQuotePlanner({ vehicles }: { vehicles: VehicleOption[] })
         </div>
 
         <div>
-          <h3 className="text-sm font-semibold">Additional trip costs</h3>
+          <h3 className="text-sm font-semibold">Vehicle utilisation and additional trip costs</h3>
+          <p className="mb-3 mt-1 text-xs text-muted-foreground">Vehicle utilisation is charged per day separately from fuel and driver costs. For this provisional SUV charter, use N$3,000/day unless the actual supplier agreement differs.</p>
+          <div className="mb-3 grid gap-3 sm:grid-cols-2">
+            <div className="space-y-1"><label htmlFor="vehicleDays" className="text-xs font-medium">Vehicle utilisation days</label><Input id="vehicleDays" name="vehicleDays" type="number" min="1" max="365" step="1" value={vehicleDays} onChange={(event) => setVehicleDays(event.target.value)} /></div>
+            <div className="space-y-1"><label htmlFor="vehicleDailyRate" className="text-xs font-medium">SUV / 4x4 utilisation per day (N$)</label><Input id="vehicleDailyRate" name="vehicleDailyRate" type="number" min="0" step="1" value={vehicleDailyRate} onChange={(event) => setVehicleDailyRate(event.target.value)} /></div>
+          </div>
+          <h3 className="text-sm font-semibold">Driver and other trip costs</h3>
           <p className="mb-3 mt-1 text-xs text-muted-foreground">Enter the total days/nights and rate. Fuel and non-fuel vehicle running costs are calculated separately.</p>
           <div className="grid gap-3 sm:grid-cols-2">
             <div className="space-y-1"><label htmlFor="driverDays" className="text-xs font-medium">Driver days</label><Input id="driverDays" name="driverDays" type="number" min="1" step="1" value={driverDays} onChange={(event) => setDriverDays(event.target.value)} /></div>
@@ -207,13 +219,13 @@ export function CharterQuotePlanner({ vehicles }: { vehicles: VehicleOption[] })
       {state && !state.ok && <p role="alert" className="rounded-md border border-destructive/40 p-3 text-sm text-destructive">{state.message}</p>}
       {state?.ok && (
         <div className="space-y-4 rounded-lg border p-4">
-          <div><p className="text-xs uppercase tracking-wide text-muted-foreground">Suggested customer price · {state.vehicleName}</p><p className="text-3xl font-semibold">{formatNad(state.result.finalPrice.toFixed(2))}</p><p className="text-sm text-muted-foreground">{state.result.route.totalDistanceKm.toFixed(1)} road km · {Math.round(state.result.route.totalDurationMinutes / 60 * 10) / 10} driving hours · {state.result.route.legCount} legs</p></div>
+          <div><p className="text-xs uppercase tracking-wide text-muted-foreground">Suggested customer price · {state.vehicleName}</p><p className="text-3xl font-semibold">{formatNad(state.result.finalPrice.toFixed(2))}</p><p className="text-sm text-muted-foreground">{state.result.route.totalDistanceKm.toFixed(1)} passenger-route road km · {Math.round(state.result.route.totalDurationMinutes / 60 * 10) / 10} driving hours · {state.result.route.legCount} legs</p></div>
           <div className="grid gap-3 sm:grid-cols-2">
             <div className="rounded-md bg-muted p-3"><p className="text-xs text-muted-foreground">Expected operating cost</p><p className="text-lg font-semibold">{formatNad(state.result.costs.expectedCost.toFixed(2))}</p></div>
             <div className="rounded-md bg-muted p-3"><p className="text-xs text-muted-foreground">Contribution after payment fee</p><p className="text-lg font-semibold">{formatNad(state.result.actual.contribution.toFixed(2))}</p><p className="text-xs text-muted-foreground">{(state.result.actual.contributionMargin * 100).toFixed(1)}% contribution margin</p></div>
           </div>
           <div className="space-y-2 text-sm">
-            <div className="flex justify-between gap-3"><span>Fuel ({state.result.costs.fuelLitres.toFixed(2)} L)</span><span>{formatNad(state.result.costs.fuelCost.toFixed(2))}</span></div>
+            <div className="flex justify-between gap-3"><span>Fuel ({state.result.costs.fuelLitres.toFixed(2)} L at {state.fuelAssumptions.litresPer100Km.toFixed(1)} L/100 km × N${state.fuelAssumptions.pricePerLitre.toFixed(2)}/L {state.fuelAssumptions.fuelType})</span><span>{formatNad(state.result.costs.fuelCost.toFixed(2))}</span></div>
             <div className="flex justify-between gap-3"><span>Non-fuel vehicle running cost</span><span>{formatNad(state.result.costs.nonFuelRunningCost.toFixed(2))}</span></div>
             {state.result.costs.itemisedCosts.map((item) => <div key={item.id} className="flex justify-between gap-3"><span>{item.label}</span><span>{formatNad(item.amount.toFixed(2))}</span></div>)}
             <div className="flex justify-between gap-3 border-t pt-2"><span>Estimated payment fee</span><span>{formatNad(state.result.suggested.paymentFee.toFixed(2))}</span></div>
@@ -226,7 +238,7 @@ export function CharterQuotePlanner({ vehicles }: { vehicles: VehicleOption[] })
             <input type="hidden" name="aiBrief" value={aiBrief ? JSON.stringify(aiBrief) : ""} />
             <div>
               <h3 className="text-sm font-semibold">Save as a private draft</h3>
-              <p className="mt-1 text-xs text-muted-foreground">Saves the signed server-calculated route and price snapshot. Recalculate if you change the itinerary or costs. Enter at least one customer contact method.</p>
+              <p className="mt-1 text-xs text-muted-foreground"> Saves the signed server-calculated route and price snapshot. Recalculate after changing itinerary or costs. Confirm vehicle days, positioning/local km, driver days, and supplier-cost inclusions before issuing a quote. Enter at least one customer contact method.</p>
             </div>
             <div className="grid gap-3 sm:grid-cols-2">
               <div className="space-y-1"><label htmlFor="draft-customer-name" className="text-sm font-medium">Customer name / organisation</label><Input id="draft-customer-name" name="customerName" value={customerName} onChange={(event) => setCustomerName(event.target.value)} required minLength={2} maxLength={160} placeholder="Customer name" /></div>
