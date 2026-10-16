@@ -136,7 +136,25 @@ function calculationSigningKey(): string {
 
 /** Bind the server-verified route and cost snapshot to this admin session. */
 function signCalculation(payload: SignedCalculationPayload): string {
-  const encoded = Buffer.from(JSON.stringify(payload)).toString("base64url");
+  // Mapbox overview geometry can be large for multi-day Namibia itineraries.
+  // It is useful for map display, but not needed to verify the deterministic
+  // price or save the route legs. Excluding it keeps the hidden server-action
+  // field comfortably below request-size limits.
+  const compactPayload: SignedCalculationPayload = {
+    ...payload,
+    calculated: {
+      ...payload.calculated,
+      route: {
+        ...payload.calculated.route,
+        geometry: null,
+        snappedWaypoints: [],
+      },
+    },
+  };
+  const encoded = Buffer.from(JSON.stringify(compactPayload)).toString("base64url");
+  if (encoded.length > 80_000) {
+    throw new Error("This itinerary is too large to save as one quote. Split the route into smaller sections or remove unnecessary stops.");
+  }
   const signature = createHmac("sha256", calculationSigningKey()).update(encoded).digest("base64url");
   return `${encoded}.${signature}`;
 }
