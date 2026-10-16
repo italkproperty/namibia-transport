@@ -73,7 +73,7 @@ export async function analyseCharterConversationAction(
       },
       body: JSON.stringify({
         model: process.env.ANTHROPIC_MODEL_TRANSPORT?.trim() || "claude-sonnet-5-5",
-        max_tokens: 3500,
+        max_tokens: 7000,
         system: "You are an assistant for a Namibia-based bespoke safari charter operator. Extract facts from customer WhatsApp/email text into the requested JSON schema. Do not invent or silently reconcile information. Use null for missing facts. Preserve exact place names and dates. Separate the customer's requested travel dates from dates stated in an attached/lodge itinerary. List discrepancies explicitly in dateConflicts and unresolvedQuestions. Do not calculate or invent road distances, prices, availability, bookings, or confirmed inclusions. A budget is not an agreed price. Only set priceAgreed if the customer and operator clearly accepted a specific amount. Keep output valid JSON only.",
         messages: [{ role: "user", content: "Extract this conversation into this JSON schema: " + schema + "\n\nCUSTOMER CONVERSATION:\n" + conversation }],
       }),
@@ -84,10 +84,24 @@ export async function analyseCharterConversationAction(
       console.error("[charter-ai-intake] Anthropic error", response.status, detail.slice(0, 500));
       return { ok: false, message: response.status === 401 ? "Claude rejected the API key. Check ANTHROPIC_API_KEY_TRANSPORT in Vercel." : "AI could not analyse the conversation right now. Please try again." };
     }
-    const payload = await response.json() as { content?: { type?: string; text?: string }[] };
+    const payload = await response.json() as { stop_reason?: string; content?: { type?: string; text?: string }[] };
     const text = payload.content?.filter((part) => part.type === "text").map((part) => part.text ?? "").join("\n").trim() ?? "";
-    const jsonText = text.replace(/^\`\`\`(?:json)?\s*/i, "").replace(/\s*\`\`\`$/, "");
-    const parsed = JSON.parse(jsonText) as CharterConversationIntake;
+    if (payload.stop_reason === "max_tokens") {
+      console.error("[charter-ai-intake] Claude response reached max_tokens", { textLength: text.length });
+      return { ok: false, message: "The AI response was cut off. Please paste only the relevant customer conversation and try again." };
+    }
+    // Accept plain JSON or JSON wrapped in a Markdown code fence; tolerate a short preamble.
+    const unfenced = text.replace(/^```(?:json)?\s*/i, "").replace(/\s*```$/, "").trim();
+    const firstBrace = unfenced.indexOf("{");
+    const lastBrace = unfenced.lastIndexOf("}");
+    const jsonText = firstBrace >= 0 && lastBrace > firstBrace ? unfenced.slice(firstBrace, lastBrace + 1) : unfenced;
+    let parsed: CharterConversationIntake;
+    try {
+      parsed = JSON.parse(jsonText) as CharterConversationIntake;
+    } catch {
+      console.error("[charter-ai-intake] Could not parse Claude JSON", { stopReason: payload.stop_reason, responseLength: text.length, startsWith: text.slice(0, 80), endsWith: text.slice(-80) });
+      return { ok: false, message: "Claude returned an incomplete or unreadable response. Try again with only the relevant customer messages." };
+    }
     if (!parsed || typeof parsed !== "object" || !Array.isArray(parsed.itinerary) || typeof parsed.summary !== "string") {
       return { ok: false, message: "The AI response was incomplete. Please try again or shorten the pasted conversation." };
     }
