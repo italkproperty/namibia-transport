@@ -107,7 +107,7 @@ export function CharterQuotePlanner({ vehicles }: { vehicles: VehicleOption[] })
       for (const leg of itinerary) {
         for (const candidate of [leg.from, leg.to]) {
           const label = typeof candidate === "string" ? candidate.trim() : "";
-          if (label && labels[labels.length - 1]?.toLowerCase() !== label.toLowerCase() && !labels.some((existing) => existing.toLowerCase() === label.toLowerCase())) labels.push(label);
+          if (label && labels[labels.length - 1]?.toLowerCase() !== label.toLowerCase()) labels.push(label);
         }
       }
       const usableLabels = labels.slice(0, 10);
