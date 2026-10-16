@@ -39,8 +39,8 @@ export async function analyseCharterConversationAction(
   if (conversation.length < 30) return { ok: false, message: "Paste the customer conversation (at least 30 characters)." };
   if (conversation.length > 40000) return { ok: false, message: "The pasted conversation is too long. Keep it under 40,000 characters." };
 
-  const apiKey = process.env.ANTHROPIC_API_KEY;
-  if (!apiKey) return { ok: false, message: "AI is not configured on this deployment: ANTHROPIC_API_KEY is missing from the server environment." };
+  const apiKey = process.env.ANTHROPIC_API_KEY_TRANSPORT?.trim();
+  if (!apiKey) return { ok: false, message: "Claude is not configured on this deployment. Add ANTHROPIC_API_KEY_TRANSPORT in Vercel and redeploy." };
 
   const schema = `{
     "customerName": string|null,
@@ -68,11 +68,11 @@ export async function analyseCharterConversationAction(
       method: "POST",
       headers: {
         "content-type": "application/json",
-        "x-api-key": apiKey,
+        Authorization: `Bearer ${apiKey}`,
         "anthropic-version": "2023-06-01",
       },
       body: JSON.stringify({
-        model: process.env.ANTHROPIC_MODEL || "claude-3-5-sonnet-latest",
+        model: process.env.ANTHROPIC_MODEL_TRANSPORT?.trim() || "claude-sonnet-5-5",
         max_tokens: 3500,
         system: "You are an assistant for a Namibia-based bespoke safari charter operator. Extract facts from customer WhatsApp/email text into the requested JSON schema. Do not invent or silently reconcile information. Use null for missing facts. Preserve exact place names and dates. Separate the customer's requested travel dates from dates stated in an attached/lodge itinerary. List discrepancies explicitly in dateConflicts and unresolvedQuestions. Do not calculate or invent road distances, prices, availability, bookings, or confirmed inclusions. A budget is not an agreed price. Only set priceAgreed if the customer and operator clearly accepted a specific amount. Keep output valid JSON only.",
         messages: [{ role: "user", content: "Extract this conversation into this JSON schema: " + schema + "\n\nCUSTOMER CONVERSATION:\n" + conversation }],
