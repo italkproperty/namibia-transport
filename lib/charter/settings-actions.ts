@@ -7,6 +7,7 @@ import { eq } from "drizzle-orm";
 import { getDb, isDatabaseConfigured } from "@/db";
 import { charterVehicleCostProfiles, pricingSettings, vehicleClasses } from "@/db/schema";
 import { getAdminGateState } from "@/lib/admin/auth";
+import { withDeadline } from "@/lib/deadline";
 
 export type CharterSettingsSaveResult =
   | { ok: true }
@@ -32,7 +33,7 @@ function boundedNumber(
 }
 
 /** Saves only charter-specific settings; legacy published fare settings are untouched. */
-export async function saveCharterCostSettings(
+async function saveCharterCostSettingsUnsafe(
   _previous: CharterSettingsSaveResult | null,
   form: FormData,
 ): Promise<CharterSettingsSaveResult> {
@@ -72,7 +73,7 @@ export async function saveCharterCostSettings(
 }
 
 /** Save one vehicle profile independently so an incomplete SUV profile cannot block a Polo save (or vice versa). */
-export async function saveCharterVehicleCostProfile(
+async function saveCharterVehicleCostProfileUnsafe(
   _previous: CharterSettingsSaveResult | null,
   form: FormData,
 ): Promise<CharterSettingsSaveResult> {
@@ -121,4 +122,44 @@ export async function saveCharterVehicleCostProfile(
   revalidatePath("/admin/pricing");
   revalidatePath("/admin/quotes/charter");
   return { ok: true };
+}
+
+
+/**
+ * Keep failures at the server-action boundary. A rejected auth/database call
+ * must be rendered as an inline form error rather than taking down the entire
+ * admin pricing page. The deadline is shorter than the Vercel function limit.
+ */
+export async function saveCharterCostSettings(
+  previous: CharterSettingsSaveResult | null,
+  form: FormData,
+): Promise<CharterSettingsSaveResult> {
+  try {
+    return await withDeadline("save shared charter pricing rules", 8_000, () =>
+      saveCharterCostSettingsUnsafe(previous, form),
+    );
+  } catch (error) {
+    console.error("[charter-pricing] shared settings action crashed or timed out", error);
+    return {
+      ok: false,
+      message: "The save did not complete. The server or database did not respond in time. No successful save was confirmed; retry once, and if it repeats check the Vercel function logs.",
+    };
+  }
+}
+
+export async function saveCharterVehicleCostProfile(
+  previous: CharterSettingsSaveResult | null,
+  form: FormData,
+): Promise<CharterSettingsSaveResult> {
+  try {
+    return await withDeadline("save charter vehicle cost profile", 8_000, () =>
+      saveCharterVehicleCostProfileUnsafe(previous, form),
+    );
+  } catch (error) {
+    console.error("[charter-pricing] vehicle profile action crashed or timed out", error);
+    return {
+      ok: false,
+      message: "This vehicle profile was not saved. The server or database did not respond in time. No successful save was confirmed; retry once, and if it repeats check the Vercel function logs.",
+    };
+  }
 }
