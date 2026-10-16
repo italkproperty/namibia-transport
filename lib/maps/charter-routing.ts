@@ -15,8 +15,11 @@ import type { LatLng } from "./types";
 const GEOCODING_BASE = "https://api.mapbox.com/search/geocode/v6/forward";
 const DIRECTIONS_BASE = "https://api.mapbox.com/directions/v5/mapbox/driving";
 
-const NAMIBIA_DESTINATIONS: DestinationCandidate[] = [
-  { id: "catalog:kulala-desert-lodge", name: "Kulala Desert Lodge", fullAddress: "Kulala Wilderness Reserve, Hardap Region, Namibia", coordinates: { lat: -24.61485, lng: 15.70331 }, featureType: "lodge", source: "namibia_destination_catalog" },
+const NAMIBIA_DESTINATIONS: (DestinationCandidate & { aliases?: string[] })[] = [
+  // "Kulala Desert Camp" is a common informal description used by travellers;
+  // the verified property name is Kulala Desert Lodge. Coordinates are from
+  // the lodge's published location, not Namibia's country-centre result.
+  { id: "catalog:kulala-desert-lodge", name: "Kulala Desert Lodge", aliases: ["Kulala Desert Camp", "Kulala Lodge", "Kulala Wilderness Reserve"], fullAddress: "Kulala Wilderness Reserve, Sesriem, Hardap Region, Namibia", coordinates: { lat: -24.614952, lng: 15.703432 }, featureType: "lodge", source: "namibia_destination_catalog" },
   { id: "catalog:little-kulala", name: "Little Kulala", fullAddress: "Kulala Wilderness Reserve, Hardap Region, Namibia", coordinates: { lat: -24.61880, lng: 15.76560 }, featureType: "lodge", source: "namibia_destination_catalog" },
   { id: "catalog:villa-margherita", name: "Villa Margherita", fullAddress: "34 Daniel Tjongarero Avenue, Swakopmund, Namibia", coordinates: { lat: -22.67669, lng: 14.52875 }, featureType: "hotel", source: "namibia_destination_catalog" },
   { id: "catalog:anderssons-at-ongava", name: "Anderssons at Ongava", fullAddress: "Ongava Private Game Reserve, near Etosha, Namibia", coordinates: { lat: -19.343611, lng: 15.898806 }, featureType: "lodge", source: "namibia_destination_catalog" },
@@ -106,8 +109,11 @@ export async function searchCharterDestinations(query: string): Promise<Destinat
     const normalise = (value: string) => value.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9]+/g, " ").trim();
   const q = normalise(cleanQuery);
   const curated = NAMIBIA_DESTINATIONS.filter((item) => {
-    const searchable = normalise(`${item.name} ${item.fullAddress ?? ""}`);
-    return searchable.includes(q) || q.includes(normalise(item.name));
+    const searchable = normalise(`${item.name} ${item.fullAddress ?? ""} ${(item.aliases ?? []).join(" ")}`);
+    return searchable.includes(q) || [item.name, ...(item.aliases ?? [])].some((alias) => {
+      const normalisedAlias = normalise(alias);
+      return q === normalisedAlias || q.includes(normalisedAlias);
+    });
   });
   // Exact known Namibia destinations take priority over fuzzy provider results.
   if (curated.length) return curated.slice(0, 5);
@@ -128,10 +134,15 @@ export async function searchCharterDestinations(query: string): Promise<Destinat
         mapboxCandidates = (body.features ?? []).flatMap((feature) => {
           const coords = feature.geometry?.coordinates;
           const name = (feature.properties?.name_preferred ?? feature.properties?.name)?.trim();
+          const featureType = feature.properties?.feature_type ?? null;
           if (!coords || coords.length < 2 || !name) return [];
+          // Country-level fallbacks are not destinations. Mapbox sometimes
+          // returns the country centroid for a lodge query, which can create a
+          // wildly wrong route and price if the operator confirms it.
+          if (normalise(name) === "namibia" || featureType === "country") return [];
           const point = { lng: coords[0], lat: coords[1] };
           if (!validPoint(point)) return [];
-          return [{ id: feature.id ?? `${point.lat},${point.lng}`, name, fullAddress: feature.properties?.full_address ?? feature.properties?.place_formatted ?? null, coordinates: point, featureType: feature.properties?.feature_type ?? null, source: "mapbox_geocoding" as const }];
+          return [{ id: feature.id ?? `${point.lat},${point.lng}`, name, fullAddress: feature.properties?.full_address ?? feature.properties?.place_formatted ?? null, coordinates: point, featureType, source: "mapbox_geocoding" as const }];
         });
       }
     } catch {
@@ -158,7 +169,7 @@ export async function searchCharterDestinations(query: string): Promise<Destinat
         const lat = Number(feature.lat);
         const lng = Number(feature.lon);
         const name = feature.name?.trim() || feature.display_name?.split(",")[0]?.trim();
-        if (!name || !Number.isFinite(lat) || !Number.isFinite(lng)) continue;
+        if (!name || normalise(name) === "namibia" || !Number.isFinite(lat) || !Number.isFinite(lng)) continue;
         const point = { lat, lng };
         if (!validPoint(point) || lat > -16 || lat < -30 || lng < 11 || lng > 26) continue;
         osmCandidates.push({ id: `osm:${feature.osm_type ?? "place"}:${feature.osm_id ?? feature.place_id ?? `${lat},${lng}`}`, name, fullAddress: feature.display_name ?? "Namibia", coordinates: point, featureType: feature.type ?? feature.class ?? null, source: "openstreetmap_geocoding" });

@@ -1,6 +1,6 @@
 "use server";
 
-import { randomBytes } from "node:crypto";
+import { createHmac, randomBytes, timingSafeEqual } from "node:crypto";
 import { revalidatePath } from "next/cache";
 import { getDb, isDatabaseConfigured } from "@/db";
 import { charterQuoteVersions, charterQuotes } from "@/db/schema";
@@ -38,7 +38,7 @@ export type CharterDraftRequest = {
 };
 
 export type CharterPriceState =
-  | { ok: true; result: ReturnType<typeof priceCharterItinerary>; vehicleName: string; request: CharterDraftRequest }
+  | { ok: true; result: ReturnType<typeof priceCharterItinerary>; vehicleName: string; request: CharterDraftRequest; signedCalculation: string }
   | { ok: false; message: string }
   | null;
 
@@ -80,8 +80,20 @@ async function calculateRequest(request: CharterDraftRequest) {
   // operator's pricing screen (6.4 L/100 km, N$27/litre, N$0/km other costs),
   // using diesel as the selected operating assumption. No database or
   // published airport-transfer fare is changed by this fallback.
-  const storedProfile = settings.profiles.find((item) => item.vehicleClassId === request.vehicleClassId);
   const isSuv = vehicle.slug === "suv-4x4" || /suv|4x4/i.test(vehicle.name);
+  const configuredProfile = settings.profiles.find((item) => item.vehicleClassId === request.vehicleClassId);
+  // Reject obviously malformed stored fuel assumptions. A 1,991 km itinerary
+  // at 38.5 L/100 km produces 767 L, which is not a credible default for this
+  // SUV costing profile and inflates the customer price dramatically.
+  const storedProfile = configuredProfile &&
+    configuredProfile.litresPer100Km >= 3 &&
+    configuredProfile.litresPer100Km <= 25 &&
+    configuredProfile.fuelPricePerLitre > 0 &&
+    configuredProfile.fuelPricePerLitre <= 100 &&
+    configuredProfile.nonFuelRunningCostPerKm >= 0 &&
+    configuredProfile.nonFuelRunningCostPerKm <= 100
+      ? configuredProfile
+      : null;
   const profile = storedProfile ?? (isSuv ? {
     vehicleClassId: vehicle.id,
     fuelType: "diesel" as const,
@@ -109,6 +121,48 @@ async function calculateRequest(request: CharterDraftRequest) {
   return { settings, vehicle, profile, route, result };
 }
 
+type SignedCalculationPayload = {
+  version: 1;
+  issuedAt: number;
+  request: CharterDraftRequest;
+  calculated: Awaited<ReturnType<typeof calculateRequest>>;
+};
+
+function calculationSigningKey(): string {
+  const key = process.env.ADMIN_PASSWORD?.trim();
+  if (!key) throw new Error("Admin signing configuration is unavailable. Sign in again and retry.");
+  return key;
+}
+
+/** Bind the server-verified route and cost snapshot to this admin session. */
+function signCalculation(payload: SignedCalculationPayload): string {
+  const encoded = Buffer.from(JSON.stringify(payload)).toString("base64url");
+  const signature = createHmac("sha256", calculationSigningKey()).update(encoded).digest("base64url");
+  return `${encoded}.${signature}`;
+}
+
+function verifySignedCalculation(token: string): SignedCalculationPayload {
+  if (!token || token.length > 100000) throw new Error("The quote calculation is missing or too large. Calculate the route again.");
+  const [encoded, suppliedSignature, extra] = token.split(".");
+  if (!encoded || !suppliedSignature || extra) throw new Error("The quote calculation could not be verified. Calculate the route again.");
+  const expected = createHmac("sha256", calculationSigningKey()).update(encoded).digest();
+  let supplied: Buffer;
+  try { supplied = Buffer.from(suppliedSignature, "base64url"); } catch { throw new Error("The quote calculation could not be verified. Calculate the route again."); }
+  if (supplied.length !== expected.length || !timingSafeEqual(supplied, expected)) {
+    throw new Error("The quote calculation has changed or could not be verified. Calculate the route again.");
+  }
+  let payload: SignedCalculationPayload;
+  try { payload = JSON.parse(Buffer.from(encoded, "base64url").toString("utf8")) as SignedCalculationPayload; }
+  catch { throw new Error("The quote calculation could not be read. Calculate the route again."); }
+  if (payload.version !== 1 || !Number.isFinite(payload.issuedAt) || Date.now() - payload.issuedAt > 15 * 60 * 1000 || payload.issuedAt > Date.now() + 60_000) {
+    throw new Error("This calculation has expired. Calculate the route again before saving.");
+  }
+  if (!payload.request || !payload.calculated?.route || !payload.calculated?.result || !payload.calculated?.vehicle || !Array.isArray(payload.request.stops)) {
+    throw new Error("The verified calculation is incomplete. Calculate the route again.");
+  }
+  return payload;
+}
+
 export async function priceCharterItineraryAction(_previous: CharterPriceState, form: FormData): Promise<CharterPriceState> {
   const gate = await getAdminGateState();
   if (gate.state !== "signed-in") return { ok: false, message: "Sign in before calculating a charter quote." };
@@ -127,7 +181,8 @@ export async function priceCharterItineraryAction(_previous: CharterPriceState, 
       otherCosts: readNumber(form, "otherCosts", "Other supplier costs"),
     };
     const calculated = await calculateRequest(request);
-    return { ok: true, result: calculated.result, vehicleName: calculated.vehicle.name, request };
+    const signedCalculation = signCalculation({ version: 1, issuedAt: Date.now(), request, calculated });
+    return { ok: true, result: calculated.result, vehicleName: calculated.vehicle.name, request, signedCalculation };
   } catch (error) {
     return { ok: false, message: error instanceof Error ? error.message : "The charter itinerary could not be priced." };
   }
@@ -173,27 +228,12 @@ export async function saveCharterQuoteDraftAction(_previous: SaveCharterDraftSta
   }
 
   try {
-    const request = JSON.parse(String(form.get("request") ?? "")) as CharterDraftRequest;
-    const stops = validateStops(request?.stops);
-    if (!request || typeof request.vehicleClassId !== "string") throw new Error("The quote preview is missing. Calculate the route again before saving.");
-    const bounded = (name: keyof CharterDraftRequest, max: number) => {
-      const value = request[name];
-      if (typeof value !== "number" || !Number.isFinite(value) || value < 0 || value > max) throw new Error(`Invalid ${name} value. Calculate the quote again.`);
-      return value;
-    };
-    const trustedRequest: CharterDraftRequest = {
-      stops,
-      vehicleClassId: request.vehicleClassId,
-      positioningKm: bounded("positioningKm", 100000),
-      localKm: bounded("localKm", 100000),
-      driverDays: bounded("driverDays", 365),
-      driverDailyRate: bounded("driverDailyRate", 100000),
-      accommodationNights: bounded("accommodationNights", 365),
-      accommodationRate: bounded("accommodationRate", 100000),
-      parkFees: bounded("parkFees", 100000),
-      otherCosts: bounded("otherCosts", 100000),
-    };
-    const calculated = await calculateRequest(trustedRequest);
+    // Reuse the signed server calculation produced by the pricing action.
+    // Re-running Mapbox and configuration reads here doubled the work and
+    // could exceed Vercel's server-action budget, leaving Save stuck on a 504.
+    const signedCalculation = verifySignedCalculation(String(form.get("signedCalculation") ?? ""));
+    const trustedRequest = signedCalculation.request;
+    const calculated = signedCalculation.calculated;
     const year = new Date().getFullYear();
     const snapshot = {
       schemaVersion: 1,

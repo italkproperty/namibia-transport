@@ -12,6 +12,12 @@ async function main() {
     (error: unknown) =>
       error instanceof CharterRoutingError && error.code === "invalid_query",
   );
+  const kulala = await searchCharterDestinations("Kulala Desert Camp");
+  assert.equal(kulala.length, 1, "informal Kulala Desert Camp name resolves to the curated lodge");
+  assert.equal(kulala[0].name, "Kulala Desert Lodge");
+  assert.ok(Math.abs(kulala[0].coordinates.lat - (-24.614952)) < 0.001);
+  assert.ok(Math.abs(kulala[0].coordinates.lng - 15.703432) < 0.001);
+
   await assert.rejects(
     () => routeCharterItinerary([]),
     (error: unknown) =>

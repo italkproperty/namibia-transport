@@ -222,11 +222,11 @@ export function CharterQuotePlanner({ vehicles }: { vehicles: VehicleOption[] })
           {state.result.belowTargetMargin && <p className="rounded-md border border-amber-400/50 bg-amber-50 p-3 text-sm text-amber-900">This price is below the configured target margin. Do not send it without reviewing the economics.</p>}
           <p className="text-xs text-muted-foreground">Routing source: Mapbox. Retrieved {new Date(state.result.route.retrievedAt).toLocaleString()}. Saving creates a private draft and immutable version-1 cost/price snapshot. It does not approve, issue, or send the quote.</p>
           <form action={saveAction} className="space-y-3 border-t pt-4">
-            <input type="hidden" name="request" value={JSON.stringify(state.request)} />
+            <input type="hidden" name="signedCalculation" value={state.signedCalculation} />
             <input type="hidden" name="aiBrief" value={aiBrief ? JSON.stringify(aiBrief) : ""} />
             <div>
               <h3 className="text-sm font-semibold">Save as a private draft</h3>
-              <p className="mt-1 text-xs text-muted-foreground">The server recalculates the route and price before saving. Enter at least one customer contact method.</p>
+              <p className="mt-1 text-xs text-muted-foreground">Saves the signed server-calculated route and price snapshot. Recalculate if you change the itinerary or costs. Enter at least one customer contact method.</p>
             </div>
             <div className="grid gap-3 sm:grid-cols-2">
               <div className="space-y-1"><label htmlFor="draft-customer-name" className="text-sm font-medium">Customer name / organisation</label><Input id="draft-customer-name" name="customerName" value={customerName} onChange={(event) => setCustomerName(event.target.value)} required minLength={2} maxLength={160} placeholder="Customer name" /></div>
