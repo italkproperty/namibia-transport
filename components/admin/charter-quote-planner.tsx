@@ -93,6 +93,7 @@ export function CharterQuotePlanner({ vehicles }: { vehicles: VehicleOption[] })
   const [vehicleClassId, setVehicleClassId] = React.useState(vehicles.find((item) => item.hasProfile)?.id ?? "");
   const [positioningKm, setPositioningKm] = React.useState("0");
   const [localKm, setLocalKm] = React.useState("0");
+  const [nonFuelCostPerKm, setNonFuelCostPerKm] = React.useState("2.5");
   const [vehicleDays, setVehicleDays] = React.useState("10");
   const [vehicleDailyRate, setVehicleDailyRate] = React.useState("3500");
   const [driverDays, setDriverDays] = React.useState("10");
@@ -173,6 +174,7 @@ export function CharterQuotePlanner({ vehicles }: { vehicles: VehicleOption[] })
       <form action={action} className="space-y-5">
         <input type="hidden" name="stops" value={serialisedStops} />
         <input type="hidden" name="supplierItems" value={serialisedSupplierItems} />
+        <input type="hidden" name="nonFuelCostPerKm" value={nonFuelCostPerKm} />
         <div className="space-y-3">
           {stops.map((stop, index) => (
             <DestinationField key={index} index={index} value={stop} initialQuery={stopQueries[index] ?? ""} onSelect={(value) => updateStop(index, value)} canRemove={stops.length > 2} onRemove={() => { setStops((current) => current.filter((_, i) => i !== index)); setStopQueries((current) => current.filter((_, i) => i !== index)); }} />
@@ -200,6 +202,11 @@ export function CharterQuotePlanner({ vehicles }: { vehicles: VehicleOption[] })
             <label htmlFor="localKm" className="text-sm font-medium">Local excursions / driving (km)</label>
             <Input id="localKm" name="localKm" type="number" min="0" step="1" value={localKm} onChange={(event) => setLocalKm(event.target.value)} />
             <p className="text-xs text-muted-foreground">Passenger route + positioning + local kilometres all incur fuel. Confirm positioning with the actual depot/pickup/drop-off plan.</p>
+          </div>
+          <div className="space-y-1">
+            <label htmlFor="nonFuelCostPerKmVisible" className="text-sm font-medium">Non-fuel vehicle running cost per km (N$)</label>
+            <Input id="nonFuelCostPerKmVisible" type="number" min="0" max="100" step="0.1" value={nonFuelCostPerKm} onChange={(event) => setNonFuelCostPerKm(event.target.value)} />
+            <p className="text-xs text-muted-foreground">Provisional N$2.50/km for tyres/service/wear, excluding fuel. Set to N$0 if the N$3,500/day supplier rate already covers these costs.</p>
           </div>
         </div>
 
@@ -246,6 +253,16 @@ export function CharterQuotePlanner({ vehicles }: { vehicles: VehicleOption[] })
             <div className="rounded-md bg-muted p-3"><p className="text-xs text-muted-foreground">Contribution after payment fee</p><p className="text-lg font-semibold">{formatNad(state.result.actual.contribution.toFixed(2))}</p><p className="text-xs text-muted-foreground">{(state.result.actual.contributionMargin * 100).toFixed(1)}% contribution margin</p></div>
           </div>
           <div className="space-y-2 text-sm">
+            <div className="rounded-md border p-3">
+              <h3 className="mb-2 text-sm font-semibold">Verified route legs</h3>
+              <div className="space-y-2">
+                {state.routeLegs.map((leg, index) => <div key={index} className="flex flex-col gap-1 border-b pb-2 last:border-0 sm:flex-row sm:items-center sm:justify-between">
+                  <div><p className="font-medium">{index + 1}. {leg.from} → {leg.to}</p><p className="text-xs text-muted-foreground">{leg.distanceKm.toFixed(1)} km · {(leg.durationMinutes / 60).toFixed(1)} h · fuel {formatNad(leg.fuelCost.toFixed(2))} · non-fuel running {formatNad(leg.nonFuelCost.toFixed(2))}</p></div>
+                  <p className="font-medium">{formatNad((leg.fuelCost + leg.nonFuelCost).toFixed(2))}</p>
+                </div>)}
+              </div>
+              <p className="mt-2 text-xs text-muted-foreground">Legs show variable kilometre costs only. Vehicle utilisation and driver charges are priced by service day below, not incorrectly counted as five days just because there are five route legs.</p>
+            </div>
             <div className="flex justify-between gap-3"><span>Fuel ({state.result.costs.fuelLitres.toFixed(2)} L at {state.fuelAssumptions.litresPer100Km.toFixed(1)} L/100 km × N${state.fuelAssumptions.pricePerLitre.toFixed(2)}/L {state.fuelAssumptions.fuelType})</span><span>{formatNad(state.result.costs.fuelCost.toFixed(2))}</span></div>
             <div className="flex justify-between gap-3"><span>Non-fuel vehicle running cost</span><span>{formatNad(state.result.costs.nonFuelRunningCost.toFixed(2))}</span></div>
             {state.result.costs.itemisedCosts.map((item) => <div key={item.id} className="flex justify-between gap-3"><span>{item.label}</span><span>{formatNad(item.amount.toFixed(2))}</span></div>)}
