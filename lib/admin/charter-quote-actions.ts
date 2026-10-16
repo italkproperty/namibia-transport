@@ -36,7 +36,12 @@ export type CharterDraftRequest = {
   accommodationNights: number;
   accommodationRate: number;
   parkFees: number;
-  otherCosts: number;
+  driverPerDiemDays: number;
+  driverPerDiemRate: number;
+  parkFees: number;
+  activityFees: number;
+  permitsAndTolls: number;
+  supplierItems: { id: string; label: string; quantity: number; unitCost: number; unit: string }[];
 };
 
 export type CharterPriceState =
@@ -120,8 +125,14 @@ async function calculateRequest(request: CharterDraftRequest) {
       { id: "vehicle-utilisation", label: "SUV / 4x4 vehicle utilisation", quantity: request.vehicleDays, unitCost: request.vehicleDailyRate, unit: "day" },
       { id: "driver-days", label: "Driver days", quantity: request.driverDays, unitCost: request.driverDailyRate, unit: "day" },
       { id: "accommodation", label: "Driver accommodation", quantity: request.accommodationNights, unitCost: request.accommodationRate, unit: "night" },
-      { id: "park-fees", label: "Park and permit fees", quantity: 1, unitCost: request.parkFees, unit: "trip" },
-      { id: "other-suppliers", label: "Other supplier costs", quantity: 1, unitCost: request.otherCosts, unit: "trip" },
+      { id: "driver-per-diem", label: "Driver meals / per diem", quantity: request.driverPerDiemDays, unitCost: request.driverPerDiemRate, unit: "day" },
+      { id: "park-fees", label: "National park / conservation fees", quantity: 1, unitCost: request.parkFees, unit: "trip" },
+      { id: "activity-fees", label: "Non-included activity fees", quantity: 1, unitCost: request.activityFees, unit: "trip" },
+      { id: "permits-tolls", label: "Permits, tolls and access fees", quantity: 1, unitCost: request.permitsAndTolls, unit: "trip" },
+      ...request.supplierItems.filter((item) => item.label.trim()).map((item) => ({
+        ...item,
+        label: item.label.trim().slice(0, 100),
+      })),
     ],
     targetContributionMargin: settings.targetContributionMargin,
     paymentFeeRate: settings.paymentFeeRate,
@@ -206,7 +217,29 @@ export async function priceCharterItineraryAction(_previous: CharterPriceState, 
       accommodationNights: readNumber(form, "accommodationNights", "Accommodation nights", 365),
       accommodationRate: readNumber(form, "accommodationRate", "Accommodation rate"),
       parkFees: readNumber(form, "parkFees", "Park and permit fees"),
-      otherCosts: readNumber(form, "otherCosts", "Other supplier costs"),
+      driverPerDiemDays: readNumber(form, "driverPerDiemDays", "Driver per diem days", 365),
+      driverPerDiemRate: readNumber(form, "driverPerDiemRate", "Driver per diem rate"),
+      parkFees: readNumber(form, "parkFees", "National park and conservation fees"),
+      activityFees: readNumber(form, "activityFees", "Non-included activity fees"),
+      permitsAndTolls: readNumber(form, "permitsAndTolls", "Permits, tolls and access fees"),
+      supplierItems: (() => {
+        const raw = String(form.get("supplierItems") ?? "[]");
+        if (raw.length > 12000) throw new Error("Supplier line items are too large.");
+        const parsed: unknown = JSON.parse(raw);
+        if (!Array.isArray(parsed) || parsed.length > 10) throw new Error("Use no more than 10 named supplier line items.");
+        return parsed.map((item, index) => {
+          if (!item || typeof item !== "object") throw new Error("A supplier line item is invalid.");
+          const value = item as Record<string, unknown>;
+          const label = typeof value.label === "string" ? value.label.trim() : "";
+          const quantity = Number(value.quantity);
+          const unitCost = Number(value.unitCost);
+          const unit = typeof value.unit === "string" ? value.unit : "item";
+          if (!label || label.length > 100 || !Number.isFinite(quantity) || quantity < 0 || quantity > 100000 || !Number.isFinite(unitCost) || unitCost < 0 || unitCost > 100000000) {
+            throw new Error(`Supplier line item ${index + 1} needs a name and valid quantity/rate.`);
+          }
+          return { id: `supplier-${index + 1}`, label, quantity, unitCost, unit: unit.slice(0, 20) };
+        });
+      })(),
     };
     const calculated = await calculateRequest(request);
     const signedCalculation = signCalculation({ version: 1, issuedAt: Date.now(), request, calculated });
