@@ -93,7 +93,7 @@ export async function analyseCharterConversationAction(
       if (response.status === 403) return { ok: false, message: "The Claude API key does not have permission to use the configured model." };
       if (response.status === 429) return { ok: false, message: "Claude is rate-limited or the account has reached its usage limit. Retry shortly." };
       if (response.status >= 500) return { ok: false, message: "Claude's API is temporarily unavailable. Retry shortly." };
-      return { ok: false, message: `Claude rejected the request (HTTP ${response.status})${requestId ? `; reference ${requestId}` : ""}. Check the Vercel function logs for [charter-ai-intake].`;
+      return { ok: false, message: `Claude rejected the request (HTTP ${response.status})${requestId ? `; reference ${requestId}` : ""}. Check the Vercel function logs for [charter-ai-intake].` };
     }
     const rawBody = await response.text();
     let payload: { stop_reason?: string; content?: { type?: string; text?: string }[]; error?: { type?: string; message?: string } };
