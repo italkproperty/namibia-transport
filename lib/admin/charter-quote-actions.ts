@@ -29,16 +29,23 @@ export type CharterDraftRequest = {
   vehicleClassId: string;
   positioningKm: number;
   localKm: number;
+  nonFuelCostPerKm: number;
+  vehicleDays: number;
+  vehicleDailyRate: number;
   driverDays: number;
   driverDailyRate: number;
   accommodationNights: number;
   accommodationRate: number;
+  driverPerDiemDays: number;
+  driverPerDiemRate: number;
   parkFees: number;
-  otherCosts: number;
+  activityFees: number;
+  permitsAndTolls: number;
+  supplierItems: { id: string; label: string; quantity: number; unitCost: number; unit: string }[];
 };
 
 export type CharterPriceState =
-  | { ok: true; result: ReturnType<typeof priceCharterItinerary>; vehicleName: string; request: CharterDraftRequest; signedCalculation: string }
+  | { ok: true; result: ReturnType<typeof priceCharterItinerary>; vehicleName: string; request: CharterDraftRequest; routeLegs: { from: string; to: string; distanceKm: number; durationMinutes: number; fuelCost: number; nonFuelCost: number }[]; fuelAssumptions: { fuelType: "diesel" | "petrol"; litresPer100Km: number; pricePerLitre: number }; signedCalculation: string }
   | { ok: false; message: string }
   | null;
 
@@ -75,16 +82,12 @@ async function calculateRequest(request: CharterDraftRequest) {
   const [settings, classes] = await Promise.all([getCharterCostSettings(), listVehicleClasses()]);
   const vehicle = classes.find((item) => item.id === request.vehicleClassId);
   if (!vehicle) throw new Error("Select a valid vehicle class.");
-  // Emergency code-level fallback for the SUV while the pricing screen's
-  // database save is unreliable. These match the values entered on the
-  // operator's pricing screen (6.4 L/100 km, N$27/litre, N$0/km other costs),
-  // using diesel as the selected operating assumption. No database or
-  // published airport-transfer fare is changed by this fallback.
+  // Provisional conservative SUV charter assumptions pending confirmation of
+  // the exact vehicle: 12 L/100 km for mixed gravel/highway use and N$28.45/L,
+  // the published September 2026 Windhoek diesel 10ppm price. September 2027
+  // fuel price must be refreshed before the final quote/contract.
   const isSuv = vehicle.slug === "suv-4x4" || /suv|4x4/i.test(vehicle.name);
   const configuredProfile = settings.profiles.find((item) => item.vehicleClassId === request.vehicleClassId);
-  // Reject obviously malformed stored fuel assumptions. A 1,991 km itinerary
-  // at 38.5 L/100 km produces 767 L, which is not a credible default for this
-  // SUV costing profile and inflates the customer price dramatically.
   const storedProfile = configuredProfile &&
     configuredProfile.litresPer100Km >= 3 &&
     configuredProfile.litresPer100Km <= 25 &&
@@ -94,26 +97,43 @@ async function calculateRequest(request: CharterDraftRequest) {
     configuredProfile.nonFuelRunningCostPerKm <= 100
       ? configuredProfile
       : null;
-  const profile = storedProfile ?? (isSuv ? {
+  const rawProfile = storedProfile ?? (isSuv ? {
     vehicleClassId: vehicle.id,
     fuelType: "diesel" as const,
-    litresPer100Km: 6.4,
-    fuelPricePerLitre: 27,
+    litresPer100Km: 12,
+    fuelPricePerLitre: 28.45,
     nonFuelRunningCostPerKm: 0,
   } : null);
-  if (!profile) throw new Error(`No charter cost profile is saved for ${vehicle.name}. Go to Admin → Pricing and save its fuel and running-cost assumptions first.`);
+  if (!rawProfile) throw new Error(`No charter cost profile is saved for ${vehicle.name}. Go to Admin → Pricing and save its fuel and running-cost assumptions first.`);
+  // Do not let an old 6.4 L/100 km or N$27/L SUV profile silently underprice a
+  // long, loaded, mixed gravel-road safari. Higher operator-configured values
+  // remain respected; the conservative floors can be changed when the exact
+  // vehicle and measured consumption are confirmed.
+  const profile = isSuv ? {
+    ...rawProfile,
+    litresPer100Km: Math.max(rawProfile.litresPer100Km, 12),
+    fuelPricePerLitre: Math.max(rawProfile.fuelPricePerLitre, 28.45),
+    nonFuelRunningCostPerKm: request.nonFuelCostPerKm,
+  } : { ...rawProfile, nonFuelRunningCostPerKm: request.nonFuelCostPerKm };
   const route = await routeCharterItinerary(request.stops);
   const result = priceCharterItinerary({
     route,
     positioningKm: request.positioningKm,
     localKm: request.localKm,
     fuel: { fuelType: profile.fuelType, litresPer100Km: profile.litresPer100Km, pricePerLitre: profile.fuelPricePerLitre },
-    nonFuelRunningCostPerKm: profile.nonFuelRunningCostPerKm,
+    nonFuelRunningCostPerKm: request.nonFuelCostPerKm,
     items: [
+      { id: "vehicle-utilisation", label: "SUV / 4x4 vehicle utilisation", quantity: request.vehicleDays, unitCost: request.vehicleDailyRate, unit: "day" },
       { id: "driver-days", label: "Driver days", quantity: request.driverDays, unitCost: request.driverDailyRate, unit: "day" },
       { id: "accommodation", label: "Driver accommodation", quantity: request.accommodationNights, unitCost: request.accommodationRate, unit: "night" },
-      { id: "park-fees", label: "Park and permit fees", quantity: 1, unitCost: request.parkFees, unit: "trip" },
-      { id: "other-suppliers", label: "Other supplier costs", quantity: 1, unitCost: request.otherCosts, unit: "trip" },
+      { id: "driver-per-diem", label: "Driver meals / per diem", quantity: request.driverPerDiemDays, unitCost: request.driverPerDiemRate, unit: "day" },
+      { id: "park-fees", label: "National park / conservation fees", quantity: 1, unitCost: request.parkFees, unit: "trip" },
+      { id: "activity-fees", label: "Non-included activity fees", quantity: 1, unitCost: request.activityFees, unit: "trip" },
+      { id: "permits-tolls", label: "Permits, tolls and access fees", quantity: 1, unitCost: request.permitsAndTolls, unit: "trip" },
+      ...request.supplierItems.filter((item) => item.label.trim()).map((item) => ({
+        ...item,
+        label: item.label.trim().slice(0, 100),
+      })),
     ],
     targetContributionMargin: settings.targetContributionMargin,
     paymentFeeRate: settings.paymentFeeRate,
@@ -191,16 +211,51 @@ export async function priceCharterItineraryAction(_previous: CharterPriceState, 
       vehicleClassId: String(form.get("vehicleClassId") ?? ""),
       positioningKm: readNumber(form, "positioningKm", "Empty positioning kilometres", 100000),
       localKm: readNumber(form, "localKm", "Local excursion kilometres", 100000),
+      nonFuelCostPerKm: readNumber(form, "nonFuelCostPerKm", "Non-fuel running cost per kilometre", 100),
+      vehicleDays: readNumber(form, "vehicleDays", "Vehicle utilisation days", 365),
+      vehicleDailyRate: readNumber(form, "vehicleDailyRate", "Vehicle utilisation daily rate"),
       driverDays: readNumber(form, "driverDays", "Driver days", 365),
       driverDailyRate: readNumber(form, "driverDailyRate", "Driver daily rate"),
       accommodationNights: readNumber(form, "accommodationNights", "Accommodation nights", 365),
       accommodationRate: readNumber(form, "accommodationRate", "Accommodation rate"),
-      parkFees: readNumber(form, "parkFees", "Park and permit fees"),
-      otherCosts: readNumber(form, "otherCosts", "Other supplier costs"),
+      driverPerDiemDays: readNumber(form, "driverPerDiemDays", "Driver per diem days", 365),
+      driverPerDiemRate: readNumber(form, "driverPerDiemRate", "Driver per diem rate"),
+      parkFees: readNumber(form, "parkFees", "National park and conservation fees"),
+      activityFees: readNumber(form, "activityFees", "Non-included activity fees"),
+      permitsAndTolls: readNumber(form, "permitsAndTolls", "Permits, tolls and access fees"),
+      supplierItems: (() => {
+        const raw = String(form.get("supplierItems") ?? "[]");
+        if (raw.length > 12000) throw new Error("Supplier line items are too large.");
+        const parsed: unknown = JSON.parse(raw);
+        if (!Array.isArray(parsed) || parsed.length > 10) throw new Error("Use no more than 10 named supplier line items.");
+        return parsed.map((item, index) => {
+          if (!item || typeof item !== "object") throw new Error("A supplier line item is invalid.");
+          const value = item as Record<string, unknown>;
+          const label = typeof value.label === "string" ? value.label.trim() : "";
+          const quantity = Number(value.quantity);
+          const unitCost = Number(value.unitCost);
+          const unit = typeof value.unit === "string" ? value.unit : "item";
+          if (!label || label.length > 100 || !Number.isFinite(quantity) || quantity < 0 || quantity > 100000 || !Number.isFinite(unitCost) || unitCost < 0 || unitCost > 100000000) {
+            throw new Error(`Supplier line item ${index + 1} needs a name and valid quantity/rate.`);
+          }
+          return { id: `supplier-${index + 1}`, label, quantity, unitCost, unit: unit.slice(0, 20) };
+        });
+      })(),
     };
     const calculated = await calculateRequest(request);
     const signedCalculation = signCalculation({ version: 1, issuedAt: Date.now(), request, calculated });
-    return { ok: true, result: calculated.result, vehicleName: calculated.vehicle.name, request, signedCalculation };
+    return { ok: true, result: calculated.result, vehicleName: calculated.vehicle.name, request, routeLegs: calculated.route.legs.map((leg) => {
+      const km = leg.distanceKm;
+      const litres = km * calculated.profile.litresPer100Km / 100;
+      return {
+        from: request.stops[leg.fromIndex]?.label ?? `Stop ${leg.fromIndex + 1}`,
+        to: request.stops[leg.toIndex]?.label ?? `Stop ${leg.toIndex + 1}`,
+        distanceKm: km,
+        durationMinutes: leg.durationMinutes,
+        fuelCost: Math.round(litres * calculated.profile.fuelPricePerLitre * 100) / 100,
+        nonFuelCost: Math.round(km * request.nonFuelCostPerKm * 100) / 100,
+      };
+    }), fuelAssumptions: { fuelType: calculated.profile.fuelType, litresPer100Km: calculated.profile.litresPer100Km, pricePerLitre: calculated.profile.fuelPricePerLitre }, signedCalculation };
   } catch (error) {
     return { ok: false, message: error instanceof Error ? error.message : "The charter itinerary could not be priced." };
   }
