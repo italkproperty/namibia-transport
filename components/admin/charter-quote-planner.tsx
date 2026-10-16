@@ -93,6 +93,7 @@ export function CharterQuotePlanner({ vehicles }: { vehicles: VehicleOption[] })
   const [vehicleClassId, setVehicleClassId] = React.useState(vehicles.find((item) => item.hasProfile)?.id ?? "");
   const [positioningKm, setPositioningKm] = React.useState("0");
   const [localKm, setLocalKm] = React.useState("0");
+  const [driverDays, setDriverDays] = React.useState("1");
 
   const serialisedStops = JSON.stringify(stops.filter((stop): stop is ResolvedDestination => Boolean(stop)));
   const updateStop = (index: number, stop: ResolvedDestination | null) => setStops((current) => current.map((item, i) => i === index ? stop : item));
@@ -148,7 +149,7 @@ export function CharterQuotePlanner({ vehicles }: { vehicles: VehicleOption[] })
     };
     window.addEventListener("namibia-transport:charter-intake", handleIntake);
     return () => window.removeEventListener("namibia-transport:charter-intake", handleIntake);
-  }, []);
+  }, [vehicles]);
 
   return (
     <section id="charter-quote-planner" className="rounded-xl border bg-card p-4 sm:p-5 space-y-5">
