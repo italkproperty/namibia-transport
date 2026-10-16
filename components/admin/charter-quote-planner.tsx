@@ -218,7 +218,7 @@ export function CharterQuotePlanner({ vehicles }: { vehicles: VehicleOption[] })
             <div className="space-y-1"><label htmlFor="vehicleDailyRate" className="text-xs font-medium">SUV / 4x4 utilisation per day (N$)</label><Input id="vehicleDailyRate" name="vehicleDailyRate" type="number" min="0" step="1" value={vehicleDailyRate} onChange={(event) => setVehicleDailyRate(event.target.value)} /></div>
           </div>
           <h3 className="text-sm font-semibold">Driver, accommodation and destination costs</h3>
-          <p className="mb-3 mt-1 text-xs text-muted-foreground">Enter the total days/nights and rate. Fuel and non-fuel vehicle running costs are calculated separately.</p>
+          <p className="mb-3 mt-1 text-xs text-muted-foreground">Enter the actual service days/nights, not the number of route legs. Date conflict to resolve: 15–24 September is 10 calendar dates; 16–24 September is 9. Driver accommodation and per diem are separate from the daily driver fee.</p>
           <div className="grid gap-3 sm:grid-cols-2">
             <div className="space-y-1"><label htmlFor="driverDays" className="text-xs font-medium">Driver days</label><Input id="driverDays" name="driverDays" type="number" min="1" step="1" value={driverDays} onChange={(event) => setDriverDays(event.target.value)} /></div>
             <div className="space-y-1"><label htmlFor="driverDailyRate" className="text-xs font-medium">Driver / guide cost per day (N$)</label><Input id="driverDailyRate" name="driverDailyRate" type="number" min="0" step="1" defaultValue="950" /></div>
