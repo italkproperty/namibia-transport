@@ -73,7 +73,7 @@ export async function analyseCharterConversationAction(
       },
       body: JSON.stringify({
         model: process.env.ANTHROPIC_MODEL_TRANSPORT?.trim() || "claude-sonnet-5-5",
-        max_tokens: 3500,
+        max_tokens: 7000,
         system: "You are an assistant for a Namibia-based bespoke safari charter operator. Extract facts from customer WhatsApp/email text into the requested JSON schema. Do not invent or silently reconcile information. Use null for missing facts. Preserve exact place names and dates. Separate the customer's requested travel dates from dates stated in an attached/lodge itinerary. List discrepancies explicitly in dateConflicts and unresolvedQuestions. Do not calculate or invent road distances, prices, availability, bookings, or confirmed inclusions. A budget is not an agreed price. Only set priceAgreed if the customer and operator clearly accepted a specific amount. Keep output valid JSON only.",
         messages: [{ role: "user", content: "Extract this conversation into this JSON schema: " + schema + "\n\nCUSTOMER CONVERSATION:\n" + conversation }],
       }),
