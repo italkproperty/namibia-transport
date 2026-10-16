@@ -19,12 +19,14 @@ type VehicleOption = { id: string; name: string; hasProfile: boolean };
 function DestinationField({
   index,
   value,
+  initialQuery,
   onSelect,
   onRemove,
   canRemove,
 }: {
   index: number;
   value: ResolvedDestination | null;
+  initialQuery: string;
   onSelect: (value: ResolvedDestination | null) => void;
   onRemove: () => void;
   canRemove: boolean;
@@ -34,7 +36,7 @@ function DestinationField({
   const [error, setError] = React.useState("");
   const [pending, startTransition] = React.useTransition();
 
-  React.useEffect(() => setQuery(value?.label ?? ""), [value?.label]);
+  React.useEffect(() => setQuery(value?.label ?? initialQuery), [value?.label, initialQuery]);
 
   const search = () => {
     setError("");
@@ -80,6 +82,12 @@ function DestinationField({
 
 export function CharterQuotePlanner({ vehicles }: { vehicles: VehicleOption[] }) {
   const [stops, setStops] = React.useState<(ResolvedDestination | null)[]>([null, null]);
+  const [stopQueries, setStopQueries] = React.useState<string[]>(["", ""]);
+  const [customerName, setCustomerName] = React.useState("");
+  const [customerEmail, setCustomerEmail] = React.useState("");
+  const [customerWhatsapp, setCustomerWhatsapp] = React.useState("");
+  const [changeReason, setChangeReason] = React.useState("");
+  const [aiBrief, setAiBrief] = React.useState<Record<string, unknown> | null>(null);
   const [state, action, pending] = React.useActionState<CharterPriceState, FormData>(priceCharterItineraryAction, null);
   const [savedDraft, saveAction, saving] = React.useActionState<SaveCharterDraftState, FormData>(saveCharterQuoteDraftAction, null);
   const [vehicleClassId, setVehicleClassId] = React.useState(vehicles.find((item) => item.hasProfile)?.id ?? "");
@@ -89,8 +97,40 @@ export function CharterQuotePlanner({ vehicles }: { vehicles: VehicleOption[] })
   const serialisedStops = JSON.stringify(stops.filter((stop): stop is ResolvedDestination => Boolean(stop)));
   const updateStop = (index: number, stop: ResolvedDestination | null) => setStops((current) => current.map((item, i) => i === index ? stop : item));
 
+  React.useEffect(() => {
+    const handleIntake = (event: Event) => {
+      const detail = (event as CustomEvent<{ intake?: Record<string, unknown> }>).detail;
+      const intake = detail?.intake;
+      if (!intake) return;
+      const itinerary = Array.isArray(intake.itinerary) ? intake.itinerary as { from?: string | null; to?: string | null }[] : [];
+      const labels: string[] = [];
+      for (const leg of itinerary) {
+        for (const candidate of [leg.from, leg.to]) {
+          const label = typeof candidate === "string" ? candidate.trim() : "";
+          if (label && labels[labels.length - 1]?.toLowerCase() !== label.toLowerCase() && !labels.some((existing) => existing.toLowerCase() === label.toLowerCase())) labels.push(label);
+        }
+      }
+      const usableLabels = labels.slice(0, 10);
+      if (usableLabels.length >= 2) {
+        setStops(usableLabels.map(() => null));
+        setStopQueries(usableLabels);
+      } else if (usableLabels.length === 1) {
+        setStops([null, null]);
+        setStopQueries([usableLabels[0], ""]);
+      }
+      setCustomerName(String(intake.customerName || intake.organisation || ""));
+      setCustomerEmail(String(intake.email || ""));
+      setCustomerWhatsapp(String(intake.whatsapp || ""));
+      setChangeReason("Prepared from AI intake. Confirm dates, route, inclusions and price against the original conversation.");
+      setAiBrief(intake);
+      document.getElementById("charter-quote-planner")?.scrollIntoView({ behavior: "smooth", block: "start" });
+    };
+    window.addEventListener("namibia-transport:charter-intake", handleIntake);
+    return () => window.removeEventListener("namibia-transport:charter-intake", handleIntake);
+  }, []);
+
   return (
-    <section className="rounded-xl border bg-card p-4 sm:p-5 space-y-5">
+    <section id="charter-quote-planner" className="rounded-xl border bg-card p-4 sm:p-5 space-y-5">
       <div>
         <h2 className="flex items-center gap-2 text-base font-semibold"><RouteIcon className="size-5" />Verified charter quote planner</h2>
         <p className="mt-1 text-sm text-muted-foreground">Use actual lodges, camps, gates and addresses. Select each Mapbox match before pricing; this planner does not use town-centre approximations or alter public transfer fares.</p>
@@ -100,9 +140,9 @@ export function CharterQuotePlanner({ vehicles }: { vehicles: VehicleOption[] })
         <input type="hidden" name="stops" value={serialisedStops} />
         <div className="space-y-3">
           {stops.map((stop, index) => (
-            <DestinationField key={index} index={index} value={stop} onSelect={(value) => updateStop(index, value)} canRemove={stops.length > 2} onRemove={() => setStops((current) => current.filter((_, i) => i !== index))} />
+            <DestinationField key={index} index={index} value={stop} initialQuery={stopQueries[index] ?? ""} onSelect={(value) => updateStop(index, value)} canRemove={stops.length > 2} onRemove={() => { setStops((current) => current.filter((_, i) => i !== index)); setStopQueries((current) => current.filter((_, i) => i !== index)); }} />
           ))}
-          <Button type="button" variant="outline" size="sm" disabled={stops.length >= 10} onClick={() => setStops((current) => [...current, null])}><PlusIcon className="mr-1 size-4" />Add stop</Button>
+          <Button type="button" variant="outline" size="sm" disabled={stops.length >= 10} onClick={() => { setStops((current) => [...current, null]); setStopQueries((current) => [...current, ""]); }}><PlusIcon className="mr-1 size-4" />Add stop</Button>
         </div>
 
         <div className="grid gap-3 sm:grid-cols-2">
@@ -157,15 +197,16 @@ export function CharterQuotePlanner({ vehicles }: { vehicles: VehicleOption[] })
           <p className="text-xs text-muted-foreground">Routing source: Mapbox. Retrieved {new Date(state.result.route.retrievedAt).toLocaleString()}. Saving creates a private draft and immutable version-1 cost/price snapshot. It does not approve, issue, or send the quote.</p>
           <form action={saveAction} className="space-y-3 border-t pt-4">
             <input type="hidden" name="request" value={JSON.stringify(state.request)} />
+            <input type="hidden" name="aiBrief" value={aiBrief ? JSON.stringify(aiBrief) : ""} />
             <div>
               <h3 className="text-sm font-semibold">Save as a private draft</h3>
               <p className="mt-1 text-xs text-muted-foreground">The server recalculates the route and price before saving. Enter at least one customer contact method.</p>
             </div>
             <div className="grid gap-3 sm:grid-cols-2">
-              <div className="space-y-1"><label htmlFor="draft-customer-name" className="text-sm font-medium">Customer name / organisation</label><Input id="draft-customer-name" name="customerName" required minLength={2} maxLength={160} placeholder="Customer name" /></div>
-              <div className="space-y-1"><label htmlFor="draft-customer-email" className="text-sm font-medium">Email</label><Input id="draft-customer-email" name="customerEmail" type="email" maxLength={254} placeholder="name@example.com" /></div>
-              <div className="space-y-1"><label htmlFor="draft-customer-whatsapp" className="text-sm font-medium">WhatsApp</label><Input id="draft-customer-whatsapp" name="customerWhatsapp" maxLength={40} placeholder="+264…" /></div>
-              <div className="space-y-1"><label htmlFor="draft-change-reason" className="text-sm font-medium">Internal note / pricing rationale (optional)</label><Input id="draft-change-reason" name="changeReason" maxLength={500} placeholder="e.g. initial quote draft" /></div>
+              <div className="space-y-1"><label htmlFor="draft-customer-name" className="text-sm font-medium">Customer name / organisation</label><Input id="draft-customer-name" name="customerName" value={customerName} onChange={(event) => setCustomerName(event.target.value)} required minLength={2} maxLength={160} placeholder="Customer name" /></div>
+              <div className="space-y-1"><label htmlFor="draft-customer-email" className="text-sm font-medium">Email</label><Input id="draft-customer-email" name="customerEmail" type="email" value={customerEmail} onChange={(event) => setCustomerEmail(event.target.value)} maxLength={254} placeholder="name@example.com" /></div>
+              <div className="space-y-1"><label htmlFor="draft-customer-whatsapp" className="text-sm font-medium">WhatsApp</label><Input id="draft-customer-whatsapp" name="customerWhatsapp" value={customerWhatsapp} onChange={(event) => setCustomerWhatsapp(event.target.value)} maxLength={40} placeholder="+264…" /></div>
+              <div className="space-y-1"><label htmlFor="draft-change-reason" className="text-sm font-medium">Internal note / pricing rationale (optional)</label><Input id="draft-change-reason" name="changeReason" value={changeReason} onChange={(event) => setChangeReason(event.target.value)} maxLength={500} placeholder="e.g. initial quote draft" /></div>
             </div>
             <Button type="submit" disabled={saving}>{saving ? "Saving private draft…" : "Save private quote draft"}</Button>
           </form>
