@@ -53,7 +53,7 @@ export function CharterAiConversationIntake() {
             <Info label="WhatsApp" value={state.intake.whatsapp} />
             <Info label="Passengers" value={state.intake.passengers == null ? null : String(state.intake.passengers)} />
             <Info label="Vehicle preference" value={state.intake.vehiclePreference} />
-            <Info label="Customer's requested dates" value={[state.intake.requestedStartDate, state.intake.requestedEndDate].filter(Boolean).join(" to ") || null} />
+            <Info label="Customer&apos;s requested dates" value={[state.intake.requestedStartDate, state.intake.requestedEndDate].filter(Boolean).join(" to ") || null} />
             <Info label="Itinerary start date" value={state.intake.itineraryStartDate} />
             <Info label="Budget (not necessarily agreed)" value={state.intake.customerBudget} />
             <Info label="Agreed price" value={state.intake.priceAgreed} />
