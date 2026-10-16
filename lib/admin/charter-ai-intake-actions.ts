@@ -35,9 +35,24 @@ export async function analyseCharterConversationAction(
   const gate = await getAdminGateState();
   if (gate.state !== "signed-in") return { ok: false, message: "Sign in to use AI charter intake." };
 
+  const mode = String(form.get("mode") ?? "analyse");
   const conversation = String(form.get("conversation") ?? "").trim();
-  if (conversation.length < 30) return { ok: false, message: "Paste the customer conversation (at least 30 characters)." };
-  if (conversation.length > 40000) return { ok: false, message: "The pasted conversation is too long. Keep it under 40,000 characters." };
+  const feedback = String(form.get("feedback") ?? "").trim();
+  let currentIntake: CharterConversationIntake | null = null;
+  if (mode === "refine") {
+    if (!feedback || feedback.length > 4000) return { ok: false, message: "Enter feedback or a correction (up to 4,000 characters)." };
+    try {
+      currentIntake = JSON.parse(String(form.get("currentIntake") ?? "")) as CharterConversationIntake;
+    } catch {
+      return { ok: false, message: "The saved understanding could not be read. Analyse the conversation again." };
+    }
+    if (!currentIntake || typeof currentIntake !== "object" || !Array.isArray(currentIntake.itinerary)) {
+      return { ok: false, message: "The saved understanding is incomplete. Analyse the conversation again." };
+    }
+  } else {
+    if (conversation.length < 30) return { ok: false, message: "Paste the customer conversation (at least 30 characters)." };
+    if (conversation.length > 40000) return { ok: false, message: "The pasted conversation is too long. Keep it under 40,000 characters." };
+  }
 
   const apiKey = process.env.ANTHROPIC_API_KEY_TRANSPORT?.trim();
   if (!apiKey) return { ok: false, message: "Claude is not configured on this deployment. Add ANTHROPIC_API_KEY_TRANSPORT in Vercel and redeploy." };
@@ -75,7 +90,12 @@ export async function analyseCharterConversationAction(
         model: process.env.ANTHROPIC_MODEL_TRANSPORT?.trim() || "claude-sonnet-5-5",
         max_tokens: 7000,
         system: "You are an assistant for a Namibia-based bespoke safari charter operator. Extract facts from customer WhatsApp/email text into the requested JSON schema. Do not invent or silently reconcile information. Use null for missing facts. Preserve exact place names and dates. Separate the customer's requested travel dates from dates stated in an attached/lodge itinerary. List discrepancies explicitly in dateConflicts and unresolvedQuestions. Do not calculate or invent road distances, prices, availability, bookings, or confirmed inclusions. A budget is not an agreed price. Only set priceAgreed if the customer and operator clearly accepted a specific amount. Keep output valid JSON only.",
-        messages: [{ role: "user", content: "Extract this conversation into this JSON schema: " + schema + "\n\nCUSTOMER CONVERSATION:\n" + conversation }],
+        messages: [{
+          role: "user",
+          content: mode === "refine"
+            ? "Revise the existing extracted trip brief using the operator's feedback. Treat the original customer conversation as the source of customer facts and the operator feedback as corrections/context supplied by the operator. Do not invent details; keep unresolved uncertainties explicit. Return the complete updated object in this schema: " + schema + "\n\nCURRENT EXTRACTED BRIEF:\n" + JSON.stringify(currentIntake) + "\n\nORIGINAL CUSTOMER CONVERSATION:\n" + (conversation || "(not retained)") + "\n\nOPERATOR FEEDBACK / CORRECTION:\n" + feedback
+            : "Extract this conversation into this JSON schema: " + schema + "\n\nCUSTOMER CONVERSATION:\n" + conversation
+        }],
       }),
       signal: AbortSignal.timeout(45000),
     });
