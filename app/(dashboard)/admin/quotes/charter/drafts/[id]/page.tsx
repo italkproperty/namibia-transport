@@ -49,6 +49,20 @@ type QuoteSnapshot = {
   requiresMarginReview?: boolean;
   customer?: { name?: string; email?: string | null; whatsapp?: string | null };
   changeReason?: string | null;
+  customerBrief?: {
+    summary?: string;
+    requestedStartDate?: string | null;
+    requestedEndDate?: string | null;
+    itineraryStartDate?: string | null;
+    passengers?: number | null;
+    customerBudget?: string | null;
+    priceAgreed?: string | null;
+    itinerary?: { dayOrDate?: string | null; from?: string | null; to?: string | null; details?: string | null; nights?: number | null }[];
+    inclusionsRequested?: string[];
+    preferences?: string[];
+    unresolvedQuestions?: string[];
+    dateConflicts?: string[];
+  } | null;
   calculatedAt?: string;
 };
 
@@ -123,6 +137,11 @@ export default async function CharterQuoteDraftDetailPage({
   const settings = readObject(pricingSnapshot.settings);
   const suggested = readObject(pricingSnapshot.suggested);
   const actual = readObject(pricingSnapshot.actual);
+  const rawCustomerBrief = snapshot?.customerBrief ?? itinerary.customerBrief;
+  const customerBrief = rawCustomerBrief && typeof rawCustomerBrief === "object" && !Array.isArray(rawCustomerBrief)
+    ? rawCustomerBrief as NonNullable<QuoteSnapshot["customerBrief"]>
+    : null;
+  const briefList = (value: unknown) => Array.isArray(value) ? value.filter((item): item is string => typeof item === "string" && item.trim().length > 0) : [];
 
   return (
     <AdminShell active="/admin/quotes">
@@ -176,6 +195,28 @@ export default async function CharterQuoteDraftDetailPage({
             <Metric label="Vehicle class" value={snapshot?.vehicle?.name || String(profile.vehicleClassName ?? "Saved vehicle profile")} />
           </div>
         </section>
+
+        {customerBrief && (
+          <section className="rounded-xl border bg-card p-4">
+            <h2 className="font-semibold">AI-extracted customer brief</h2>
+            <p className="mt-1 text-sm text-muted-foreground">Saved with this draft for reference. This is extracted context, not independently verified customer terms.</p>
+            {customerBrief.summary && <p className="mt-3 text-sm">{customerBrief.summary}</p>}
+            <div className="mt-3 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+              <Metric label="Requested dates" value={[customerBrief.requestedStartDate, customerBrief.requestedEndDate].filter(Boolean).join(" to ") || "Not stated"} />
+              <Metric label="Itinerary start date" value={customerBrief.itineraryStartDate || "Not stated"} />
+              <Metric label="Passengers" value={customerBrief.passengers == null ? "Not stated" : String(customerBrief.passengers)} />
+              <Metric label="Customer budget" value={customerBrief.customerBudget || "Not stated"} />
+              <Metric label="Agreed price in conversation" value={customerBrief.priceAgreed || "Not confirmed"} />
+            </div>
+            {Array.isArray(customerBrief.itinerary) && customerBrief.itinerary.length > 0 && <div className="mt-4"><h3 className="text-sm font-semibold">Extracted route context</h3><ol className="mt-2 space-y-2">{customerBrief.itinerary.map((leg, index) => <li key={index} className="rounded-md border p-3 text-sm"><p className="font-medium">{leg.dayOrDate || `Leg ${index + 1}`}: {leg.from || "Origin not stated"} → {leg.to || "Destination not stated"}</p>{leg.details && <p className="mt-1 text-muted-foreground">{leg.details}</p>}{leg.nights != null && <p className="mt-1 text-xs text-muted-foreground">Nights: {leg.nights}</p>}</li>)}</ol></div>}
+            {(["inclusionsRequested", "preferences", "dateConflicts", "unresolvedQuestions"] as const).map((key) => {
+              const items = briefList(customerBrief?.[key]);
+              if (!items.length) return null;
+              const title = ({ inclusionsRequested: "Requested inclusions", preferences: "Preferences", dateConflicts: "Date conflicts to resolve", unresolvedQuestions: "Open questions" } as const)[key];
+              return <div key={key} className="mt-4"><h3 className="text-sm font-semibold">{title}</h3><ul className="mt-1 list-disc space-y-1 pl-5 text-sm">{items.map((item, index) => <li key={index}>{item}</li>)}</ul></div>;
+            })}
+          </section>
+        )}
 
         <section className="rounded-xl border bg-card p-4">
           <h2 className="font-semibold">Cost and pricing snapshot</h2>

@@ -134,6 +134,18 @@ export async function saveCharterQuoteDraftAction(_previous: SaveCharterDraftSta
   const customerEmail = String(form.get("customerEmail") ?? "").trim();
   const customerWhatsapp = String(form.get("customerWhatsapp") ?? "").trim();
   const changeReason = String(form.get("changeReason") ?? "").trim();
+  const rawAiBrief = String(form.get("aiBrief") ?? "").trim();
+  let customerBrief: Record<string, unknown> | null = null;
+  if (rawAiBrief) {
+    if (rawAiBrief.length > 30000) return { ok: false, message: "The AI intake brief is too large to attach to this quote." };
+    try {
+      const parsed = JSON.parse(rawAiBrief) as unknown;
+      if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) throw new Error("Invalid brief");
+      customerBrief = parsed as Record<string, unknown>;
+    } catch {
+      return { ok: false, message: "The AI intake brief could not be read. Reapply it from the intake panel and try again." };
+    }
+  }
   if (customerName.length < 2 || customerName.length > 160) {
     return { ok: false, message: "Enter the customer's name (2–160 characters)." };
   }
@@ -184,6 +196,7 @@ export async function saveCharterQuoteDraftAction(_previous: SaveCharterDraftSta
       requiresMarginReview: calculated.result.belowTargetMargin,
       customer: { name: customerName, email: customerEmail || null, whatsapp: customerWhatsapp || null },
       changeReason: changeReason || null,
+      customerBrief,
       calculatedAt: new Date().toISOString(),
     };
     const db = getDb();
@@ -202,7 +215,7 @@ export async function saveCharterQuoteDraftAction(_previous: SaveCharterDraftSta
             customerEmail: customerEmail || null,
             customerWhatsapp: customerWhatsapp || null,
             vehicleClassId: calculated.vehicle.id,
-            itinerarySnapshot: { stops: trustedRequest.stops, route: calculated.route },
+            itinerarySnapshot: { stops: trustedRequest.stops, route: calculated.route, customerBrief },
             costSnapshot: { vehicleCostProfile: calculated.profile, costs: calculated.result.costs },
             pricingSnapshot: { settings: snapshot.settings, suggested: calculated.result.suggested, actual: calculated.result.actual },
             total: calculated.result.finalPrice.toFixed(2),
