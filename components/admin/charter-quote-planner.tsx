@@ -102,14 +102,27 @@ export function CharterQuotePlanner({ vehicles }: { vehicles: VehicleOption[] })
       const detail = (event as CustomEvent<{ intake?: Record<string, unknown> }>).detail;
       const intake = detail?.intake;
       if (!intake) return;
-      const itinerary = Array.isArray(intake.itinerary) ? intake.itinerary as { from?: string | null; to?: string | null }[] : [];
+      const itinerary = Array.isArray(intake.itinerary) ? intake.itinerary as { from?: string | null; to?: string | null; details?: string | null; nights?: number | null; dayOrDate?: string | null }[] : [];
       const labels: string[] = [];
+      const addLabel = (value: unknown) => {
+        const label = typeof value === "string" ? value.trim().replace(/[.;,]+$/, "") : "";
+        if (label && !labels.some((existing) => existing.toLowerCase() === label.toLowerCase())) labels.push(label);
+      };
+      // Accommodation names often live in the itinerary's Reservations/details
+      // text, not in the town-level from/to fields. Prefer the named property
+      // for an overnight stop, while retaining the first origin and final airport.
+      if (itinerary.length) addLabel(itinerary[0].from);
       for (const leg of itinerary) {
-        for (const candidate of [leg.from, leg.to]) {
-          const label = typeof candidate === "string" ? candidate.trim() : "";
-          if (label && labels[labels.length - 1]?.toLowerCase() !== label.toLowerCase()) labels.push(label);
+        const details = typeof leg.details === "string" ? leg.details : "";
+        const reservation = details.match(/(?:reservation|stay at|overnight at|accommodation(?: at)?|booked at)\s*[:\-]?\s*([^.;\n]+)/i);
+        const lodging = reservation?.[1]?.trim();
+        if (lodging && !/^(none|not stated|tbc|to be confirmed)$/i.test(lodging)) {
+          addLabel(lodging.replace(/\s+(?:evening|morning|next day|for \d+ nights).*$/i, ""));
+        } else if (typeof leg.to === "string") {
+          addLabel(leg.to);
         }
       }
+      if (itinerary.length) addLabel(itinerary[itinerary.length - 1].to);
       const usableLabels = labels.slice(0, 10);
       if (usableLabels.length >= 2) {
         setStops(usableLabels.map(() => null));
@@ -121,6 +134,14 @@ export function CharterQuotePlanner({ vehicles }: { vehicles: VehicleOption[] })
       setCustomerName(String(intake.customerName || intake.organisation || ""));
       setCustomerEmail(String(intake.email || ""));
       setCustomerWhatsapp(String(intake.whatsapp || ""));
+      const requestedVehicle = String(intake.vehiclePreference || "");
+      if (/suv|4x4|land cruiser|safari vehicle/i.test(requestedVehicle)) {
+        const suv = vehicles.find((item) => /suv|4x4/i.test(item.name));
+        if (suv) setVehicleClassId(suv.id);
+      }
+      const start = typeof intake.requestedStartDate === "string" ? Date.parse(intake.requestedStartDate + "T00:00:00Z") : NaN;
+      const end = typeof intake.requestedEndDate === "string" ? Date.parse(intake.requestedEndDate + "T00:00:00Z") : NaN;
+      if (Number.isFinite(start) && Number.isFinite(end) && end >= start) setDriverDays(String(Math.floor((end - start) / 86400000) + 1));
       setChangeReason("Prepared from AI intake. Confirm dates, route, inclusions and price against the original conversation.");
       setAiBrief(intake);
       document.getElementById("charter-quote-planner")?.scrollIntoView({ behavior: "smooth", block: "start" });
@@ -149,7 +170,11 @@ export function CharterQuotePlanner({ vehicles }: { vehicles: VehicleOption[] })
           <div className="space-y-1">
             <label htmlFor="charter-vehicle" className="text-sm font-medium">Vehicle class</label>
             <select id="charter-vehicle" name="vehicleClassId" value={vehicleClassId} onChange={(event) => setVehicleClassId(event.target.value)} className="h-10 w-full rounded-md border bg-background px-3 text-sm">
-              {vehicles.map((vehicle) => <option key={vehicle.id} value={vehicle.id} disabled={!vehicle.hasProfile}>{vehicle.name}{vehicle.hasProfile ? "" : " — cost profile required"}</option>)}
+              {vehicles.map((vehicle) => {
+                const fallbackAvailable = /suv|4x4/i.test(vehicle.name);
+                const selectable = vehicle.hasProfile || fallbackAvailable;
+                return <option key={vehicle.id} value={vehicle.id} disabled={!selectable}>{vehicle.name}{selectable && !vehicle.hasProfile ? " — temporary costing fallback" : vehicle.hasProfile ? "" : " — cost profile required"}</option>;
+              })}
             </select>
           </div>
           <div className="space-y-1">
@@ -167,7 +192,7 @@ export function CharterQuotePlanner({ vehicles }: { vehicles: VehicleOption[] })
           <h3 className="text-sm font-semibold">Additional trip costs</h3>
           <p className="mb-3 mt-1 text-xs text-muted-foreground">Enter the total days/nights and rate. Fuel and non-fuel vehicle running costs are calculated separately.</p>
           <div className="grid gap-3 sm:grid-cols-2">
-            <div className="space-y-1"><label htmlFor="driverDays" className="text-xs font-medium">Driver days</label><Input id="driverDays" name="driverDays" type="number" min="0" step="1" defaultValue="1" /></div>
+            <div className="space-y-1"><label htmlFor="driverDays" className="text-xs font-medium">Driver days</label><Input id="driverDays" name="driverDays" type="number" min="1" step="1" value={driverDays} onChange={(event) => setDriverDays(event.target.value)} /></div>
             <div className="space-y-1"><label htmlFor="driverDailyRate" className="text-xs font-medium">Driver cost per day (N$)</label><Input id="driverDailyRate" name="driverDailyRate" type="number" min="0" step="1" defaultValue="0" /></div>
             <div className="space-y-1"><label htmlFor="accommodationNights" className="text-xs font-medium">Driver accommodation nights</label><Input id="accommodationNights" name="accommodationNights" type="number" min="0" step="1" defaultValue="0" /></div>
             <div className="space-y-1"><label htmlFor="accommodationRate" className="text-xs font-medium">Accommodation per night (N$)</label><Input id="accommodationRate" name="accommodationRate" type="number" min="0" step="1" defaultValue="0" /></div>
@@ -175,7 +200,7 @@ export function CharterQuotePlanner({ vehicles }: { vehicles: VehicleOption[] })
             <div className="space-y-1"><label htmlFor="otherCosts" className="text-xs font-medium">Other supplier costs (N$ total)</label><Input id="otherCosts" name="otherCosts" type="number" min="0" step="1" defaultValue="0" /></div>
           </div>
         </div>
-        <Button type="submit" disabled={pending || stops.some((stop) => !stop) || !vehicles.some((vehicle) => vehicle.id === vehicleClassId && vehicle.hasProfile)}>{pending ? "Calculating verified route…" : "Calculate charter cost and price"}</Button>
+        <Button type="submit" disabled={pending || stops.some((stop) => !stop) || !vehicles.some((vehicle) => vehicle.id === vehicleClassId && (vehicle.hasProfile || /suv|4x4/i.test(vehicle.name)))}>{pending ? "Calculating verified route…" : "Calculate charter cost and price"}</Button>
       </form>
 
       {state && !state.ok && <p role="alert" className="rounded-md border border-destructive/40 p-3 text-sm text-destructive">{state.message}</p>}
