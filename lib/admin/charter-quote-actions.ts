@@ -29,6 +29,8 @@ export type CharterDraftRequest = {
   vehicleClassId: string;
   positioningKm: number;
   localKm: number;
+  vehicleDays: number;
+  vehicleDailyRate: number;
   driverDays: number;
   driverDailyRate: number;
   accommodationNights: number;
@@ -38,7 +40,7 @@ export type CharterDraftRequest = {
 };
 
 export type CharterPriceState =
-  | { ok: true; result: ReturnType<typeof priceCharterItinerary>; vehicleName: string; request: CharterDraftRequest; signedCalculation: string }
+  | { ok: true; result: ReturnType<typeof priceCharterItinerary>; vehicleName: string; request: CharterDraftRequest; fuelAssumptions: { fuelType: "diesel" | "petrol"; litresPer100Km: number; pricePerLitre: number }; signedCalculation: string }
   | { ok: false; message: string }
   | null;
 
@@ -75,16 +77,12 @@ async function calculateRequest(request: CharterDraftRequest) {
   const [settings, classes] = await Promise.all([getCharterCostSettings(), listVehicleClasses()]);
   const vehicle = classes.find((item) => item.id === request.vehicleClassId);
   if (!vehicle) throw new Error("Select a valid vehicle class.");
-  // Emergency code-level fallback for the SUV while the pricing screen's
-  // database save is unreliable. These match the values entered on the
-  // operator's pricing screen (6.4 L/100 km, N$27/litre, N$0/km other costs),
-  // using diesel as the selected operating assumption. No database or
-  // published airport-transfer fare is changed by this fallback.
+  // Provisional conservative SUV charter assumptions pending confirmation of
+  // the exact vehicle: 12 L/100 km for mixed gravel/highway use and N$28.45/L,
+  // the published September 2026 Windhoek diesel 10ppm price. September 2027
+  // fuel price must be refreshed before the final quote/contract.
   const isSuv = vehicle.slug === "suv-4x4" || /suv|4x4/i.test(vehicle.name);
   const configuredProfile = settings.profiles.find((item) => item.vehicleClassId === request.vehicleClassId);
-  // Reject obviously malformed stored fuel assumptions. A 1,991 km itinerary
-  // at 38.5 L/100 km produces 767 L, which is not a credible default for this
-  // SUV costing profile and inflates the customer price dramatically.
   const storedProfile = configuredProfile &&
     configuredProfile.litresPer100Km >= 3 &&
     configuredProfile.litresPer100Km <= 25 &&
@@ -94,14 +92,23 @@ async function calculateRequest(request: CharterDraftRequest) {
     configuredProfile.nonFuelRunningCostPerKm <= 100
       ? configuredProfile
       : null;
-  const profile = storedProfile ?? (isSuv ? {
+  const rawProfile = storedProfile ?? (isSuv ? {
     vehicleClassId: vehicle.id,
     fuelType: "diesel" as const,
-    litresPer100Km: 6.4,
-    fuelPricePerLitre: 27,
+    litresPer100Km: 12,
+    fuelPricePerLitre: 28.45,
     nonFuelRunningCostPerKm: 0,
   } : null);
-  if (!profile) throw new Error(`No charter cost profile is saved for ${vehicle.name}. Go to Admin → Pricing and save its fuel and running-cost assumptions first.`);
+  if (!rawProfile) throw new Error(`No charter cost profile is saved for ${vehicle.name}. Go to Admin → Pricing and save its fuel and running-cost assumptions first.`);
+  // Do not let an old 6.4 L/100 km or N$27/L SUV profile silently underprice a
+  // long, loaded, mixed gravel-road safari. Higher operator-configured values
+  // remain respected; the conservative floors can be changed when the exact
+  // vehicle and measured consumption are confirmed.
+  const profile = isSuv ? {
+    ...rawProfile,
+    litresPer100Km: Math.max(rawProfile.litresPer100Km, 12),
+    fuelPricePerLitre: Math.max(rawProfile.fuelPricePerLitre, 28.45),
+  } : rawProfile;
   const route = await routeCharterItinerary(request.stops);
   const result = priceCharterItinerary({
     route,
@@ -110,6 +117,7 @@ async function calculateRequest(request: CharterDraftRequest) {
     fuel: { fuelType: profile.fuelType, litresPer100Km: profile.litresPer100Km, pricePerLitre: profile.fuelPricePerLitre },
     nonFuelRunningCostPerKm: profile.nonFuelRunningCostPerKm,
     items: [
+      { id: "vehicle-utilisation", label: "SUV / 4x4 vehicle utilisation", quantity: request.vehicleDays, unitCost: request.vehicleDailyRate, unit: "day" },
       { id: "driver-days", label: "Driver days", quantity: request.driverDays, unitCost: request.driverDailyRate, unit: "day" },
       { id: "accommodation", label: "Driver accommodation", quantity: request.accommodationNights, unitCost: request.accommodationRate, unit: "night" },
       { id: "park-fees", label: "Park and permit fees", quantity: 1, unitCost: request.parkFees, unit: "trip" },
@@ -191,6 +199,8 @@ export async function priceCharterItineraryAction(_previous: CharterPriceState, 
       vehicleClassId: String(form.get("vehicleClassId") ?? ""),
       positioningKm: readNumber(form, "positioningKm", "Empty positioning kilometres", 100000),
       localKm: readNumber(form, "localKm", "Local excursion kilometres", 100000),
+      vehicleDays: readNumber(form, "vehicleDays", "Vehicle utilisation days", 365),
+      vehicleDailyRate: readNumber(form, "vehicleDailyRate", "Vehicle utilisation daily rate"),
       driverDays: readNumber(form, "driverDays", "Driver days", 365),
       driverDailyRate: readNumber(form, "driverDailyRate", "Driver daily rate"),
       accommodationNights: readNumber(form, "accommodationNights", "Accommodation nights", 365),
@@ -200,7 +210,7 @@ export async function priceCharterItineraryAction(_previous: CharterPriceState, 
     };
     const calculated = await calculateRequest(request);
     const signedCalculation = signCalculation({ version: 1, issuedAt: Date.now(), request, calculated });
-    return { ok: true, result: calculated.result, vehicleName: calculated.vehicle.name, request, signedCalculation };
+    return { ok: true, result: calculated.result, vehicleName: calculated.vehicle.name, request, fuelAssumptions: { fuelType: calculated.profile.fuelType, litresPer100Km: calculated.profile.litresPer100Km, pricePerLitre: calculated.profile.fuelPricePerLitre }, signedCalculation };
   } catch (error) {
     return { ok: false, message: error instanceof Error ? error.message : "The charter itinerary could not be priced." };
   }
