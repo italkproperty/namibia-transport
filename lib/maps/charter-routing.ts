@@ -234,11 +234,24 @@ export async function routeCharterItinerary(
 
   let response: Response;
   try {
-    response = await fetch(url, { cache: "no-store" });
-  } catch {
+    // Keep routing inside the serverless request budget. Without an explicit
+    // timeout, a stalled Mapbox Directions request can hold the server action
+    // open until Vercel returns a generic 504 and the UI remains stuck loading.
+    response = await fetch(url, {
+      cache: "no-store",
+      signal: AbortSignal.timeout(7000),
+    });
+  } catch (error) {
+    const timedOut = error instanceof Error && error.name === "TimeoutError";
+    console.error("[charter-routing] Mapbox Directions request failed", {
+      reason: timedOut ? "timeout" : error instanceof Error ? error.name : "unknown",
+      stopCount: stops.length,
+    });
     throw new CharterRoutingError(
       "provider_unavailable",
-      "Road routing is temporarily unavailable. Do not treat an unverified estimate as a firm fare.",
+      timedOut
+        ? "Road routing took too long to respond. Your quote has not been saved; retry in a moment. If this repeats, check Mapbox service status and token limits."
+        : "Road routing is temporarily unavailable. Your quote has not been saved; retry shortly. Do not treat an unverified estimate as a firm fare.",
     );
   }
   if (!response.ok) {
