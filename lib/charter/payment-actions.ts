@@ -34,6 +34,11 @@ export async function startCharterPaymentAction(formData: FormData): Promise<nev
     redirect("/");
   }
 
+  const [settled] = await db.select({ id: charterQuotePayments.id })
+    .from(charterQuotePayments).where(and(eq(charterQuotePayments.quoteId, quote.id), eq(charterQuotePayments.status, "paid")))
+    .limit(1);
+  if (settled) redirect(`/charter-quote/${token}?payment=received`);
+
   const [existing] = await db.select().from(charterQuotePayments)
     .where(and(eq(charterQuotePayments.quoteId, quote.id), eq(charterQuotePayments.status, "pending")))
     .orderBy(desc(charterQuotePayments.createdAt)).limit(1);
