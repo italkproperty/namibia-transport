@@ -1,5 +1,6 @@
 "use server";
 
+import { desc, eq } from "drizzle-orm";
 import { createHmac, randomBytes, timingSafeEqual } from "node:crypto";
 import { revalidatePath } from "next/cache";
 import { getDb, isDatabaseConfigured } from "@/db";
@@ -323,5 +324,59 @@ export async function saveCharterQuoteDraftAction(_previous: SaveCharterDraftSta
       return { ok: false, message: "The quote tables are not in Supabase yet. Apply the updated db/manual/RUN-ME.sql migration, then try again." };
     }
     return { ok: false, message };
+  }
+}
+
+
+export type IssueCharterQuoteState = { ok: true; url: string; validUntil: string } | { ok: false; message: string } | null;
+
+/** Issue a private draft as a customer-facing, revocable token link. */
+export async function issueCharterQuoteAction(
+  _previous: IssueCharterQuoteState,
+  form: FormData,
+): Promise<IssueCharterQuoteState> {
+  const gate = await getAdminGateState();
+  if (gate.state !== "signed-in") return { ok: false, message: "Sign in before issuing a charter quote." };
+  if (!isDatabaseConfigured()) return { ok: false, message: "No database is configured on this deployment." };
+  const id = String(form.get("quoteId") ?? "");
+  if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id)) {
+    return { ok: false, message: "The quote reference is invalid." };
+  }
+  try {
+    const db = getDb();
+    const [quote] = await db.select().from(charterQuotes).where(eq(charterQuotes.id, id)).limit(1);
+    if (!quote) return { ok: false, message: "The charter draft could not be found." };
+    if (quote.status === "paid" || quote.status === "cancelled") {
+      return { ok: false, message: "A paid or cancelled quote cannot be issued again." };
+    }
+    const latest = await db.select().from(charterQuoteVersions)
+      .where(eq(charterQuoteVersions.quoteId, id))
+      .orderBy(desc(charterQuoteVersions.version)).limit(1);
+    const snapshot = latest[0]?.snapshot as { requiresMarginReview?: boolean; result?: { belowTargetMargin?: boolean } } | undefined;
+    if (snapshot?.requiresMarginReview || snapshot?.result?.belowTargetMargin) {
+      return { ok: false, message: "This quote is below the target contribution margin. Review and correct the price before issuing it." };
+    }
+    const token = randomBytes(32).toString("base64url");
+    const validUntil = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
+    await db.update(charterQuotes).set({
+      publicToken: token,
+      status: "sent",
+      issuedAt: new Date(),
+      validUntil,
+      updatedAt: new Date(),
+    }).where(eq(charterQuotes.id, id));
+    revalidatePath("/admin/quotes/charter/drafts");
+    revalidatePath(`/admin/quotes/charter/drafts/${id}`);
+    // Use this deployment host for preview links so a token issued against a preview database
+    // is not sent to production, where that preview-only quote does not exist.
+    const deploymentHost = process.env.VERCEL_URL?.trim();
+    const origin = process.env.VERCEL_ENV !== "production" && deploymentHost
+      ? `https://${deploymentHost}`
+      : process.env.NEXT_PUBLIC_SITE_URL?.trim() || "https://www.namibiatransport.com";
+    const cleanOrigin = origin.endsWith("/") ? origin.slice(0, -1) : origin;
+    return { ok: true, url: `${cleanOrigin}/charter-quote/${token}`, validUntil: validUntil.toISOString() };
+  } catch (error) {
+    console.error("[charter-quote] issue failed", error);
+    return { ok: false, message: "The quote could not be issued. No customer link was created; try again or check the server logs." };
   }
 }

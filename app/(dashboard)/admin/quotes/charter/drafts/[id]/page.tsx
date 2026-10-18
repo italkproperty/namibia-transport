@@ -9,6 +9,7 @@ import { charterQuoteVersions, charterQuotes } from "@/db/schema";
 import { READ_DEADLINE_MS, withDeadline } from "@/lib/deadline";
 import { formatDate } from "@/lib/format";
 import { formatNad } from "@/lib/money";
+import { IssueCharterQuoteForm } from "@/components/admin/issue-charter-quote-form";
 
 export const metadata: Metadata = {
   title: "Charter quote detail",
@@ -136,12 +137,19 @@ export default async function CharterQuoteDraftDetailPage({
   const profile = readObject(costSnapshot.vehicleCostProfile);
   const settings = readObject(pricingSnapshot.settings);
   const suggested = readObject(pricingSnapshot.suggested);
-  const actual = readObject(pricingSnapshot.actual);
   const rawCustomerBrief = snapshot?.customerBrief ?? itinerary.customerBrief;
   const customerBrief = rawCustomerBrief && typeof rawCustomerBrief === "object" && !Array.isArray(rawCustomerBrief)
     ? rawCustomerBrief as NonNullable<QuoteSnapshot["customerBrief"]>
     : null;
   const briefList = (value: unknown) => Array.isArray(value) ? value.filter((item): item is string => typeof item === "string" && item.trim().length > 0) : [];
+
+  const configuredSiteUrl = process.env.NEXT_PUBLIC_SITE_URL?.trim() || "https://www.namibiatransport.com";
+  const siteOrigin = process.env.VERCEL_ENV !== "production" && process.env.VERCEL_URL?.trim()
+    ? "https://" + process.env.VERCEL_URL.trim()
+    : configuredSiteUrl.endsWith("/") ? configuredSiteUrl.slice(0, -1) : configuredSiteUrl;
+  const existingCustomerUrl = quote.publicToken && quote.status === "sent" && quote.validUntil && quote.validUntil.getTime() > Date.now()
+    ? siteOrigin + "/charter-quote/" + quote.publicToken
+    : null;
 
   return (
     <AdminShell active="/admin/quotes">
@@ -171,7 +179,7 @@ export default async function CharterQuoteDraftDetailPage({
             <p className="mt-2 text-2xl font-semibold tabular-nums">{formatNad(quote.total)}</p>
             <p className="text-xs text-muted-foreground">{quote.currency} · Version {quote.currentVersion}</p>
             {snapshot?.requiresMarginReview && <p className="mt-3 rounded-md border border-amber-400/50 bg-amber-50 p-3 text-sm text-amber-950">Below target contribution margin — review required before any future approval or issue.</p>}
-            <p className="mt-3 text-xs text-muted-foreground">This is a private saved draft. It has not been approved, issued, or sent.</p>
+            <p className="mt-3 text-xs text-muted-foreground">{quote.status === "sent" ? "A customer quote link has been issued. This status does not confirm that the link was delivered by email or WhatsApp." : quote.status === "approved" ? "This quote has been approved but a customer link has not been issued." : "This is a private saved draft. It has not been approved or issued to the customer."}</p>
           </div>
         </section>
 
@@ -251,6 +259,11 @@ export default async function CharterQuoteDraftDetailPage({
           </div>
           {snapshot?.changeReason && <p className="mt-4 text-sm"><span className="text-muted-foreground">Internal note:</span> {snapshot.changeReason}</p>}
         </section>
+
+        <IssueCharterQuoteForm
+          quoteId={quote.id}
+          existingUrl={existingCustomerUrl}
+        />
 
         <section className="rounded-xl border bg-card p-4">
           <h2 className="font-semibold">Version history</h2>
