@@ -239,12 +239,16 @@ export async function ReviewsSection() {
                 />
               ))}
             </p>
+            {review.authorContext && (
+              <p className="text-muted-foreground mt-3 text-[0.7rem] font-medium tracking-wide uppercase">
+                {review.authorContext}
+              </p>
+            )}
             <blockquote className="mt-2 text-sm leading-relaxed text-pretty">
               &ldquo;{review.body}&rdquo;
             </blockquote>
             <p className="text-muted-foreground mt-3 text-xs">
               {review.authorName}
-              {review.authorContext ? ` · ${review.authorContext}` : ""}
             </p>
           </li>
         ))}
