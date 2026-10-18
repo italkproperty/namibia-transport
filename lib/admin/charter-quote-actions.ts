@@ -359,7 +359,7 @@ export async function issueCharterQuoteAction(
     const validUntil = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
     await db.update(charterQuotes).set({
       publicToken: token,
-      status: "issued",
+      status: "sent",
       issuedAt: new Date(),
       validUntil,
       updatedAt: new Date(),
