@@ -16,7 +16,7 @@ export const metadata: Metadata = {
 
 export const dynamic = "force-dynamic";
 
-const MIN_TO_DISPLAY = 3;
+const MIN_TO_DISPLAY = 2;
 
 export default async function AdminReviewsPage() {
   const reviews = await listAllReviews();
