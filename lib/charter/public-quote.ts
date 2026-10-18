@@ -33,8 +33,10 @@ export function buildPublicCharterLegs(snapshot: unknown, totalValue: string | n
     allocatedCents += rawPrice;
     const distanceKm = Number(leg.distanceKm);
     const durationMinutes = Number(leg.durationMinutes);
-    const from = typeof stops[index]?.label === "string" ? stops[index].label.trim() : "";
-    const to = typeof stops[index + 1]?.label === "string" ? stops[index + 1].label.trim() : "";
+    const fromLabel: unknown = stops[index]?.label;
+    const toLabel: unknown = stops[index + 1]?.label;
+    const from = typeof fromLabel === "string" ? fromLabel.trim() : "";
+    const to = typeof toLabel === "string" ? toLabel.trim() : "";
     return {
       from: from || `Stop ${index + 1}`,
       to: to || `Stop ${index + 2}`,
