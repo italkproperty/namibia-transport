@@ -9,6 +9,7 @@ import { charterQuoteVersions, charterQuotes } from "@/db/schema";
 import { READ_DEADLINE_MS, withDeadline } from "@/lib/deadline";
 import { formatDate } from "@/lib/format";
 import { formatNad } from "@/lib/money";
+import { IssueCharterQuoteForm } from "@/components/admin/issue-charter-quote-form";
 
 export const metadata: Metadata = {
   title: "Charter quote detail",
@@ -251,6 +252,13 @@ export default async function CharterQuoteDraftDetailPage({
           </div>
           {snapshot?.changeReason && <p className="mt-4 text-sm"><span className="text-muted-foreground">Internal note:</span> {snapshot.changeReason}</p>}
         </section>
+
+        <IssueCharterQuoteForm
+          quoteId={quote.id}
+          existingUrl={quote.publicToken && quote.status === "issued" && quote.validUntil && quote.validUntil.getTime() > Date.now()
+            ? `${(process.env.NEXT_PUBLIC_SITE_URL?.trim() || "https://www.namibiatransport.com").replace(/\\/$/, "")}/charter-quote/${quote.publicToken}`
+            : null}
+        />
 
         <section className="rounded-xl border bg-card p-4">
           <h2 className="font-semibold">Version history</h2>
