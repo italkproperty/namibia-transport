@@ -528,6 +528,52 @@ export function findNode(slug: string): PlaceNode | null {
   return NODES_BY_SLUG.get(slug) ?? null;
 }
 
+/** Common traveller spellings and shorthand, normalised for autocomplete. */
+const NODE_SEARCH_ALIASES: Record<string, string[]> = {
+  "hosea-kutako": ["wdh", "wdh airport", "windhoek airport", "hosea kutako airport"],
+  "eros-airport": ["ers", "ers airport"],
+  "walvis-bay-airport": ["wvb", "wvb airport", "walvis bay airport"],
+  sossusvlei: ["sossus vlei", "sesriem", "sesriem gate", "deadvlei", "dead vlei"],
+  "etosha-okaukuejo": ["okaukuejo", "andersson gate", "etosha south gate"],
+  "etosha-namutoni": ["namutoni", "von lindequist gate", "etosha east gate"],
+  "fish-river-canyon": ["hobas", "fish river canyon hobas"],
+  "ai-ais": ["ai ais", "ai-ais"],
+  luderitz: ["luderitz", "lüderitz"],
+  grunau: ["grunau", "grünau"],
+  noordoewer: ["noordoewer", "noordoever"],
+};
+
+function normaliseSearch(value: string): string {
+  return value
+    .toLocaleLowerCase()
+    .normalize("NFD")
+    .replace(/[\\u0300-\\u036f]/g, "")
+    .replace(/[^a-z0-9]+/g, " ")
+    .trim()
+    .replace(/\\s+/g, " ");
+}
+
+/**
+ * Search the verified instant-pricing road network by name, slug, region or
+ * common traveller alias. This intentionally does not turn arbitrary free text
+ * into a priced route; unknown places must go through the quote-request path.
+ */
+export function searchNodes(query: string, limit = 10): PlaceNode[] {
+  const q = normaliseSearch(query);
+  if (!q) return PLACE_NODES.slice(0, Math.max(0, limit));
+  return PLACE_NODES.filter((node) => {
+    const aliases = NODE_SEARCH_ALIASES[node.slug] ?? [];
+    const searchable = [
+      node.name,
+      node.shortName ?? "",
+      node.slug.replace(/-/g, " "),
+      REGION_LABELS[node.region],
+      ...aliases,
+    ].map(normaliseSearch);
+    return searchable.some((candidate) => candidate.includes(q) || q.includes(candidate));
+  }).slice(0, Math.max(0, limit));
+}
+
 /** What to call a place in a sentence: the short form when there is one. */
 export function nodeLabel(node: PlaceNode): string {
   return node.shortName ?? node.name;
