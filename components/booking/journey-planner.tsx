@@ -383,7 +383,7 @@ function PlacePicker({
               <span className="min-w-0">
                 <span className="block truncate text-sm">{nodeLabel(node)}</span>
                 <span className="text-muted-foreground block text-xs">
-                  {node.isAirport ? "Airport" : "Road-network place"} · {REGION_LABELS[node.region]}
+                  {node.searchOnly ? "Destination · quote required" : node.isAirport ? "Airport" : "Road-network place"} · {REGION_LABELS[node.region]}
                 </span>
               </span>
               {node.slug === value && <CheckIcon className="text-brand size-4 shrink-0" aria-hidden />}
