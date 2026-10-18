@@ -117,7 +117,7 @@ export default async function PublicCharterQuotePage({ params, searchParams }: {
             <p className="mt-3 text-sm text-muted-foreground">Card checkout is temporarily unavailable. Request bank-transfer instructions from our team; bank details are provided securely by Namibia Transport.</p>
           )}
           {paymentStatus !== "received" && transferLines && (
-            <CharterBankTransfer lines={transferLines} quoteNumber={quote.quoteNumber} />
+            <CharterBankTransfer lines={transferLines} />
           )}
           {paymentStatus !== "received" && !bank && (
             <p className="mt-3 text-sm text-muted-foreground">Bank-transfer details are temporarily unavailable. Please contact Namibia Transport before making a payment.</p>
