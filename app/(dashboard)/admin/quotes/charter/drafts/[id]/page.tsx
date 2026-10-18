@@ -179,7 +179,7 @@ export default async function CharterQuoteDraftDetailPage({
             <p className="mt-2 text-2xl font-semibold tabular-nums">{formatNad(quote.total)}</p>
             <p className="text-xs text-muted-foreground">{quote.currency} · Version {quote.currentVersion}</p>
             {snapshot?.requiresMarginReview && <p className="mt-3 rounded-md border border-amber-400/50 bg-amber-50 p-3 text-sm text-amber-950">Below target contribution margin — review required before any future approval or issue.</p>}
-            <p className="mt-3 text-xs text-muted-foreground">This is a private saved draft. It has not been approved, issued, or sent.</p>
+            <p className="mt-3 text-xs text-muted-foreground">{quote.status === "sent" ? "A customer quote link has been issued. This status does not confirm that the link was delivered by email or WhatsApp." : quote.status === "approved" ? "This quote has been approved but a customer link has not been issued." : "This is a private saved draft. It has not been approved or issued to the customer."}</p>
           </div>
         </section>
 
