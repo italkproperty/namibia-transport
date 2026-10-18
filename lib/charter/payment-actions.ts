@@ -28,13 +28,13 @@ function preserveRedirect(error: unknown): boolean {
 }
 
 function returnToQuote(token: string, reason: string): never {
-  redirect(`/charter-quote/${token}?payment=${encodeURIComponent(reason)}`);
+  redirect(`/q/${token}?payment=${encodeURIComponent(reason)}`);
 }
 
 /** Create or resume a PayToday checkout for the saved charter total. */
 export async function startCharterPaymentAction(formData: FormData): Promise<never> {
   const token = String(formData.get("token") ?? "").trim();
-  if (!/^[A-Za-z0-9_-]{32,100}$/.test(token)) redirect("/");
+  if (!/^[A-Za-z0-9_-]{10,100}$/.test(token)) redirect("/");
 
   if (!isDatabaseConfigured()) {
     console.error("[charter-payment] checkout blocked: database_not_configured");
