@@ -1,7 +1,7 @@
 import { notFound } from "next/navigation";
-import { eq } from "drizzle-orm";
+import { desc, eq } from "drizzle-orm";
 import { getDb, isDatabaseConfigured } from "@/db";
-import { charterQuotes, charterQuoteVersions } from "@/db/schema";
+import { charterQuotes, charterQuoteVersions, charterQuotePayments } from "@/db/schema";
 import { formatNad } from "@/lib/money";
 import { buildPublicCharterLegs } from "@/lib/charter/public-quote";
 import { SiteFooter } from "@/components/marketing/site-footer";
@@ -31,6 +31,10 @@ export default async function PublicCharterQuotePage({ params, searchParams }: {
     .where(eq(charterQuoteVersions.quoteId, quote.id))
     .orderBy(charterQuoteVersions.version).limit(1);
   if (!version) notFound();
+  const [latestPayment] = await db.select({ status: charterQuotePayments.status })
+    .from(charterQuotePayments).where(eq(charterQuotePayments.quoteId, quote.id))
+    .orderBy(desc(charterQuotePayments.createdAt)).limit(1);
+  const paymentStatus = payment ?? (latestPayment?.status === "paid" ? "received" : undefined);
   const snapshot = obj(version.snapshot);
   const customer = obj(snapshot.customer);
   const route = obj(snapshot.route);
@@ -87,7 +91,7 @@ export default async function PublicCharterQuotePage({ params, searchParams }: {
         {Array.isArray(brief.inclusionsRequested) && brief.inclusionsRequested.length > 0 && <section className="mt-6 rounded-xl border p-4"><h2 className="font-semibold">Requested inclusions</h2><ul className="mt-2 list-disc space-y-1 pl-5 text-sm">{(brief.inclusionsRequested as unknown[]).filter((x): x is string => typeof x === "string").map((x, i) => <li key={i}>{x}</li>)}</ul></section>}
         <section className="mt-6 rounded-xl border p-4">
           <h2 className="font-semibold">Payment and confirmation</h2>
-          {payment === "received" ? (
+          {paymentStatus === "received" ? (
             <p className="mt-2 text-sm" role="status">PayToday reports that your payment was received. Namibia Transport will verify the transaction and issue your operational booking confirmation separately. This proposal page is not itself a booking confirmation.</p>
           ) : payment === "pending" ? (
             <p className="mt-2 text-sm" role="status">We have not yet received a final payment confirmation from PayToday. Please allow a moment and contact us if the status does not update. Do not pay a second time while this is being checked.</p>
@@ -97,7 +101,7 @@ export default async function PublicCharterQuotePage({ params, searchParams }: {
             <p className="mt-2 text-sm" role="status">Secure online checkout is not available for this proposal right now. Contact Namibia Transport to arrange payment safely.</p>
           ) : null}
           <p className="mt-2 text-sm text-muted-foreground">Your trip is not booked until payment is verified and a booking confirmation is issued.</p>
-          {payment !== "received" && (
+          {paymentStatus !== "received" && (
             <form action={startCharterPaymentAction} className="mt-4">
               <input type="hidden" name="token" value={token} />
               <button className="inline-flex rounded-md bg-foreground px-4 py-2 text-sm font-medium text-background disabled:opacity-50" type="submit">Pay securely by card</button>
