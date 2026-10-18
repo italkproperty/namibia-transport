@@ -34,9 +34,16 @@ export default async function PublicCharterQuotePage({ params, searchParams }: {
     .where(eq(charterQuoteVersions.quoteId, quote.id))
     .orderBy(charterQuoteVersions.version).limit(1);
   if (!version) notFound();
-  const [latestPayment] = await db.select({ status: charterQuotePayments.status })
-    .from(charterQuotePayments).where(eq(charterQuotePayments.quoteId, quote.id))
-    .orderBy(desc(charterQuotePayments.createdAt)).limit(1);
+  let latestPayment: { status: string } | undefined;
+  let paymentLedgerAvailable = true;
+  try {
+    [latestPayment] = await db.select({ status: charterQuotePayments.status })
+      .from(charterQuotePayments).where(eq(charterQuotePayments.quoteId, quote.id))
+      .orderBy(desc(charterQuotePayments.createdAt)).limit(1);
+  } catch (error) {
+    paymentLedgerAvailable = false;
+    console.error("[charter-payment] payment ledger unavailable; bank transfer remains available", error);
+  }
   const paymentStatus = payment ?? (latestPayment?.status === "paid" ? "received" : undefined);
   const liveCheckoutAvailable = isLiveGatewayConfigured();
   const bank = getBankDetails();
@@ -107,14 +114,14 @@ export default async function PublicCharterQuotePage({ params, searchParams }: {
             <p className="mt-2 text-sm" role="status">Secure online checkout is not available for this proposal right now. Contact Namibia Transport to arrange payment safely.</p>
           ) : null}
           <p className="mt-2 text-sm text-muted-foreground">Your trip is not booked until payment is verified and a booking confirmation is issued.</p>
-          {paymentStatus !== "received" && liveCheckoutAvailable && (
+          {paymentStatus !== "received" && liveCheckoutAvailable && paymentLedgerAvailable && (
             <form action={startCharterPaymentAction} className="mt-4">
               <input type="hidden" name="token" value={token} />
               <button className="inline-flex rounded-md bg-foreground px-4 py-2 text-sm font-medium text-background disabled:opacity-50" type="submit">Pay securely by card</button>
             </form>
           )}
-          {!liveCheckoutAvailable && paymentStatus !== "received" && (
-            <p className="mt-3 text-sm text-muted-foreground">Card checkout is temporarily unavailable. Request bank-transfer instructions from our team; bank details are provided securely by Namibia Transport.</p>
+          {(!liveCheckoutAvailable || !paymentLedgerAvailable) && paymentStatus !== "received" && (
+            <p className="mt-3 text-sm text-muted-foreground">Card checkout is temporarily unavailable. You can pay by bank transfer using the copyable account details below.</p>
           )}
           {paymentStatus !== "received" && transferLines && (
             <CharterBankTransfer lines={transferLines} />
