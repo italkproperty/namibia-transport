@@ -137,7 +137,6 @@ export default async function CharterQuoteDraftDetailPage({
   const profile = readObject(costSnapshot.vehicleCostProfile);
   const settings = readObject(pricingSnapshot.settings);
   const suggested = readObject(pricingSnapshot.suggested);
-  const actual = readObject(pricingSnapshot.actual);
   const rawCustomerBrief = snapshot?.customerBrief ?? itinerary.customerBrief;
   const customerBrief = rawCustomerBrief && typeof rawCustomerBrief === "object" && !Array.isArray(rawCustomerBrief)
     ? rawCustomerBrief as NonNullable<QuoteSnapshot["customerBrief"]>
