@@ -477,6 +477,85 @@ export async function saveCharterCommercialPricingAction(
   }
 }
 
+export type CreateCharterQuoteRevisionState = { ok: true; id: string; quoteNumber: string } | { ok: false; message: string } | null;
+
+/** Copy an issued quote into a new private draft; never mutate the issued terms. */
+export async function createCharterQuoteRevisionAction(
+  _previous: CreateCharterQuoteRevisionState,
+  form: FormData,
+): Promise<CreateCharterQuoteRevisionState> {
+  const gate = await getAdminGateState();
+  if (gate.state !== "signed-in") return { ok: false, message: "Sign in before creating a quote revision." };
+  if (!isDatabaseConfigured()) return { ok: false, message: "No database is configured on this deployment." };
+  const id = String(form.get("quoteId") ?? "");
+  if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id)) {
+    return { ok: false, message: "The quote reference is invalid." };
+  }
+  try {
+    const db = getDb();
+    const [source] = await db.select().from(charterQuotes).where(eq(charterQuotes.id, id)).limit(1);
+    if (!source) return { ok: false, message: "The original quote could not be found." };
+    if (source.status === "paid" || source.status === "cancelled") {
+      return { ok: false, message: "Paid or cancelled quotes cannot be revised here." };
+    }
+    const [latest] = await db.select().from(charterQuoteVersions)
+      .where(eq(charterQuoteVersions.quoteId, id))
+      .orderBy(desc(charterQuoteVersions.version)).limit(1);
+    if (!latest) return { ok: false, message: "The latest saved quote version could not be found." };
+    const originalSnapshot = latest.snapshot && typeof latest.snapshot === "object" && !Array.isArray(latest.snapshot)
+      ? latest.snapshot as Record<string, unknown> : {};
+    const snapshot = { ...originalSnapshot, changeReason: `Draft revision of ${source.quoteNumber}`, requiresMarginReview: Boolean((originalSnapshot.result as { belowTargetMargin?: boolean } | undefined)?.belowTargetMargin) };
+    const year = new Date().getFullYear();
+    let created: { id: string; quoteNumber: string } | undefined;
+    for (let attempt = 0; attempt < 3; attempt += 1) {
+      const quoteNumber = `NT-CQ-${year}-${randomBytes(8).toString("hex").toUpperCase()}`;
+      try {
+        created = await db.transaction(async (tx) => {
+          const [quote] = await tx.insert(charterQuotes).values({
+            quoteNumber,
+            status: "draft",
+            customerName: source.customerName,
+            customerEmail: source.customerEmail,
+            customerWhatsapp: source.customerWhatsapp,
+            vehicleClassId: source.vehicleClassId,
+            itinerarySnapshot: source.itinerarySnapshot,
+            costSnapshot: source.costSnapshot,
+            pricingSnapshot: source.pricingSnapshot,
+            total: latest.total,
+            currency: source.currency,
+            currentVersion: 1,
+            publicToken: null,
+            issuedAt: null,
+            validUntil: null,
+          }).returning({ id: charterQuotes.id, quoteNumber: charterQuotes.quoteNumber });
+          await tx.insert(charterQuoteVersions).values({
+            quoteId: quote.id,
+            version: 1,
+            status: "draft",
+            snapshot,
+            total: latest.total,
+            changeReason: `Draft revision of ${source.quoteNumber}`,
+            actor: "admin",
+          });
+          return quote;
+        });
+        break;
+      } catch (error) {
+        const dbError = error as { code?: string; constraint?: string; cause?: { code?: string; constraint?: string } };
+        if ((dbError.code ?? dbError.cause?.code) === "23505" && (dbError.constraint ?? dbError.cause?.constraint) === "charter_quotes_number_key" && attempt < 2) continue;
+        throw error;
+      }
+    }
+    if (!created) throw new Error("Could not allocate a unique quote number. Try again.");
+    revalidatePath("/admin/quotes");
+    revalidatePath("/admin/quotes/charter/drafts");
+    return { ok: true, ...created };
+  } catch (error) {
+    console.error("[charter-quote] revision creation failed", error);
+    return { ok: false, message: error instanceof Error ? error.message : "Could not create a draft revision." };
+  }
+}
+
 export type IssueCharterQuoteState = { ok: true; url: string; validUntil: string } | { ok: false; message: string } | null;
 
 /** Issue a private draft as a customer-facing, revocable token link. */
