@@ -21,6 +21,11 @@ export const dynamic = "force-dynamic";
 
 type StopSnapshot = { label?: string; coordinates?: { lat?: number; lng?: number } };
 type QuoteSnapshot = {
+  commercialPricing?: {
+    legs?: { from?: string; to?: string; price?: number }[];
+    extras?: { id?: string; label?: string; quantity?: number; unit?: string; unitPrice?: number; amount?: number }[];
+    total?: string;
+  };
   schemaVersion?: number;
   request?: {
     positioningKm?: number;
