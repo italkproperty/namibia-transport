@@ -57,7 +57,7 @@ export async function startCharterPaymentAction(formData: FormData): Promise<nev
     }
 
     stage = "customer_validation";
-    if (!quote.customerWhatsapp?.trim() || !/^\\+?[0-9 ()-]{7,20}$/.test(quote.customerWhatsapp.trim())) {
+    if (!quote.customerWhatsapp?.trim() || !/^\+?[0-9 ()-]{7,20}$/.test(quote.customerWhatsapp.trim())) {
       console.error("[charter-payment] checkout blocked: customer_mobile_missing_or_invalid", { quoteNumber: quote.quoteNumber });
       returnToQuote(token, "mobile");
     }
