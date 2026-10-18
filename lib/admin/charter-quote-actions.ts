@@ -328,6 +328,136 @@ export async function saveCharterQuoteDraftAction(_previous: SaveCharterDraftSta
 }
 
 
+
+export type SaveCharterCommercialPricingState = { ok: true; total: string; version: number; belowTargetMargin: boolean } | { ok: false; message: string } | null;
+
+/**
+ * Saves operator-edited customer line prices as a new immutable quote version.
+ * Prices are validated and totals/margins are recomputed on the server.
+ */
+export async function saveCharterCommercialPricingAction(
+  _previous: SaveCharterCommercialPricingState,
+  form: FormData,
+): Promise<SaveCharterCommercialPricingState> {
+  const gate = await getAdminGateState();
+  if (gate.state !== "signed-in") return { ok: false, message: "Sign in before editing charter prices." };
+  if (!isDatabaseConfigured()) return { ok: false, message: "No database is configured on this deployment." };
+
+  const id = String(form.get("quoteId") ?? "");
+  const changeReason = String(form.get("changeReason") ?? "").trim();
+  let input: unknown;
+  try { input = JSON.parse(String(form.get("commercialPricing") ?? "")); }
+  catch { return { ok: false, message: "The pricing lines could not be read. Refresh the draft and try again." }; }
+  if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id)) {
+    return { ok: false, message: "The quote reference is invalid." };
+  }
+  if (changeReason.length > 500) return { ok: false, message: "The change reason must be 500 characters or fewer." };
+  if (!input || typeof input !== "object" || Array.isArray(input)) return { ok: false, message: "Invalid pricing data." };
+
+  const candidate = input as { legs?: unknown; extras?: unknown };
+  if (!Array.isArray(candidate.legs) || candidate.legs.length < 1 || candidate.legs.length > 24 || !Array.isArray(candidate.extras) || candidate.extras.length > 30) {
+    return { ok: false, message: "The itinerary pricing lines are invalid. Refresh the draft and try again." };
+  }
+  const legs: { from: string; to: string; price: number }[] = [];
+  for (const [index, item] of candidate.legs.entries()) {
+    if (!item || typeof item !== "object") return { ok: false, message: `Route leg ${index + 1} is invalid.` };
+    const line = item as { from?: unknown; to?: unknown; price?: unknown };
+    const price = Number(line.price);
+    if (typeof line.from !== "string" || !line.from.trim() || typeof line.to !== "string" || !line.to.trim() || !Number.isFinite(price) || price < 0 || price > 100000000) {
+      return { ok: false, message: `Enter a valid non-negative price for route leg ${index + 1}.` };
+    }
+    legs.push({ from: line.from.trim().slice(0, 300), to: line.to.trim().slice(0, 300), price: Math.round(price * 100) / 100 });
+  }
+  const extras: { id: string; label: string; quantity: number; unit: string; unitPrice: number; amount: number }[] = [];
+  const seen = new Set<string>();
+  for (const [index, item] of candidate.extras.entries()) {
+    if (!item || typeof item !== "object") return { ok: false, message: `Additional line ${index + 1} is invalid.` };
+    const line = item as { id?: unknown; label?: unknown; quantity?: unknown; unit?: unknown; unitPrice?: unknown };
+    const idValue = typeof line.id === "string" ? line.id.trim() : "";
+    const label = typeof line.label === "string" ? line.label.trim() : "";
+    const unit = typeof line.unit === "string" ? line.unit.trim() : "";
+    const quantity = Number(line.quantity);
+    const unitPrice = Number(line.unitPrice);
+    if (!idValue || seen.has(idValue) || !label || label.length > 160 || !unit || unit.length > 40 ||
+      !Number.isFinite(quantity) || quantity < 0 || quantity > 100000 ||
+      !Number.isFinite(unitPrice) || unitPrice < 0 || unitPrice > 100000000) {
+      return { ok: false, message: `Enter valid details for additional line ${index + 1}.` };
+    }
+    seen.add(idValue);
+    extras.push({ id: idValue, label, quantity, unit, unitPrice: Math.round(unitPrice * 100) / 100, amount: Math.round(quantity * unitPrice * 100) / 100 });
+  }
+
+  const totalCents = legs.reduce((sum, line) => sum + Math.round(line.price * 100), 0) +
+    extras.reduce((sum, line) => sum + Math.round(line.amount * 100), 0);
+  const total = totalCents / 100;
+  if (!Number.isSafeInteger(totalCents) || total <= 0 || total > 100000000) {
+    return { ok: false, message: "The customer total must be greater than zero and within the supported range." };
+  }
+
+  try {
+    const db = getDb();
+    const result = await db.transaction(async (tx) => {
+      const [quote] = await tx.select().from(charterQuotes).where(eq(charterQuotes.id, id)).limit(1);
+      if (!quote) throw new Error("The charter draft could not be found.");
+      if (quote.status !== "draft" && quote.status !== "approved") {
+        throw new Error("Only a private draft can be edited. Create a new draft revision rather than changing an issued quote.");
+      }
+      const [latest] = await tx.select().from(charterQuoteVersions)
+        .where(eq(charterQuoteVersions.quoteId, id))
+        .orderBy(desc(charterQuoteVersions.version)).limit(1);
+      if (!latest) throw new Error("The saved quote version could not be found.");
+      const snapshot = latest.snapshot && typeof latest.snapshot === "object" && !Array.isArray(latest.snapshot)
+        ? { ...(latest.snapshot as Record<string, unknown>) } : {};
+      const resultSnapshot = snapshot.result && typeof snapshot.result === "object" ? snapshot.result as Record<string, unknown> : {};
+      const costs = resultSnapshot.costs && typeof resultSnapshot.costs === "object" ? resultSnapshot.costs as Record<string, unknown> : {};
+      const settings = snapshot.settings && typeof snapshot.settings === "object" ? snapshot.settings as Record<string, unknown> : {};
+      const expectedCost = Number(costs.expectedCost);
+      const feeRate = Number(settings.paymentFeeRate ?? 0);
+      const marginTarget = Number(settings.targetContributionMargin ?? 0);
+      if (!Number.isFinite(expectedCost) || expectedCost < 0 || !Number.isFinite(feeRate) || feeRate < 0 || feeRate > 0.3) {
+        throw new Error("The saved cost assumptions are incomplete. Recalculate this quote before editing prices.");
+      }
+      const paymentFee = Math.round(total * feeRate * 100) / 100;
+      const contribution = Math.round((total - expectedCost - paymentFee) * 100) / 100;
+      const contributionMargin = total > 0 ? contribution / total : 0;
+      const belowTargetMargin = contributionMargin + 1e-9 < marginTarget;
+      const nextVersion = latest.version + 1;
+      const commercialPricing = { currency: quote.currency, legs, extras, total: total.toFixed(2), editedAt: new Date().toISOString() };
+      const nextSnapshot = {
+        ...snapshot,
+        commercialPricing,
+        result: {
+          ...resultSnapshot,
+          finalPrice: total,
+          actual: { paymentFee, contribution, contributionMargin },
+          belowTargetMargin,
+        },
+        requiresMarginReview: belowTargetMargin,
+        changeReason: changeReason || "Commercial line prices edited",
+        calculatedAt: new Date().toISOString(),
+      };
+      await tx.insert(charterQuoteVersions).values({
+        quoteId: id, version: nextVersion, status: quote.status, snapshot: nextSnapshot,
+        total: total.toFixed(2), changeReason: changeReason || "Commercial line prices edited", actor: "admin",
+      });
+      await tx.update(charterQuotes).set({
+        total: total.toFixed(2), currentVersion: nextVersion,
+        pricingSnapshot: { ...((quote.pricingSnapshot && typeof quote.pricingSnapshot === "object" ? quote.pricingSnapshot : {}) as Record<string, unknown>), actual: { paymentFee, contribution, contributionMargin }, belowTargetMargin },
+        updatedAt: new Date(),
+      }).where(eq(charterQuotes.id, id));
+      return { version: nextVersion, belowTargetMargin };
+    });
+    revalidatePath("/admin/quotes");
+    revalidatePath("/admin/quotes/charter/drafts");
+    revalidatePath(`/admin/quotes/charter/drafts/${id}`);
+    return { ok: true, total: total.toFixed(2), version: result.version, belowTargetMargin: result.belowTargetMargin };
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "The quote prices could not be saved.";
+    console.error("[charter-quote] commercial pricing save failed", error);
+    return { ok: false, message };
+  }
+}
+
 export type IssueCharterQuoteState = { ok: true; url: string; validUntil: string } | { ok: false; message: string } | null;
 
 /** Issue a private draft as a customer-facing, revocable token link. */
