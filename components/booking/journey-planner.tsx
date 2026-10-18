@@ -142,7 +142,9 @@ export function JourneyPlanner({
             id="journey-from"
             label="From"
             value={from}
-            onChange={setFrom}
+            onChange={(slug) => { setFrom(slug); setExternalFrom(null); }}
+            onExternalChange={setExternalFrom}
+            externalValue={externalFrom}
             groups={groups}
           />
 
@@ -159,7 +161,9 @@ export function JourneyPlanner({
             id="journey-to"
             label="To"
             value={to}
-            onChange={setTo}
+            onChange={(slug) => { setTo(slug); setExternalTo(null); }}
+            onExternalChange={setExternalTo}
+            externalValue={externalTo}
             groups={groups}
           />
         </div>
