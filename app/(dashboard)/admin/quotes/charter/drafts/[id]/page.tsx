@@ -148,7 +148,7 @@ export default async function CharterQuoteDraftDetailPage({
     ? "https://" + process.env.VERCEL_URL.trim()
     : configuredSiteUrl.endsWith("/") ? configuredSiteUrl.slice(0, -1) : configuredSiteUrl;
   const existingCustomerUrl = quote.publicToken && quote.status === "sent" && quote.validUntil && quote.validUntil.getTime() > Date.now()
-    ? siteOrigin + "/charter-quote/" + quote.publicToken
+    ? siteOrigin + "/q/" + quote.publicToken
     : null;
 
   return (
