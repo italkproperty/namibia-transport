@@ -222,7 +222,7 @@ export async function ReviewsSection() {
         </p>
       </div>
 
-      <ul className="mt-5 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+      <ul className="mt-5 grid gap-4 sm:grid-cols-2">
         {reviews.slice(0, 6).map((review) => (
           <li key={review.id} className="bg-card rounded-xl border p-4">
             <p
