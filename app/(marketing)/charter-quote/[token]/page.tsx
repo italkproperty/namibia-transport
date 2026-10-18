@@ -179,7 +179,7 @@ export default async function PublicCharterQuotePage({ params, searchParams }: {
           )}
           <a className="mt-3 inline-flex rounded-md border px-4 py-2 text-sm font-medium" href={"https://wa.me/264817278410?text=" + encodeURIComponent("Hello Namibia Transport, I am reviewing charter proposal " + quote.quoteNumber + " for " + formatNad(quote.total) + ". Please assist with payment and booking confirmation.")} target="_blank" rel="noopener noreferrer">Contact us on WhatsApp</a>
         </section>
-        <p className="mt-6 text-xs text-muted-foreground">This link is private and expires on {dateText(quote.validUntil.toISOString())}. Internal operating costs and margin are not shown.</p>
+        <p className="mt-6 text-xs text-muted-foreground">{quote.validUntil ? `This link is private and expires on ${dateText(quote.validUntil.toISOString())}.` : "This paid proposal is retained for your records."} Internal operating costs and margin are not shown.</p>
       </main>
       <SiteFooter />
     </div>
