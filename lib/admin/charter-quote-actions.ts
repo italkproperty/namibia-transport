@@ -34,6 +34,8 @@ export type CharterDraftRequest = {
   driverDailyRate: number;
   accommodationNights: number;
   accommodationRate: number;
+  driverMealAllowanceDays: number;
+  driverMealAllowanceRate: number;
   parkFees: number;
   otherCosts: number;
 };
@@ -113,6 +115,7 @@ async function calculateRequest(request: CharterDraftRequest) {
     items: [
       { id: "driver-days", label: "Driver days", quantity: request.driverDays, unitCost: request.driverDailyRate, unit: "day" },
       { id: "accommodation", label: "Driver accommodation", quantity: request.accommodationNights, unitCost: request.accommodationRate, unit: "night" },
+      { id: "driver-meals", label: "Driver meal allowance", quantity: request.driverMealAllowanceDays, unitCost: request.driverMealAllowanceRate, unit: "day" },
       { id: "park-fees", label: "Park and permit fees", quantity: 1, unitCost: request.parkFees, unit: "trip" },
       { id: "other-suppliers", label: "Other supplier costs", quantity: 1, unitCost: request.otherCosts, unit: "trip" },
     ],
@@ -196,6 +199,8 @@ export async function priceCharterItineraryAction(_previous: CharterPriceState, 
       driverDailyRate: readNumber(form, "driverDailyRate", "Driver daily rate"),
       accommodationNights: readNumber(form, "accommodationNights", "Accommodation nights", 365),
       accommodationRate: readNumber(form, "accommodationRate", "Accommodation rate"),
+      driverMealAllowanceDays: readNumber(form, "driverMealAllowanceDays", "Driver meal-allowance days", 365),
+      driverMealAllowanceRate: readNumber(form, "driverMealAllowanceRate", "Driver meal allowance per day"),
       parkFees: readNumber(form, "parkFees", "Park and permit fees"),
       otherCosts: readNumber(form, "otherCosts", "Other supplier costs"),
     };
