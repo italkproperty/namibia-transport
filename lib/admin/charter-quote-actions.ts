@@ -356,7 +356,7 @@ export async function issueCharterQuoteAction(
     if (snapshot?.requiresMarginReview || snapshot?.result?.belowTargetMargin) {
       return { ok: false, message: "This quote is below the target contribution margin. Review and correct the price before issuing it." };
     }
-    const token = randomBytes(32).toString("base64url");
+    const token = randomBytes(12).toString("base64url");
     const validUntil = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
     await db.update(charterQuotes).set({
       publicToken: token,
@@ -374,7 +374,7 @@ export async function issueCharterQuoteAction(
       ? `https://${deploymentHost}`
       : process.env.NEXT_PUBLIC_SITE_URL?.trim() || "https://www.namibiatransport.com";
     const cleanOrigin = origin.endsWith("/") ? origin.slice(0, -1) : origin;
-    return { ok: true, url: `${cleanOrigin}/charter-quote/${token}`, validUntil: validUntil.toISOString() };
+    return { ok: true, url: `${cleanOrigin}/q/${token}`, validUntil: validUntil.toISOString() };
   } catch (error) {
     console.error("[charter-quote] issue failed", error);
     return { ok: false, message: "The quote could not be issued. No customer link was created; try again or check the server logs." };
