@@ -276,6 +276,15 @@ CREATE TABLE IF NOT EXISTS "charter_quotes" (
 CREATE INDEX IF NOT EXISTS "charter_quotes_status_created_idx"
   ON "charter_quotes" ("status", "created_at" DESC);
 
+-- Verified gateway settlement moves the quote to paid. Update the constraint
+-- for both fresh databases and databases created by an earlier version of
+-- this cumulative script; CREATE TABLE IF NOT EXISTS alone does not alter it.
+ALTER TABLE "charter_quotes"
+  DROP CONSTRAINT IF EXISTS "charter_quotes_status_check";
+ALTER TABLE "charter_quotes"
+  ADD CONSTRAINT "charter_quotes_status_check"
+  CHECK ("status" IN ('draft', 'approved', 'sent', 'paid', 'accepted', 'rejected', 'expired', 'cancelled'));
+
 CREATE TABLE IF NOT EXISTS "charter_quote_versions" (
   "id" uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   "quote_id" uuid NOT NULL REFERENCES "charter_quotes"("id") ON DELETE CASCADE,
