@@ -6,6 +6,7 @@ import { formatNad } from "@/lib/money";
 import { buildPublicCharterLegs } from "@/lib/charter/public-quote";
 import { SiteFooter } from "@/components/marketing/site-footer";
 import { startCharterPaymentAction } from "@/lib/charter/payment-actions";
+import { isLiveGatewayConfigured } from "@/lib/payments";
 import { SiteHeader } from "@/components/marketing/site-header";
 
 export const dynamic = "force-dynamic";
@@ -35,6 +36,7 @@ export default async function PublicCharterQuotePage({ params, searchParams }: {
     .from(charterQuotePayments).where(eq(charterQuotePayments.quoteId, quote.id))
     .orderBy(desc(charterQuotePayments.createdAt)).limit(1);
   const paymentStatus = payment ?? (latestPayment?.status === "paid" ? "received" : undefined);
+  const liveCheckoutAvailable = isLiveGatewayConfigured();
   const snapshot = obj(version.snapshot);
   const customer = obj(snapshot.customer);
   const route = obj(snapshot.route);
@@ -101,13 +103,16 @@ export default async function PublicCharterQuotePage({ params, searchParams }: {
             <p className="mt-2 text-sm" role="status">Secure online checkout is not available for this proposal right now. Contact Namibia Transport to arrange payment safely.</p>
           ) : null}
           <p className="mt-2 text-sm text-muted-foreground">Your trip is not booked until payment is verified and a booking confirmation is issued.</p>
-          {paymentStatus !== "received" && (
+          {paymentStatus !== "received" && liveCheckoutAvailable && (
             <form action={startCharterPaymentAction} className="mt-4">
               <input type="hidden" name="token" value={token} />
               <button className="inline-flex rounded-md bg-foreground px-4 py-2 text-sm font-medium text-background disabled:opacity-50" type="submit">Pay securely by card</button>
             </form>
           )}
-          <a className="mt-3 inline-flex rounded-md border px-4 py-2 text-sm font-medium" href={`https://wa.me/264817278410?text=${encodeURIComponent(`Hello Namibia Transport, I am reviewing charter proposal ${quote.quoteNumber} for ${formatNad(quote.total)}. Please assist with payment and booking confirmation.`)}`} target="_blank" rel="noopener noreferrer">Contact us on WhatsApp</a>
+          {!liveCheckoutAvailable && paymentStatus !== "received" && (
+            <p className="mt-3 text-sm text-muted-foreground">Card checkout is temporarily unavailable. Request bank-transfer instructions from our team; bank details are provided securely by Namibia Transport.</p>
+          )}
+          <a className="mt-3 inline-flex rounded-md border px-4 py-2 text-sm font-medium" href={"https://wa.me/264817278410?text=" + encodeURIComponent("Hello Namibia Transport, please send me the bank transfer details for charter proposal " + quote.quoteNumber + " for " + formatNad(quote.total) + ". Please include the payment reference I should use. I understand my trip is not confirmed until payment is verified and you issue a booking confirmation.")} target="_blank" rel="noopener noreferrer">Request bank transfer details on WhatsApp</a>
         </section>
         <p className="mt-6 text-xs text-muted-foreground">This link is private and expires on {dateText(quote.validUntil.toISOString())}. Internal operating costs and margin are not shown.</p>
       </main>
