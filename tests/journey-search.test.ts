@@ -19,6 +19,12 @@ assert.equal(modelJourney("windhoek", "gross-barmen"), null, "search-only destin
 const onkoshi = searchNodes("onkoshi camp");
 assert.ok(onkoshi.some((node) => node.slug === "onkoshi-camp"), "Onkoshi alias resolves to a normalized slug");
 
+const roshPinah = searchNodes("Rosh Pinah");
+assert.ok(roshPinah.some((node) => node.slug === "rosh-pinah"), "Rosh Pinah town is searchable");
+assert.ok(roshPinah.some((node) => node.slug === "rosh-pinah-zinc-mine"), "Rosh Pinah mine is separately searchable");
+assert.ok(searchNodes("Skorpion Zinc Mine").some((node) => node.slug === "skorpion-zinc-mine"), "Skorpion mine aliases resolve");
+assert.equal(modelJourney("windhoek", "rosh-pinah-zinc-mine"), null, "mine gate must not be priced until a verified road route is available");
+
 assert.deepEqual(searchNodes("place that does not exist"), [], "unknown places are not mapped to a guessed node");
 
 console.log("Journey place search tests passed.");
