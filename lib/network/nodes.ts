@@ -547,12 +547,11 @@ function normaliseSearch(value: string): string {
   return value
     .toLocaleLowerCase()
     .normalize("NFD")
-    .replace(/\\p{M}/gu, "")
+    .replace(/\p{M}/gu, "")
     .replace(/[^a-z0-9]+/g, " ")
     .trim()
-    .replace(/\\s+/g, " ");
+    .replace(/\s+/g, " ");
 }
-
 /**
  * Search the verified instant-pricing road network by name, slug, region or
  * common traveller alias. This intentionally does not turn arbitrary free text
