@@ -144,6 +144,15 @@ export const PLACE_NODES: PlaceNode[] = [
     lng: 18.9667,
     backhaul: BACKHAUL.town,
   },
+  {
+    slug: "gross-barmen",
+    name: "Gross Barmen Resort",
+    shortName: "Gross Barmen",
+    region: "central",
+    lat: -22.1100,
+    lng: 16.7500,
+    backhaul: BACKHAUL.terminus,
+  },
 
   /* --------------------------------------------------------------- coast */
   {
@@ -531,6 +540,7 @@ export function findNode(slug: string): PlaceNode | null {
 /** Common traveller spellings and shorthand, normalised for autocomplete. */
 const NODE_SEARCH_ALIASES: Record<string, string[]> = {
   "hosea-kutako": ["wdh", "wdh airport", "windhoek airport", "hosea kutako airport"],
+  "gross-barmen": ["gross barmen", "gross barmen resort", "gross barmen hot springs", "gross barmen hot springs resort"],
   "eros-airport": ["ers", "ers airport"],
   "walvis-bay-airport": ["wvb", "wvb airport", "walvis bay airport"],
   sossusvlei: ["sossus vlei", "sesriem", "sesriem gate", "deadvlei", "dead vlei"],
