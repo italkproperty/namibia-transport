@@ -27,10 +27,15 @@ export async function GET(request: NextRequest) {
     if (!quote) return NextResponse.redirect(new URL("/", request.url), { status: 303 });
 
     const [payment] = await db.select().from(charterQuotePayments)
-      .where(and(eq(charterQuotePayments.quoteId, quote.id), eq(charterQuotePayments.status, "pending")))
+      .where(eq(charterQuotePayments.quoteId, quote.id))
       .orderBy(desc(charterQuotePayments.createdAt)).limit(1);
 
-    if (payment?.providerReference) {
+    if (payment?.status === "paid") {
+      pageUrl.searchParams.set("payment", "received");
+      return NextResponse.redirect(pageUrl, { status: 303 });
+    }
+
+    if (payment?.status === "pending" && payment.providerReference) {
       const remote = await getPaymentProvider().getPayment(payment.providerReference);
       if (remote) {
         const matches = Math.abs(parseMoney(payment.amount) - parseMoney(remote.amount)) <= 0.009 &&
@@ -38,17 +43,23 @@ export async function GET(request: NextRequest) {
         const status = remote.status === "paid" && matches ? "paid" :
           remote.status === "failed" ? "failed" :
           remote.status === "cancelled" ? "cancelled" : "pending";
-        await db.update(charterQuotePayments).set({
-          status,
-          paidAt: status === "paid" ? (payment.paidAt ?? new Date()) : payment.paidAt,
-          raw: {
-            ...(typeof payment.raw === "object" && payment.raw !== null ? payment.raw as Record<string, unknown> : {}),
-            latestQuery: remote.raw ?? {},
-            amountMismatch: remote.status === "paid" && !matches,
-            reconciledAt: new Date().toISOString(),
-          },
-          updatedAt: new Date(),
-        }).where(eq(charterQuotePayments.id, payment.id));
+        await db.transaction(async (tx) => {
+          await tx.update(charterQuotePayments).set({
+            status,
+            paidAt: status === "paid" ? (payment.paidAt ?? new Date()) : payment.paidAt,
+            raw: {
+              ...(typeof payment.raw === "object" && payment.raw !== null ? payment.raw as Record<string, unknown> : {}),
+              latestQuery: remote.raw ?? {},
+              amountMismatch: remote.status === "paid" && !matches,
+              reconciledAt: new Date().toISOString(),
+            },
+            updatedAt: new Date(),
+          }).where(and(eq(charterQuotePayments.id, payment.id), eq(charterQuotePayments.status, "pending")));
+          if (status === "paid") {
+            await tx.update(charterQuotes).set({ status: "paid", updatedAt: new Date() })
+              .where(and(eq(charterQuotes.id, quote.id), eq(charterQuotes.status, "sent")));
+          }
+        });
         pageUrl.searchParams.set("payment", status === "paid" ? "received" : status === "pending" ? "pending" : "contact");
       } else {
         pageUrl.searchParams.set("payment", "pending");
