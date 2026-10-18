@@ -413,6 +413,20 @@ export async function saveCharterCommercialPricingAction(
       if (!latest) throw new Error("The saved quote version could not be found.");
       const snapshot = latest.snapshot && typeof latest.snapshot === "object" && !Array.isArray(latest.snapshot)
         ? { ...(latest.snapshot as Record<string, unknown>) } : {};
+      const requestSnapshot = snapshot.request && typeof snapshot.request === "object" ? snapshot.request as Record<string, unknown> : {};
+      const savedStops = Array.isArray(requestSnapshot.stops) ? requestSnapshot.stops as { label?: unknown }[] : [];
+      const routeSnapshot = snapshot.route && typeof snapshot.route === "object" ? snapshot.route as Record<string, unknown> : {};
+      const savedRouteLegs = Array.isArray(routeSnapshot.legs) ? routeSnapshot.legs as unknown[] : [];
+      if (savedStops.length < 2 || savedRouteLegs.length !== legs.length || savedStops.length !== legs.length + 1) {
+        throw new Error("The number of commercial prices must match the saved, verified itinerary. Recalculate the route before editing prices.");
+      }
+      for (let index = 0; index < legs.length; index += 1) {
+        const from = typeof savedStops[index]?.label === "string" ? String(savedStops[index].label).trim() : "";
+        const to = typeof savedStops[index + 1]?.label === "string" ? String(savedStops[index + 1].label).trim() : "";
+        if (!from || !to || legs[index].from !== from || legs[index].to !== to) {
+          throw new Error(`Route leg ${index + 1} does not match the saved itinerary order. Refresh the draft and try again.`);
+        }
+      }
       const resultSnapshot = snapshot.result && typeof snapshot.result === "object" ? snapshot.result as Record<string, unknown> : {};
       const costs = resultSnapshot.costs && typeof resultSnapshot.costs === "object" ? resultSnapshot.costs as Record<string, unknown> : {};
       const settings = snapshot.settings && typeof snapshot.settings === "object" ? snapshot.settings as Record<string, unknown> : {};
