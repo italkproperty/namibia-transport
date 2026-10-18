@@ -121,8 +121,26 @@ export default async function PublicCharterQuotePage({ params, searchParams }: {
           ) : null}
           <p className="mt-2 text-sm text-muted-foreground">Your trip is not booked until payment is verified and a booking confirmation is issued.</p>
           {paymentStatus !== "received" && liveCheckoutAvailable && paymentLedgerAvailable && (
-            <form action={startCharterPaymentAction} className="mt-4">
+            <form action={startCharterPaymentAction} className="mt-4 space-y-3">
               <input type="hidden" name="token" value={token} />
+              <div>
+                <label htmlFor="charter-payment-mobile" className="mb-1 block text-sm font-medium">Mobile number for card payment</label>
+                <input
+                  id="charter-payment-mobile"
+                  name="whatsapp"
+                  type="tel"
+                  autoComplete="tel"
+                  inputMode="tel"
+                  required
+                  minLength={7}
+                  maxLength={25}
+                  defaultValue={quote.customerWhatsapp ?? ""}
+                  placeholder="+264 81 234 5678"
+                  className="w-full max-w-sm rounded-md border bg-background px-3 py-2 text-sm"
+                  aria-describedby="charter-payment-mobile-help"
+                />
+                <p id="charter-payment-mobile-help" className="mt-1 text-xs text-muted-foreground">Include your country code, for example +264 for Namibia.</p>
+              </div>
               <button className="inline-flex rounded-md bg-foreground px-4 py-2 text-sm font-medium text-background disabled:opacity-50" type="submit">Pay securely by card</button>
             </form>
           )}
