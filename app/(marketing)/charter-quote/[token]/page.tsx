@@ -62,16 +62,18 @@ export default async function PublicCharterQuotePage({ params }: { params: Promi
           <p className="mt-1 text-sm text-muted-foreground">Each leg is priced as part of the complete charter. Amounts below are an allocation of the agreed trip total, not separate bookings.</p>
           <ol className="mt-4 space-y-3">
             {legs.map((leg, index) => <li key={index} className="rounded-xl border bg-card p-4 sm:p-5">
-              <div className="grid grid-cols-[minmax(0,1fr)_auto] items-start gap-x-4 gap-y-3">
-                <div className="flex min-w-0 items-start gap-3">
-                  <span className="flex size-7 shrink-0 items-center justify-center rounded-full border text-xs tabular-nums">{index + 1}</span>
-                  <div className="min-w-0">
-                    <p className="break-words font-medium leading-snug">{leg.from}</p>
-                    <p className="mt-1 break-words text-sm leading-snug text-muted-foreground">to {leg.to}</p>
-                    <p className="mt-2 text-xs text-muted-foreground">{leg.distanceKm.toLocaleString("en-NA")} km · approx. {Math.floor(leg.durationMinutes / 60)}h {Math.round(leg.durationMinutes % 60)}m driving</p>
+              <div className="flex items-start gap-4">
+                <span className="flex size-7 shrink-0 items-center justify-center rounded-full border text-xs tabular-nums">{index + 1}</span>
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-start justify-between gap-4">
+                    <div className="min-w-0 flex-1">
+                      <p className="break-words font-medium leading-snug">{leg.from}</p>
+                      <p className="mt-1 break-words text-sm leading-snug text-muted-foreground">to {leg.to}</p>
+                    </div>
+                    <p className="w-32 shrink-0 text-right font-semibold tabular-nums whitespace-nowrap">{formatNad(leg.price)}</p>
                   </div>
+                  <p className="mt-2 text-xs text-muted-foreground">{leg.distanceKm.toLocaleString("en-NA")} km · approx. {Math.floor(leg.durationMinutes / 60)}h {Math.round(leg.durationMinutes % 60)}m driving</p>
                 </div>
-                <p className="min-w-[7.5rem] text-right font-semibold tabular-nums whitespace-nowrap">{formatNad(leg.price)}</p>
               </div>
             </li>)}
           </ol>
