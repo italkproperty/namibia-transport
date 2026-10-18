@@ -178,7 +178,7 @@ export function JourneyPlanner({
         </button>
 
         {journey && <RoadDetail journey={journey} />}
-        {(externalFrom || externalTo) && (estimateLoading || routeEstimate || estimateError) && (
+        {!route && (estimateLoading || routeEstimate || estimateError) && (
           <div className="mt-4 rounded-lg border p-4" aria-live="polite">
             {estimateLoading && <p className="text-sm">Calculating the driving route and conservative estimate…</p>}
             {estimateError && <p className="text-sm text-destructive">{estimateError}</p>}
