@@ -5,10 +5,8 @@ import { CheckCircle2Icon, CopyIcon, LandmarkIcon } from "lucide-react";
 
 export function CharterBankTransfer({
   lines,
-  quoteNumber,
 }: {
   lines: { label: string; value: string }[];
-  quoteNumber: string;
 }) {
   const [copied, setCopied] = React.useState<string | null>(null);
 
