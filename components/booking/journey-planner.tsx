@@ -78,7 +78,7 @@ export function JourneyPlanner({
   const route = curated ?? journey?.route ?? null;
 
   React.useEffect(() => {
-    if (route || (!externalFrom && !externalTo) || !from && !externalFrom || !to && !externalTo) {
+    if (route || (!from && !externalFrom) || (!to && !externalTo)) {
       setRouteEstimate(null);
       setEstimateError(null);
       return;
@@ -129,6 +129,8 @@ export function JourneyPlanner({
   function swap() {
     setFrom(to);
     setTo(from);
+    setExternalFrom(externalTo);
+    setExternalTo(externalFrom);
   }
 
   return (
@@ -430,7 +432,7 @@ function PlacePicker({
           onChange={(event) => {
             setQuery(event.target.value);
             onChange("");
-            onExternalChange(null as unknown as ExternalPlace);
+            onExternalChange(null);
             setOpen(true);
             setActiveIndex(0);
           }}
