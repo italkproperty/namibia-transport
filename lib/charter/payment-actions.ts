@@ -57,7 +57,10 @@ export async function startCharterPaymentAction(formData: FormData): Promise<nev
     }
 
     stage = "customer_validation";
-    if (!quote.customerWhatsapp?.trim() || !/^\+?[0-9 ()-]{7,20}$/.test(quote.customerWhatsapp.trim())) {
+    const submittedPhone = String(formData.get("whatsapp") ?? "").trim();
+    const customerPhone = submittedPhone || quote.customerWhatsapp?.trim() || "";
+    const phoneDigits = customerPhone.replace(/\D/g, "");
+    if (phoneDigits.length < 7 || phoneDigits.length > 15) {
       console.error("[charter-payment] checkout blocked: customer_mobile_missing_or_invalid", { quoteNumber: quote.quoteNumber });
       returnToQuote(token, "mobile");
     }
@@ -92,7 +95,7 @@ export async function startCharterPaymentAction(formData: FormData): Promise<nev
       customer: {
         fullName: quote.customerName,
         email: quote.customerEmail,
-        whatsapp: quote.customerWhatsapp,
+        whatsapp: customerPhone,
       },
       description: `Charter proposal ${quote.quoteNumber}`,
       returnUrl: `${origin}/api/charter-quote/paytoday/return?token=${encodeURIComponent(token)}`,
