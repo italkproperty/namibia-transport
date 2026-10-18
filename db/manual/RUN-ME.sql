@@ -292,6 +292,31 @@ CREATE TABLE IF NOT EXISTS "charter_quote_versions" (
 CREATE INDEX IF NOT EXISTS "charter_quote_versions_quote_created_idx"
   ON "charter_quote_versions" ("quote_id", "created_at" DESC);
 
+
+/* Charter quote gateway attempts: one payment belongs to one quote total. */
+CREATE TABLE IF NOT EXISTS "charter_quote_payments" (
+  "id" uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  "quote_id" uuid NOT NULL REFERENCES "charter_quotes"("id") ON DELETE RESTRICT,
+  "provider" text NOT NULL,
+  "provider_reference" text,
+  "status" text NOT NULL DEFAULT 'pending'
+    CHECK ("status" IN ('pending', 'paid', 'failed', 'cancelled', 'refunded')),
+  "amount" numeric(10,2) NOT NULL CHECK ("amount" > 0),
+  "currency" char(3) NOT NULL DEFAULT 'NAD',
+  "checkout_url" text,
+  "expires_at" timestamptz,
+  "raw" jsonb,
+  "paid_at" timestamptz,
+  "created_at" timestamptz NOT NULL DEFAULT now(),
+  "updated_at" timestamptz NOT NULL DEFAULT now(),
+  CONSTRAINT "charter_quote_payments_provider_reference_key"
+    UNIQUE ("provider", "provider_reference")
+);
+CREATE INDEX IF NOT EXISTS "charter_quote_payments_quote_idx"
+  ON "charter_quote_payments" ("quote_id", "created_at" DESC);
+CREATE INDEX IF NOT EXISTS "charter_quote_payments_status_idx"
+  ON "charter_quote_payments" ("status", "created_at" DESC);
+
 COMMIT;
 
 /*
