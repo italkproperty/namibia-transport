@@ -163,9 +163,19 @@ export function JourneyPlanner({
           )}
         </>
       ) : (
-        <p className="text-muted-foreground bg-card rounded-xl border p-4 text-sm">
-          Choose two different places to see a price.
-        </p>
+        <div className="text-muted-foreground bg-card rounded-xl border p-4 text-sm">
+          {from && to && from !== to ? (
+            <>
+              <p className="font-medium text-foreground">We recognise these places, but an instant road price is not yet available for this pair.</p>
+              <p className="mt-1">Request a quote and our team will verify the exact pickup, road access and distance before pricing it.</p>
+              <Link href="/contact" className="text-brand mt-2 inline-block font-medium underline underline-offset-4">
+                Request a route quote
+              </Link>
+            </>
+          ) : (
+            <p>Choose two different places to see a price.</p>
+          )}
+        </div>
       )}
     </div>
   );
