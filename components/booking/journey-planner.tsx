@@ -218,7 +218,7 @@ export function JourneyPlanner({
             />
           )}
         </>
-      ) : (
+      ) : (externalFrom || externalTo) ? null : (
         <div className="text-muted-foreground bg-card rounded-xl border p-4 text-sm">
           {from && to && from !== to ? (
             <>
