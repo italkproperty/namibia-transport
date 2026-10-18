@@ -16,7 +16,7 @@ import {
   withCuratedCeiling,
   type Journey,
 } from "@/lib/network/journey";
-import { nodeLabel, nodesByRegion, REGION_LABELS } from "@/lib/network/nodes";
+import { nodeLabel, nodesByRegion, REGION_LABELS, searchNodes } from "@/lib/network/nodes";
 import { describeRoads, describeVia } from "@/lib/network/roads";
 
 /**
@@ -289,17 +289,8 @@ function PlacePicker({
   }, [allNodes, value]);
 
   const matches = React.useMemo(() => {
-    const q = query.trim().toLocaleLowerCase();
-    const filtered = allNodes.filter((node) => {
-      const searchable = [
-        node.name,
-        node.shortName ?? "",
-        node.slug.replace(/-/g, " "),
-        REGION_LABELS[node.region],
-      ].join(" ").toLocaleLowerCase();
-      return !q || searchable.includes(q);
-    });
-    return filtered.slice(0, 10);
+    if (!query.trim()) return allNodes.slice(0, 10);
+    return searchNodes(query, 10);
   }, [allNodes, query]);
 
   function choose(slug: string) {
