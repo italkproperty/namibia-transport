@@ -110,8 +110,14 @@ export default async function PublicCharterQuotePage({ params, searchParams }: {
             <p className="mt-2 text-sm" role="status">We have not yet received a final payment confirmation from PayToday. Please allow a moment and contact us if the status does not update. Do not pay a second time while this is being checked.</p>
           ) : payment === "failed" || payment === "cancelled" ? (
             <p className="mt-2 text-sm" role="status">The payment was not completed. You can try again or contact our team for assistance.</p>
-          ) : payment === "unavailable" || payment === "contact" ? (
-            <p className="mt-2 text-sm" role="status">Secure online checkout is not available for this proposal right now. Contact Namibia Transport to arrange payment safely.</p>
+          ) : payment === "mobile" ? (
+            <p className="mt-2 text-sm" role="alert">We need a valid mobile number for the card-payment request. Please contact Namibia Transport so we can update your quote details.</p>
+          ) : payment === "email" ? (
+            <p className="mt-2 text-sm" role="alert">We need an email address for the card-payment request. Please contact Namibia Transport so we can update your quote details.</p>
+          ) : payment === "ledger" || payment === "database" ? (
+            <p className="mt-2 text-sm" role="alert">Our payment system is temporarily unavailable. You can use the bank-transfer details below or contact our team; please do not retry card payment repeatedly.</p>
+          ) : payment === "gateway" || payment === "gateway_response" || payment === "gateway_error" || payment === "unavailable" || payment === "contact" ? (
+            <p className="mt-2 text-sm" role="alert">PayToday did not open a checkout for this proposal. You can pay by bank transfer using the details below or contact our team. We are checking the card-payment connection.</p>
           ) : null}
           <p className="mt-2 text-sm text-muted-foreground">Your trip is not booked until payment is verified and a booking confirmation is issued.</p>
           {paymentStatus !== "received" && liveCheckoutAvailable && paymentLedgerAvailable && (
