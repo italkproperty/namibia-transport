@@ -32,7 +32,7 @@ export default async function PublicCharterQuotePage({ params, searchParams }: {
   if (!quote || quote.status !== "sent" || !quote.validUntil || quote.validUntil.getTime() < Date.now()) notFound();
   const [version] = await db.select().from(charterQuoteVersions)
     .where(eq(charterQuoteVersions.quoteId, quote.id))
-    .orderBy(charterQuoteVersions.version).limit(1);
+    .orderBy(desc(charterQuoteVersions.version)).limit(1);
   if (!version) notFound();
   let latestPayment: { status: string } | undefined;
   let paymentLedgerAvailable = true;
@@ -53,7 +53,26 @@ export default async function PublicCharterQuotePage({ params, searchParams }: {
   const route = obj(snapshot.route);
   const vehicle = obj(snapshot.vehicle);
   const brief = obj(snapshot.customerBrief);
-  const legs = buildPublicCharterLegs(snapshot, version.total);
+  const commercialPricing = obj(snapshot.commercialPricing);
+  const hasSavedCommercialPricing = Array.isArray(commercialPricing.legs) && commercialPricing.legs.length > 0;
+  const savedLegs = hasSavedCommercialPricing ? commercialPricing.legs as { from?: unknown; to?: unknown; price?: unknown }[] : [];
+  const routeLegs = Array.isArray(route.legs) ? route.legs as { distanceKm?: unknown; durationMinutes?: unknown }[] : [];
+  const stopList = Array.isArray(obj(snapshot.request).stops) ? obj(snapshot.request).stops as { label?: unknown }[] : [];
+  const legs = hasSavedCommercialPricing
+    ? savedLegs.map((leg, index) => ({
+        from: typeof leg.from === "string" ? leg.from : String(stopList[index]?.label ?? `Stop ${index + 1}`),
+        to: typeof leg.to === "string" ? leg.to : String(stopList[index + 1]?.label ?? `Stop ${index + 2}`),
+        distanceKm: Number.isFinite(Number(routeLegs[index]?.distanceKm)) ? Number(routeLegs[index].distanceKm) : 0,
+        durationMinutes: Number.isFinite(Number(routeLegs[index]?.durationMinutes)) ? Number(routeLegs[index].durationMinutes) : 0,
+        price: Number.isFinite(Number(leg.price)) && Number(leg.price) >= 0 ? Number(leg.price) : 0,
+      }))
+    : buildPublicCharterLegs(snapshot, version.total);
+  const customerExtras = Array.isArray(commercialPricing.extras)
+    ? (commercialPricing.extras as { id?: unknown; label?: unknown; quantity?: unknown; unit?: unknown; unitPrice?: unknown; amount?: unknown }[])
+        .map((line) => ({ id: String(line.id ?? ""), label: String(line.label ?? "Additional service"), quantity: Number(line.quantity), unit: String(line.unit ?? "item"), unitPrice: Number(line.unitPrice), amount: Number(line.amount ?? Number(line.quantity) * Number(line.unitPrice)) }))
+        .filter((line) => line.label && Number.isFinite(line.amount) && line.amount > 0)
+    : [];
+  const displayedTotal = Number(version.total);
   const startDate = dateText(brief.requestedStartDate ?? brief.itineraryStartDate);
   const endDate = dateText(brief.requestedEndDate);
   const totalDistance = Number(route.totalDistanceKm);
@@ -78,7 +97,7 @@ export default async function PublicCharterQuotePage({ params, searchParams }: {
         </section>
         <section className="mt-6">
           <h2 className="text-lg font-semibold">Itemised itinerary and pricing</h2>
-          <p className="mt-1 text-sm text-muted-foreground">Each leg is priced as part of the complete charter. Amounts below are an allocation of the agreed trip total, not separate bookings.</p>
+          <p className="mt-1 text-sm text-muted-foreground">{hasSavedCommercialPricing ? "The route legs below have individual selling prices and form one complete charter proposal." : "The displayed leg amounts are an allocation of the agreed trip total. They are not independently priced or separate bookings."}</p>
           <ol className="mt-4 space-y-3">
             {legs.map((leg, index) => <li key={index} className="rounded-xl border bg-card p-4 sm:p-5">
               <div className="flex items-start gap-4">
@@ -96,8 +115,12 @@ export default async function PublicCharterQuotePage({ params, searchParams }: {
               </div>
             </li>)}
           </ol>
+          {customerExtras.length > 0 && <div className="mt-4 rounded-xl border p-4">
+            <h3 className="font-semibold">Additional services and charges</h3>
+            <div className="mt-3 space-y-2">{customerExtras.map((line) => <div key={line.id} className="flex items-start justify-between gap-4 text-sm"><span>{line.label} ({line.quantity} {line.unit}{line.quantity === 1 ? "" : "s"})</span><span className="shrink-0 font-medium tabular-nums">{formatNad(line.amount)}</span></div>)}</div>
+          </div>}
           <div className="mt-5 rounded-xl bg-muted/50 p-5">
-            <div className="flex items-center justify-between gap-4"><p className="font-medium">Total charter price</p><p className="text-2xl font-semibold tabular-nums">{formatNad(quote.total)}</p></div>
+            <div className="flex items-center justify-between gap-4"><p className="font-medium">Total charter price</p><p className="text-2xl font-semibold tabular-nums">{formatNad(displayedTotal)}</p></div>
             <p className="mt-2 text-xs text-muted-foreground">NAD · One complete charter proposal for the itinerary above.</p>
           </div>
         </section>
