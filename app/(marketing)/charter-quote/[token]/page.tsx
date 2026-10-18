@@ -29,7 +29,8 @@ export default async function PublicCharterQuotePage({ params, searchParams }: {
   if (!/^[A-Za-z0-9_-]{10,100}$/.test(token) || !isDatabaseConfigured()) notFound();
   const db = getDb();
   const [quote] = await db.select().from(charterQuotes).where(eq(charterQuotes.publicToken, token)).limit(1);
-  if (!quote || quote.status !== "sent" || !quote.validUntil || quote.validUntil.getTime() < Date.now()) notFound();
+  if (!quote || (quote.status !== "sent" && quote.status !== "paid") ||
+      (quote.status === "sent" && (!quote.validUntil || quote.validUntil.getTime() < Date.now()))) notFound();
   const [version] = await db.select().from(charterQuoteVersions)
     .where(eq(charterQuoteVersions.quoteId, quote.id))
     .orderBy(desc(charterQuoteVersions.version)).limit(1);
@@ -44,7 +45,7 @@ export default async function PublicCharterQuotePage({ params, searchParams }: {
     paymentLedgerAvailable = false;
     console.error("[charter-payment] payment ledger unavailable; bank transfer remains available", error);
   }
-  const paymentStatus = payment ?? (latestPayment?.status === "paid" ? "received" : undefined);
+  const paymentStatus = payment ?? (quote.status === "paid" || latestPayment?.status === "paid" ? "received" : undefined);
   const liveCheckoutAvailable = isLiveGatewayConfigured();
   const bank = getBankDetails();
   const transferLines = bank ? bankTransferLines(bank, quote.quoteNumber) : null;
