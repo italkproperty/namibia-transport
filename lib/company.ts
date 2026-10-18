@@ -44,15 +44,18 @@ export const SUPPORT = {
   officeHoursShort: "06:00–22:00 CAT",
 } as const;
 
+const DEFAULT_SUPPORT_PHONE = "+264817278410";
+
 function env(name: string): string | null {
   const value = process.env[name]?.trim();
   return value ? value : null;
 }
 
 export function getCompanyInfo(): CompanyInfo {
-  const phone = env("NEXT_PUBLIC_SUPPORT_PHONE");
-  // Prefer the dedicated WhatsApp setting, but let the configured support
-  // phone power WhatsApp CTAs when that separate variable is not present.
+  // The official contact number is a code fallback so preview deployments
+  // still expose contact even when Vercel's Preview env scope is not configured.
+  const phone = env("NEXT_PUBLIC_SUPPORT_PHONE") ?? DEFAULT_SUPPORT_PHONE;
+  // Prefer the dedicated WhatsApp setting, then the configured support phone.
   const whatsapp = env("NEXT_PUBLIC_SUPPORT_WHATSAPP") ?? phone;
   const email = env("NEXT_PUBLIC_SUPPORT_EMAIL");
 
