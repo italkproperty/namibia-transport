@@ -31,7 +31,7 @@ export type ReviewSummary = { average: number; count: number };
  * Aggregate rating. Returns null below a minimum sample — "5.0 from 1
  * traveller" reads as manufactured, and would be.
  */
-const MIN_REVIEWS_TO_DISPLAY = 3;
+const MIN_REVIEWS_TO_DISPLAY = 2;
 
 export async function getReviewSummary(): Promise<ReviewSummary | null> {
   if (!isDatabaseConfigured()) return null;
