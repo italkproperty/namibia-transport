@@ -30,7 +30,6 @@ export default async function PublicCharterQuotePage({ params }: { params: Promi
     .orderBy(charterQuoteVersions.version).limit(1);
   if (!version) notFound();
   const snapshot = obj(version.snapshot);
-  const request = obj(snapshot.request);
   const customer = obj(snapshot.customer);
   const route = obj(snapshot.route);
   const vehicle = obj(snapshot.vehicle);
