@@ -1252,7 +1252,7 @@ const NODE_SEARCH_ALIASES: Record<string, string[]> = {
   "onguma-nature-reserve": ["onguma nature reserve"],
   "halali-camp": ["halali","halali resort","halali camp"],
   "dolomite-camp": ["dolomite camp","western etosha"],
-  "onko shi-camp": ["onkoshi","onkoshi camp"],
+  "onkoshi-camp": ["onkoshi", "onkoshi camp", "onkoshi campsite"],
   "hobas-lodge": ["hobas lodge","nwr hobas"],
   "sesriem-campsite": ["sesriem campsite","sesriem camp"],
   "sossus-dune-lodge": ["sossus dune lodge"],
