@@ -4,14 +4,12 @@ import { MapboxRouteProvider } from "@/lib/maps/mapbox";
 import { getPricingConfig, profileFor } from "@/lib/pricing/settings";
 import { modelCost } from "@/lib/pricing/cost-model";
 import type { Road } from "@/lib/network/roads";
-import type { PlaceNode, Region } from "@/lib/network/nodes";
+import type { PlaceNode } from "@/lib/network/nodes";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 const BOUNDS = { west: 11, south: -29, east: 25, north: -16 };
-const REGIONS: Region[] = ["central", "coast", "namib", "damaraland", "north", "zambezi", "south"];
-
 type PointInput = { name?: string; lat?: number; lng?: number; id?: string };
 
 function validPoint(point: PointInput): point is PointInput & { lat: number; lng: number } {
