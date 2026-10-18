@@ -348,6 +348,7 @@ function PlacePicker({
           onFocus={() => setOpen(true)}
           onChange={(event) => {
             setQuery(event.target.value);
+            onChange("");
             setOpen(true);
             setActiveIndex(0);
           }}
@@ -392,6 +393,7 @@ function PlacePicker({
               <Link
                 href="/contact"
                 className="text-brand mt-1 inline-block font-medium underline underline-offset-4"
+                onMouseDown={(event) => event.preventDefault()}
                 onClick={() => setOpen(false)}
               >
                 Request a quote for this destination
@@ -401,7 +403,7 @@ function PlacePicker({
           {matches.length > 0 && (
             <p className="text-muted-foreground border-t px-3 py-2 text-xs">
               Unlisted lodge, farm or private address?{" "}
-              <Link href="/contact" className="text-foreground underline underline-offset-2" onClick={() => setOpen(false)}>
+              <Link href="/contact" className="text-foreground underline underline-offset-2" onMouseDown={(event) => event.preventDefault()} onClick={() => setOpen(false)}>
                 Request a route quote
               </Link>
             </p>
