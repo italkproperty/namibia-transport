@@ -24,7 +24,7 @@ export default async function PublicCharterQuotePage({ params }: { params: Promi
   if (!/^[A-Za-z0-9_-]{32,100}$/.test(token) || !isDatabaseConfigured()) notFound();
   const db = getDb();
   const [quote] = await db.select().from(charterQuotes).where(eq(charterQuotes.publicToken, token)).limit(1);
-  if (!quote || quote.status !== "issued" || !quote.validUntil || quote.validUntil.getTime() < Date.now()) notFound();
+  if (!quote || quote.status !== "sent" || !quote.validUntil || quote.validUntil.getTime() < Date.now()) notFound();
   const [version] = await db.select().from(charterQuoteVersions)
     .where(eq(charterQuoteVersions.quoteId, quote.id))
     .orderBy(charterQuoteVersions.version).limit(1);
