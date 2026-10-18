@@ -78,6 +78,8 @@ export type PlaceNode = {
   backhaul: number;
   /** True where a booking is really an airport meet, not a town pickup. */
   isAirport?: boolean;
+  /** Search-only POI; never use its approximate pin for route matching or pricing. */
+  searchOnly?: boolean;
 };
 
 const BACKHAUL = {
@@ -149,9 +151,10 @@ export const PLACE_NODES: PlaceNode[] = [
     name: "Gross Barmen Resort",
     shortName: "Gross Barmen",
     region: "central",
-    lat: -22.1100,
-    lng: 16.7500,
+    lat: -22.11145,
+    lng: 16.74542,
     backhaul: BACKHAUL.terminus,
+    searchOnly: true,
   },
   {
     slug: "okonjima-lodge",
@@ -160,6 +163,7 @@ export const PLACE_NODES: PlaceNode[] = [
     lat: -20.8664,
     lng: 16.6394,
     backhaul: BACKHAUL.terminus,
+    searchOnly: true,
   },
   {
     slug: "onguma-the-fort",
@@ -168,6 +172,7 @@ export const PLACE_NODES: PlaceNode[] = [
     lat: -18.7361,
     lng: 17.0428,
     backhaul: BACKHAUL.terminus,
+    searchOnly: true,
   },
   {
     slug: "gross-okandjou",
@@ -176,6 +181,7 @@ export const PLACE_NODES: PlaceNode[] = [
     lat: -21.1444,
     lng: 16.1433,
     backhaul: BACKHAUL.terminus,
+    searchOnly: true,
   },
   {
     slug: "grootberg-lodge",
@@ -184,6 +190,7 @@ export const PLACE_NODES: PlaceNode[] = [
     lat: -19.8429,
     lng: 14.1283,
     backhaul: BACKHAUL.terminus,
+    searchOnly: true,
   },
   {
     slug: "haasenhof-guestfarm",
@@ -192,6 +199,7 @@ export const PLACE_NODES: PlaceNode[] = [
     lat: -20.4665,
     lng: 16.5168,
     backhaul: BACKHAUL.terminus,
+    searchOnly: true,
   },
   {
     slug: "namib-desert-lodge",
@@ -200,6 +208,7 @@ export const PLACE_NODES: PlaceNode[] = [
     lat: -24.1167,
     lng: 15.9056,
     backhaul: BACKHAUL.terminus,
+    searchOnly: true,
   },
   {
     slug: "namibgrens",
@@ -208,6 +217,7 @@ export const PLACE_NODES: PlaceNode[] = [
     lat: -23.6181,
     lng: 16.2417,
     backhaul: BACKHAUL.terminus,
+    searchOnly: true,
   },
   {
     slug: "okonjima-plains-camp",
@@ -216,6 +226,7 @@ export const PLACE_NODES: PlaceNode[] = [
     lat: -20.8591,
     lng: 16.6403,
     backhaul: BACKHAUL.terminus,
+    searchOnly: true,
   },
   {
     slug: "ongula-village-lodge",
@@ -224,6 +235,7 @@ export const PLACE_NODES: PlaceNode[] = [
     lat: -17.7413,
     lng: 16.142,
     backhaul: BACKHAUL.terminus,
+    searchOnly: true,
   },
   {
     slug: "onguma-bush-camp",
@@ -232,6 +244,7 @@ export const PLACE_NODES: PlaceNode[] = [
     lat: -18.74,
     lng: 17.046,
     backhaul: BACKHAUL.terminus,
+    searchOnly: true,
   },
   {
     slug: "onguma-tented-camp",
@@ -240,6 +253,7 @@ export const PLACE_NODES: PlaceNode[] = [
     lat: -18.731,
     lng: 17.05,
     backhaul: BACKHAUL.terminus,
+    searchOnly: true,
   },
   {
     slug: "cape-cross-lodge",
@@ -248,6 +262,7 @@ export const PLACE_NODES: PlaceNode[] = [
     lat: -21.764,
     lng: 13.9897,
     backhaul: BACKHAUL.terminus,
+    searchOnly: true,
   },
   {
     slug: "cape-cross-seal-reserve",
@@ -256,6 +271,7 @@ export const PLACE_NODES: PlaceNode[] = [
     lat: -21.7598,
     lng: 13.9672,
     backhaul: BACKHAUL.terminus,
+    searchOnly: true,
   },
   {
     slug: "kolmanskop",
@@ -264,6 +280,7 @@ export const PLACE_NODES: PlaceNode[] = [
     lat: -26.7036,
     lng: 15.2283,
     backhaul: BACKHAUL.terminus,
+    searchOnly: true,
   },
   {
     slug: "spitzkoppe-campsites",
@@ -272,6 +289,7 @@ export const PLACE_NODES: PlaceNode[] = [
     lat: -21.8263,
     lng: 15.1957,
     backhaul: BACKHAUL.terminus,
+    searchOnly: true,
   },
   {
     slug: "brandberg-white-lady",
@@ -280,6 +298,7 @@ export const PLACE_NODES: PlaceNode[] = [
     lat: -21.1167,
     lng: 14.5833,
     backhaul: BACKHAUL.terminus,
+    searchOnly: true,
   },
   {
     slug: "twylfelfontein-world-heritage",
@@ -288,6 +307,7 @@ export const PLACE_NODES: PlaceNode[] = [
     lat: -20.5936,
     lng: 14.3722,
     backhaul: BACKHAUL.terminus,
+    searchOnly: true,
   },
   {
     slug: "rocky-shore-cape-cross",
@@ -296,6 +316,7 @@ export const PLACE_NODES: PlaceNode[] = [
     lat: -21.7598,
     lng: 13.9672,
     backhaul: BACKHAUL.terminus,
+    searchOnly: true,
   },
   {
     slug: "erindi-private-game-reserve",
@@ -304,6 +325,7 @@ export const PLACE_NODES: PlaceNode[] = [
     lat: -21.2,
     lng: 16.4,
     backhaul: BACKHAUL.terminus,
+    searchOnly: true,
   },
   {
     slug: "mount-etjo",
@@ -312,6 +334,7 @@ export const PLACE_NODES: PlaceNode[] = [
     lat: -20.45,
     lng: 16.15,
     backhaul: BACKHAUL.terminus,
+    searchOnly: true,
   },
   {
     slug: "midgard",
@@ -320,6 +343,7 @@ export const PLACE_NODES: PlaceNode[] = [
     lat: -21.8,
     lng: 16.5,
     backhaul: BACKHAUL.terminus,
+    searchOnly: true,
   },
   {
     slug: "bagatelle-kalahari",
@@ -328,6 +352,7 @@ export const PLACE_NODES: PlaceNode[] = [
     lat: -24,
     lng: 18,
     backhaul: BACKHAUL.terminus,
+    searchOnly: true,
   },
   {
     slug: "namushasha",
@@ -336,6 +361,7 @@ export const PLACE_NODES: PlaceNode[] = [
     lat: -17.9,
     lng: 23.3,
     backhaul: BACKHAUL.terminus,
+    searchOnly: true,
   },
   {
     slug: "nunda-river-lodge",
@@ -344,6 +370,7 @@ export const PLACE_NODES: PlaceNode[] = [
     lat: -18.1067,
     lng: 21.5933,
     backhaul: BACKHAUL.terminus,
+    searchOnly: true,
   },
   {
     slug: "mahangu-safari-lodge",
@@ -352,6 +379,7 @@ export const PLACE_NODES: PlaceNode[] = [
     lat: -18.14,
     lng: 21.7,
     backhaul: BACKHAUL.terminus,
+    searchOnly: true,
   },
   {
     slug: "kalizo-lodge",
@@ -360,6 +388,7 @@ export const PLACE_NODES: PlaceNode[] = [
     lat: -17.54,
     lng: 24.57,
     backhaul: BACKHAUL.terminus,
+    searchOnly: true,
   },
   {
     slug: "mazambala-island-lodge",
@@ -368,6 +397,7 @@ export const PLACE_NODES: PlaceNode[] = [
     lat: -17.81,
     lng: 23.35,
     backhaul: BACKHAUL.terminus,
+    searchOnly: true,
   },
   {
     slug: "nkwazi-lodge",
@@ -376,6 +406,7 @@ export const PLACE_NODES: PlaceNode[] = [
     lat: -17.8678,
     lng: 19.9007,
     backhaul: BACKHAUL.terminus,
+    searchOnly: true,
   },
   {
     slug: "otjitotongwe-cheetah-farm",
@@ -384,6 +415,7 @@ export const PLACE_NODES: PlaceNode[] = [
     lat: -19.5913,
     lng: 15.0663,
     backhaul: BACKHAUL.terminus,
+    searchOnly: true,
   },
   {
     slug: "ombinda-country-lodge",
@@ -392,6 +424,7 @@ export const PLACE_NODES: PlaceNode[] = [
     lat: -20.12,
     lng: 16.15,
     backhaul: BACKHAUL.terminus,
+    searchOnly: true,
   },
   {
     slug: "lovedale-farm",
@@ -400,6 +433,7 @@ export const PLACE_NODES: PlaceNode[] = [
     lat: -25.9125,
     lng: 16.6634,
     backhaul: BACKHAUL.terminus,
+    searchOnly: true,
   },
   {
     slug: "melrose-guest-farm",
@@ -408,6 +442,7 @@ export const PLACE_NODES: PlaceNode[] = [
     lat: -22.8826,
     lng: 16.8985,
     backhaul: BACKHAUL.terminus,
+    searchOnly: true,
   },
   {
     slug: "oas-holiday-farm",
@@ -416,6 +451,7 @@ export const PLACE_NODES: PlaceNode[] = [
     lat: -27.4953,
     lng: 19.2205,
     backhaul: BACKHAUL.terminus,
+    searchOnly: true,
   },
   {
     slug: "orange-river-lodge",
@@ -424,6 +460,7 @@ export const PLACE_NODES: PlaceNode[] = [
     lat: -28.7439,
     lng: 17.6168,
     backhaul: BACKHAUL.terminus,
+    searchOnly: true,
   },
   {
     slug: "onguma-nature-reserve",
@@ -432,6 +469,7 @@ export const PLACE_NODES: PlaceNode[] = [
     lat: -18.7333,
     lng: 17.0486,
     backhaul: BACKHAUL.terminus,
+    searchOnly: true,
   },
   {
     slug: "halali-camp",
@@ -440,6 +478,7 @@ export const PLACE_NODES: PlaceNode[] = [
     lat: -19.028,
     lng: 16.472,
     backhaul: BACKHAUL.terminus,
+    searchOnly: true,
   },
   {
     slug: "dolomite-camp",
@@ -448,6 +487,7 @@ export const PLACE_NODES: PlaceNode[] = [
     lat: -19.3,
     lng: 14.4,
     backhaul: BACKHAUL.terminus,
+    searchOnly: true,
   },
   {
     slug: "onko shi-camp",
@@ -456,6 +496,7 @@ export const PLACE_NODES: PlaceNode[] = [
     lat: -18.7,
     lng: 16.9,
     backhaul: BACKHAUL.terminus,
+    searchOnly: true,
   },
   {
     slug: "hobas-lodge",
@@ -464,6 +505,7 @@ export const PLACE_NODES: PlaceNode[] = [
     lat: -27.5833,
     lng: 17.6167,
     backhaul: BACKHAUL.terminus,
+    searchOnly: true,
   },
   {
     slug: "sesriem-campsite",
@@ -472,6 +514,7 @@ export const PLACE_NODES: PlaceNode[] = [
     lat: -24.4833,
     lng: 15.8,
     backhaul: BACKHAUL.terminus,
+    searchOnly: true,
   },
   {
     slug: "sossus-dune-lodge",
@@ -480,6 +523,7 @@ export const PLACE_NODES: PlaceNode[] = [
     lat: -24.7333,
     lng: 15.3,
     backhaul: BACKHAUL.terminus,
+    searchOnly: true,
   },
   {
     slug: "naukluft-lodge",
@@ -488,6 +532,7 @@ export const PLACE_NODES: PlaceNode[] = [
     lat: -24.25,
     lng: 16,
     backhaul: BACKHAUL.terminus,
+    searchOnly: true,
   },
   {
     slug: "terrace-bay-resort",
@@ -496,6 +541,7 @@ export const PLACE_NODES: PlaceNode[] = [
     lat: -19.98,
     lng: 13,
     backhaul: BACKHAUL.terminus,
+    searchOnly: true,
   },
   {
     slug: "ai-ais-resort",
@@ -504,6 +550,7 @@ export const PLACE_NODES: PlaceNode[] = [
     lat: -27.9167,
     lng: 17.4833,
     backhaul: BACKHAUL.terminus,
+    searchOnly: true,
   },
   {
     slug: "waterberg-wilderness",
@@ -512,6 +559,7 @@ export const PLACE_NODES: PlaceNode[] = [
     lat: -20.5167,
     lng: 17.2333,
     backhaul: BACKHAUL.terminus,
+    searchOnly: true,
   },
   {
     slug: "gobabeb",
@@ -520,6 +568,7 @@ export const PLACE_NODES: PlaceNode[] = [
     lat: -23.56,
     lng: 15.04,
     backhaul: BACKHAUL.terminus,
+    searchOnly: true,
   },
   {
     slug: "solitaire-guest-farm",
@@ -528,6 +577,7 @@ export const PLACE_NODES: PlaceNode[] = [
     lat: -23.89,
     lng: 16,
     backhaul: BACKHAUL.terminus,
+    searchOnly: true,
   },
   {
     slug: "ababis-guest-farm",
@@ -536,6 +586,7 @@ export const PLACE_NODES: PlaceNode[] = [
     lat: -23.4,
     lng: 15.9,
     backhaul: BACKHAUL.terminus,
+    searchOnly: true,
   },
   {
     slug: "duwisib-castle",
@@ -544,6 +595,7 @@ export const PLACE_NODES: PlaceNode[] = [
     lat: -25.23,
     lng: 16.54,
     backhaul: BACKHAUL.terminus,
+    searchOnly: true,
   },
   {
     slug: "sesriem-gate",
@@ -552,6 +604,7 @@ export const PLACE_NODES: PlaceNode[] = [
     lat: -24.4833,
     lng: 15.8,
     backhaul: BACKHAUL.terminus,
+    searchOnly: true,
   },
   {
     slug: "deadvlei",
@@ -560,6 +613,7 @@ export const PLACE_NODES: PlaceNode[] = [
     lat: -24.75,
     lng: 15.29,
     backhaul: BACKHAUL.terminus,
+    searchOnly: true,
   },
   {
     slug: "big-daddy-dune",
@@ -568,6 +622,7 @@ export const PLACE_NODES: PlaceNode[] = [
     lat: -24.75,
     lng: 15.29,
     backhaul: BACKHAUL.terminus,
+    searchOnly: true,
   },
   {
     slug: "sandwich-harbour",
@@ -576,6 +631,7 @@ export const PLACE_NODES: PlaceNode[] = [
     lat: -23.37,
     lng: 14.45,
     backhaul: BACKHAUL.terminus,
+    searchOnly: true,
   },
   {
     slug: "walvis-bay-lagoon",
@@ -584,6 +640,7 @@ export const PLACE_NODES: PlaceNode[] = [
     lat: -22.97,
     lng: 14.51,
     backhaul: BACKHAUL.terminus,
+    searchOnly: true,
   },
   {
     slug: "moon-landscape",
@@ -592,6 +649,7 @@ export const PLACE_NODES: PlaceNode[] = [
     lat: -22.56,
     lng: 14.95,
     backhaul: BACKHAUL.terminus,
+    searchOnly: true,
   },
   {
     slug: "welwitschia-plains",
@@ -600,6 +658,7 @@ export const PLACE_NODES: PlaceNode[] = [
     lat: -22.35,
     lng: 14.95,
     backhaul: BACKHAUL.terminus,
+    searchOnly: true,
   },
   {
     slug: "cape-cross-lighthouse",
@@ -608,6 +667,7 @@ export const PLACE_NODES: PlaceNode[] = [
     lat: -21.7598,
     lng: 13.9672,
     backhaul: BACKHAUL.terminus,
+    searchOnly: true,
   },
   {
     slug: "hoba-meteorite",
@@ -616,6 +676,7 @@ export const PLACE_NODES: PlaceNode[] = [
     lat: -19.6,
     lng: 17.93,
     backhaul: BACKHAUL.terminus,
+    searchOnly: true,
   },
   {
     slug: "otjikoto-lake",
@@ -624,6 +685,7 @@ export const PLACE_NODES: PlaceNode[] = [
     lat: -19.2,
     lng: 17.58,
     backhaul: BACKHAUL.terminus,
+    searchOnly: true,
   },
   {
     slug: "meteorite-gibeon",
@@ -632,6 +694,7 @@ export const PLACE_NODES: PlaceNode[] = [
     lat: -25.13,
     lng: 17.77,
     backhaul: BACKHAUL.terminus,
+    searchOnly: true,
   },
   {
     slug: "quiver-tree-forest",
@@ -640,6 +703,7 @@ export const PLACE_NODES: PlaceNode[] = [
     lat: -26,
     lng: 19.75,
     backhaul: BACKHAUL.terminus,
+    searchOnly: true,
   },
   {
     slug: "giants-playground",
@@ -648,6 +712,7 @@ export const PLACE_NODES: PlaceNode[] = [
     lat: -26,
     lng: 19.75,
     backhaul: BACKHAUL.terminus,
+    searchOnly: true,
   },
   {
     slug: "kokerboomkloof",
@@ -656,6 +721,7 @@ export const PLACE_NODES: PlaceNode[] = [
     lat: -26.9,
     lng: 16,
     backhaul: BACKHAUL.terminus,
+    searchOnly: true,
   },
   {
     slug: "naute-dam",
@@ -664,6 +730,7 @@ export const PLACE_NODES: PlaceNode[] = [
     lat: -26.9,
     lng: 17.9,
     backhaul: BACKHAUL.terminus,
+    searchOnly: true,
   },
   {
     slug: "hardap-dam",
@@ -672,6 +739,7 @@ export const PLACE_NODES: PlaceNode[] = [
     lat: -24.5,
     lng: 17.8,
     backhaul: BACKHAUL.terminus,
+    searchOnly: true,
   },
   {
     slug: "reiterdenkmal",
@@ -680,6 +748,7 @@ export const PLACE_NODES: PlaceNode[] = [
     lat: -22.57,
     lng: 17.08,
     backhaul: BACKHAUL.terminus,
+    searchOnly: true,
   },
   {
     slug: "christuskirche",
@@ -688,6 +757,7 @@ export const PLACE_NODES: PlaceNode[] = [
     lat: -22.57,
     lng: 17.08,
     backhaul: BACKHAUL.terminus,
+    searchOnly: true,
   },
   {
     slug: "independence-museum",
@@ -696,6 +766,7 @@ export const PLACE_NODES: PlaceNode[] = [
     lat: -22.57,
     lng: 17.08,
     backhaul: BACKHAUL.terminus,
+    searchOnly: true,
   },
   {
     slug: "tintenpalast",
@@ -704,6 +775,7 @@ export const PLACE_NODES: PlaceNode[] = [
     lat: -22.57,
     lng: 17.08,
     backhaul: BACKHAUL.terminus,
+    searchOnly: true,
   },
   {
     slug: "hero-acres",
@@ -712,6 +784,7 @@ export const PLACE_NODES: PlaceNode[] = [
     lat: -22.62,
     lng: 17.08,
     backhaul: BACKHAUL.terminus,
+    searchOnly: true,
   },
   {
     slug: "gross-barmen-hot-spring",
@@ -720,6 +793,7 @@ export const PLACE_NODES: PlaceNode[] = [
     lat: -22.1115,
     lng: 16.7454,
     backhaul: BACKHAUL.terminus,
+    searchOnly: true,
   },
   {
     slug: "gross-barmen-camp",
@@ -728,6 +802,7 @@ export const PLACE_NODES: PlaceNode[] = [
     lat: -22.113,
     lng: 16.745,
     backhaul: BACKHAUL.terminus,
+    searchOnly: true,
   },
 
   /* --------------------------------------------------------------- coast */
@@ -763,6 +838,7 @@ export const PLACE_NODES: PlaceNode[] = [
     lat: -22.1167,
     lng: 14.2833,
     backhaul: BACKHAUL.terminus,
+    searchOnly: true,
   },
 
   /* --------------------------------------------------------------- namib */
@@ -776,6 +852,7 @@ export const PLACE_NODES: PlaceNode[] = [
     lat: -24.7272,
     lng: 15.3444,
     backhaul: BACKHAUL.terminus,
+    searchOnly: true,
   },
   {
     slug: "solitaire",
@@ -784,6 +861,7 @@ export const PLACE_NODES: PlaceNode[] = [
     lat: -23.8931,
     lng: 16.0064,
     backhaul: BACKHAUL.terminus,
+    searchOnly: true,
   },
   {
     slug: "maltahohe",
@@ -792,6 +870,7 @@ export const PLACE_NODES: PlaceNode[] = [
     lat: -24.8333,
     lng: 16.9833,
     backhaul: BACKHAUL.terminus,
+    searchOnly: true,
   },
   {
     slug: "helmeringhausen",
@@ -800,6 +879,7 @@ export const PLACE_NODES: PlaceNode[] = [
     lat: -25.8667,
     lng: 16.8167,
     backhaul: BACKHAUL.terminus,
+    searchOnly: true,
   },
 
   /* ---------------------------------------------------------- damaraland */
@@ -810,6 +890,7 @@ export const PLACE_NODES: PlaceNode[] = [
     lat: -21.83,
     lng: 15.195,
     backhaul: BACKHAUL.terminus,
+    searchOnly: true,
   },
   {
     slug: "uis",
@@ -818,6 +899,7 @@ export const PLACE_NODES: PlaceNode[] = [
     lat: -21.2333,
     lng: 14.8667,
     backhaul: BACKHAUL.terminus,
+    searchOnly: true,
   },
   {
     slug: "khorixas",
@@ -826,6 +908,7 @@ export const PLACE_NODES: PlaceNode[] = [
     lat: -20.3667,
     lng: 14.9667,
     backhaul: BACKHAUL.terminus,
+    searchOnly: true,
   },
   {
     slug: "twyfelfontein",
@@ -834,6 +917,7 @@ export const PLACE_NODES: PlaceNode[] = [
     lat: -20.5936,
     lng: 14.3722,
     backhaul: BACKHAUL.terminus,
+    searchOnly: true,
   },
   {
     slug: "karibib",
@@ -869,6 +953,7 @@ export const PLACE_NODES: PlaceNode[] = [
     lat: -20.5167,
     lng: 17.2333,
     backhaul: BACKHAUL.terminus,
+    searchOnly: true,
   },
   {
     slug: "outjo",
@@ -887,6 +972,7 @@ export const PLACE_NODES: PlaceNode[] = [
     lat: -19.1833,
     lng: 15.9167,
     backhaul: BACKHAUL.terminus,
+    searchOnly: true,
   },
   {
     slug: "etosha-namutoni",
@@ -896,6 +982,7 @@ export const PLACE_NODES: PlaceNode[] = [
     lat: -18.81,
     lng: 16.98,
     backhaul: BACKHAUL.terminus,
+    searchOnly: true,
   },
   {
     slug: "otavi",
@@ -938,6 +1025,7 @@ export const PLACE_NODES: PlaceNode[] = [
     lat: -18.1167,
     lng: 21.5667,
     backhaul: BACKHAUL.terminus,
+    searchOnly: true,
   },
   {
     slug: "kongola",
@@ -946,6 +1034,7 @@ export const PLACE_NODES: PlaceNode[] = [
     lat: -17.7833,
     lng: 23.3333,
     backhaul: BACKHAUL.terminus,
+    searchOnly: true,
   },
   {
     slug: "katima-mulilo",
@@ -980,6 +1069,7 @@ export const PLACE_NODES: PlaceNode[] = [
     lat: -26.6667,
     lng: 16.25,
     backhaul: BACKHAUL.terminus,
+    searchOnly: true,
   },
   {
     slug: "luderitz",
@@ -988,6 +1078,7 @@ export const PLACE_NODES: PlaceNode[] = [
     lat: -26.6481,
     lng: 15.1594,
     backhaul: BACKHAUL.terminus,
+    searchOnly: true,
   },
   {
     slug: "fish-river-canyon",
@@ -997,6 +1088,7 @@ export const PLACE_NODES: PlaceNode[] = [
     lat: -27.5833,
     lng: 17.6167,
     backhaul: BACKHAUL.terminus,
+    searchOnly: true,
   },
   {
     slug: "grunau",
@@ -1005,6 +1097,7 @@ export const PLACE_NODES: PlaceNode[] = [
     lat: -27.7333,
     lng: 18.4,
     backhaul: BACKHAUL.terminus,
+    searchOnly: true,
   },
   {
     slug: "noordoewer",
@@ -1014,6 +1107,7 @@ export const PLACE_NODES: PlaceNode[] = [
     lat: -28.75,
     lng: 17.6167,
     backhaul: BACKHAUL.terminus,
+    searchOnly: true,
   },
 
   /* ------------------- Kaokoland, the Owambo north, Erongo and Ai-Ais
@@ -1037,6 +1131,7 @@ export const PLACE_NODES: PlaceNode[] = [
     lat: -19.8833,
     lng: 13.9333,
     backhaul: BACKHAUL.terminus,
+    searchOnly: true,
   },
   {
     slug: "sesfontein",
@@ -1045,6 +1140,7 @@ export const PLACE_NODES: PlaceNode[] = [
     lat: -19.1333,
     lng: 13.6167,
     backhaul: BACKHAUL.terminus,
+    searchOnly: true,
   },
   {
     slug: "opuwo",
@@ -1061,6 +1157,7 @@ export const PLACE_NODES: PlaceNode[] = [
     lat: -17.0,
     lng: 13.2333,
     backhaul: BACKHAUL.terminus,
+    searchOnly: true,
   },
   {
     slug: "ruacana",
@@ -1069,6 +1166,7 @@ export const PLACE_NODES: PlaceNode[] = [
     lat: -17.4167,
     lng: 14.2167,
     backhaul: BACKHAUL.terminus,
+    searchOnly: true,
   },
   {
     slug: "oshakati",
@@ -1102,6 +1200,7 @@ export const PLACE_NODES: PlaceNode[] = [
     lat: -27.9167,
     lng: 17.4833,
     backhaul: BACKHAUL.terminus,
+    searchOnly: true,
   },
 ];
 
