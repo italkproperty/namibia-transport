@@ -367,7 +367,8 @@ export async function issueCharterQuoteAction(
     revalidatePath("/admin/quotes/charter/drafts");
     revalidatePath(`/admin/quotes/charter/drafts/${id}`);
     const origin = process.env.NEXT_PUBLIC_SITE_URL?.trim() || "https://www.namibiatransport.com";
-    return { ok: true, url: `${origin.replace(/\\/$/, "")}/charter-quote/${token}`, validUntil: validUntil.toISOString() };
+    const cleanOrigin = origin.endsWith("/") ? origin.slice(0, -1) : origin;
+    return { ok: true, url: `${cleanOrigin}/charter-quote/${token}`, validUntil: validUntil.toISOString() };
   } catch (error) {
     console.error("[charter-quote] issue failed", error);
     return { ok: false, message: "The quote could not be issued. No customer link was created; try again or check the server logs." };
