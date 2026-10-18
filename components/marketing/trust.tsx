@@ -202,7 +202,7 @@ export async function ReviewsSection() {
     <section aria-labelledby="reviews-heading">
       <div className="flex flex-wrap items-end justify-between gap-3">
         <h2 id="reviews-heading" className="text-xl sm:text-2xl">
-          From travellers we have driven
+          What our travellers say
         </h2>
         <p className="flex items-center gap-2 text-sm">
           <span className="text-brand flex" aria-hidden>
@@ -218,9 +218,7 @@ export async function ReviewsSection() {
           <span className="tabular font-semibold">
             {summary.average.toFixed(1)}/5
           </span>
-          <span className="text-muted-foreground">
-            from {summary.count} traveller{summary.count === 1 ? "" : "s"}
-          </span>
+          <span className="text-muted-foreground">Google rating</span>
         </p>
       </div>
 
@@ -275,9 +273,7 @@ export async function ReviewBadge() {
       <span className="tabular font-semibold">
         {summary.average.toFixed(1)}/5
       </span>
-      <span className="text-muted-foreground">
-        from {summary.count} traveller{summary.count === 1 ? "" : "s"}
-      </span>
+      <span className="text-muted-foreground">Google rating</span>
     </p>
   );
 }
