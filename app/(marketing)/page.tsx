@@ -116,6 +116,21 @@ export default async function HomePage({ searchParams }: PageProps) {
               journey with confidence.
             </p>
 
+            <div className="mt-6 flex flex-wrap gap-3">
+              <Button asChild size="lg" className="press bg-brand text-brand-foreground hover:bg-brand-hover h-12">
+                <Link href="/journey">
+                  Price any route in Namibia
+                  <ArrowRightIcon className="size-4" aria-hidden />
+                </Link>
+              </Button>
+              <Link
+                href="/#quote"
+                className="focus-ring inline-flex h-12 items-center rounded-md border border-white/25 px-5 text-sm font-medium text-background hover:bg-white/10"
+              >
+                View popular route prices
+              </Link>
+            </div>
+
             {/* Renders only once real published reviews exist. */}
             <ReviewBadge />
 
