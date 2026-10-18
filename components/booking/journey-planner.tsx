@@ -1,19 +1,11 @@
 "use client";
 
 import * as React from "react";
-import { ArrowUpDownIcon } from "lucide-react";
+import Link from "next/link";
+import { ArrowUpDownIcon, CheckIcon, SearchIcon } from "lucide-react";
 
 import { QuoteWidget } from "@/components/booking/quote-widget";
 import { useTrip } from "@/components/booking/use-trip";
-import {
-  Select,
-  SelectContent,
-  SelectGroup,
-  SelectItem,
-  SelectLabel,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { formatDuration } from "@/lib/format";
 import type { RouteView, VehicleClassView } from "@/lib/maps";
 import { Fare } from "@/components/currency/fare";
@@ -279,31 +271,143 @@ function PlacePicker({
   onChange: (slug: string) => void;
   groups: ReturnType<typeof nodesByRegion>;
 }) {
+  const allNodes = React.useMemo(
+    () => groups.flatMap((group) => group.nodes),
+    [groups],
+  );
+  const selected = allNodes.find((node) => node.slug === value);
+  const [query, setQuery] = React.useState(
+    selected ? nodeLabel(selected) : value,
+  );
+  const [open, setOpen] = React.useState(false);
+  const [activeIndex, setActiveIndex] = React.useState(0);
+  const inputRef = React.useRef<HTMLInputElement | null>(null);
+
+  React.useEffect(() => {
+    const node = allNodes.find((item) => item.slug === value);
+    if (node) setQuery(nodeLabel(node));
+  }, [allNodes, value]);
+
+  const matches = React.useMemo(() => {
+    const q = query.trim().toLocaleLowerCase();
+    const filtered = allNodes.filter((node) => {
+      const searchable = [
+        node.name,
+        node.shortName ?? "",
+        node.slug.replace(/-/g, " "),
+        REGION_LABELS[node.region],
+      ].join(" ").toLocaleLowerCase();
+      return !q || searchable.includes(q);
+    });
+    return filtered.slice(0, 10);
+  }, [allNodes, query]);
+
+  function choose(slug: string) {
+    const node = allNodes.find((item) => item.slug === slug);
+    if (!node) return;
+    onChange(node.slug);
+    setQuery(nodeLabel(node));
+    setOpen(false);
+    setActiveIndex(0);
+  }
+
+  function handleKeyDown(event: React.KeyboardEvent<HTMLInputElement>) {
+    if (event.key === "ArrowDown") {
+      event.preventDefault();
+      setOpen(true);
+      setActiveIndex((index) => Math.min(index + 1, Math.max(0, matches.length - 1)));
+    } else if (event.key === "ArrowUp") {
+      event.preventDefault();
+      setActiveIndex((index) => Math.max(0, index - 1));
+    } else if (event.key === "Enter" && open && matches[activeIndex]) {
+      event.preventDefault();
+      choose(matches[activeIndex].slug);
+    } else if (event.key === "Escape") {
+      setOpen(false);
+      const node = allNodes.find((item) => item.slug === value);
+      setQuery(node ? nodeLabel(node) : "");
+    }
+  }
+
   return (
-    <div className="grid gap-1.5">
-      <label
-        htmlFor={id}
-        className="text-muted-foreground text-xs font-medium"
-      >
+    <div className="relative grid min-w-0 gap-1.5">
+      <label htmlFor={id} className="text-muted-foreground text-xs font-medium">
         {label}
       </label>
-      <Select value={value} onValueChange={onChange}>
-        <SelectTrigger id={id} className="h-11 w-full">
-          <SelectValue />
-        </SelectTrigger>
-        <SelectContent className="max-h-[22rem]">
-          {groups.map((group) => (
-            <SelectGroup key={group.region}>
-              <SelectLabel>{REGION_LABELS[group.region]}</SelectLabel>
-              {group.nodes.map((node) => (
-                <SelectItem key={node.slug} value={node.slug}>
-                  {nodeLabel(node)}
-                </SelectItem>
-              ))}
-            </SelectGroup>
-          ))}
-        </SelectContent>
-      </Select>
+      <div className="relative">
+        <SearchIcon className="text-muted-foreground pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2" aria-hidden />
+        <input
+          ref={inputRef}
+          id={id}
+          role="combobox"
+          aria-autocomplete="list"
+          aria-expanded={open}
+          aria-controls={`${id}-listbox`}
+          aria-activedescendant={open && matches[activeIndex] ? `${id}-option-${matches[activeIndex].slug}` : undefined}
+          value={query}
+          onFocus={() => setOpen(true)}
+          onChange={(event) => {
+            setQuery(event.target.value);
+            setOpen(true);
+            setActiveIndex(0);
+          }}
+          onKeyDown={handleKeyDown}
+          onBlur={() => setOpen(false)}
+          placeholder="Search towns, airports and places"
+          autoComplete="off"
+          className="border-input bg-background focus-visible:ring-ring h-11 w-full min-w-0 rounded-md border pr-3 pl-9 text-sm focus-visible:ring-[3px] focus-visible:outline-none"
+        />
+      </div>
+
+      {open && (
+        <div
+          id={`${id}-listbox`}
+          role="listbox"
+          aria-label={`${label} suggestions`}
+          className="bg-popover text-popover-foreground absolute top-full z-30 mt-1 max-h-72 w-full overflow-y-auto rounded-md border p-1 shadow-md"
+        >
+          {matches.length > 0 ? matches.map((node, index) => (
+            <button
+              key={node.slug}
+              id={`${id}-option-${node.slug}`}
+              type="button"
+              role="option"
+              aria-selected={node.slug === value}
+              onMouseDown={(event) => event.preventDefault()}
+              onMouseEnter={() => setActiveIndex(index)}
+              onClick={() => choose(node.slug)}
+              className={`flex w-full items-center justify-between gap-3 rounded-sm px-3 py-2 text-left ${index === activeIndex ? "bg-accent text-accent-foreground" : "hover:bg-muted"}`}
+            >
+              <span className="min-w-0">
+                <span className="block truncate text-sm">{nodeLabel(node)}</span>
+                <span className="text-muted-foreground block text-xs">
+                  {node.isAirport ? "Airport" : "Road-network place"} · {REGION_LABELS[node.region]}
+                </span>
+              </span>
+              {node.slug === value && <CheckIcon className="text-brand size-4 shrink-0" aria-hidden />}
+            </button>
+          )) : (
+            <div className="px-3 py-3 text-sm">
+              <p>No instant-price match in the current road network.</p>
+              <Link
+                href="/contact"
+                className="text-brand mt-1 inline-block font-medium underline underline-offset-4"
+                onClick={() => setOpen(false)}
+              >
+                Request a quote for this destination
+              </Link>
+            </div>
+          )}
+          {matches.length > 0 && (
+            <p className="text-muted-foreground border-t px-3 py-2 text-xs">
+              Unlisted lodge, farm or private address?{" "}
+              <Link href="/contact" className="text-foreground underline underline-offset-2" onClick={() => setOpen(false)}>
+                Request a route quote
+              </Link>
+            </p>
+          )}
+        </div>
+      )}
     </div>
   );
 }
