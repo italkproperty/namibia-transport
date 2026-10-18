@@ -331,6 +331,36 @@ export const charterQuoteVersions = pgTable(
   ],
 );
 
+/**
+ * Gateway attempts for bespoke charter quotes. Kept separate from booking
+ * payments because a charter is priced and accepted as one commercial unit,
+ * before dispatchable booking legs are created.
+ */
+export const charterQuotePayments = pgTable(
+  "charter_quote_payments",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    quoteId: uuid("quote_id")
+      .notNull()
+      .references(() => charterQuotes.id, { onDelete: "restrict" }),
+    provider: text("provider").notNull(),
+    providerReference: text("provider_reference"),
+    status: text("status").notNull().default("pending"),
+    amount: money("amount").notNull(),
+    currency: currency(),
+    checkoutUrl: text("checkout_url"),
+    expiresAt: timestamp("expires_at", { withTimezone: true }),
+    raw: jsonb("raw"),
+    paidAt: timestamp("paid_at", { withTimezone: true }),
+    ...timestamps,
+  },
+  (t) => [
+    index("charter_quote_payments_quote_idx").on(t.quoteId, t.createdAt.desc()),
+    uniqueIndex("charter_quote_payments_provider_reference_key").on(t.provider, t.providerReference),
+    index("charter_quote_payments_status_idx").on(t.status, t.createdAt.desc()),
+  ],
+);
+
 export const addOns = pgTable(
   "add_ons",
   {
