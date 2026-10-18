@@ -85,7 +85,7 @@ export default async function PublicCharterQuotePage({ params, searchParams }: {
         <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Private charter proposal</p>
         <div className="mt-2 flex flex-wrap items-start justify-between gap-4">
           <div><h1 className="text-2xl font-semibold sm:text-3xl">Your Namibia journey</h1><p className="mt-2 text-sm text-muted-foreground">Proposal {quote.quoteNumber} · Prepared for {String(customer.name ?? quote.customerName)}</p></div>
-          <span className="rounded-full border px-3 py-1 text-xs">Valid until {dateText(quote.validUntil.toISOString())}</span>
+          <span className="rounded-full border px-3 py-1 text-xs">{quote.validUntil ? `Valid until ${dateText(quote.validUntil.toISOString())}` : "Payment received"}</span>
         </div>
         <section className="mt-7 rounded-xl border bg-card p-5">
           <h2 className="font-semibold">Trip overview</h2>
