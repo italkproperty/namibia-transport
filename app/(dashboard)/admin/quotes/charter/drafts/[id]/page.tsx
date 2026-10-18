@@ -255,8 +255,8 @@ export default async function CharterQuoteDraftDetailPage({
 
         <IssueCharterQuoteForm
           quoteId={quote.id}
-          existingUrl={quote.publicToken && quote.status === "issued" && quote.validUntil && quote.validUntil.getTime() > Date.now()
-            ? `${(process.env.NEXT_PUBLIC_SITE_URL?.trim() || "https://www.namibiatransport.com").replace(/\\/$/, "")}/charter-quote/${quote.publicToken}`
+          existingUrl={quote.publicToken && quote.status === "sent" && quote.validUntil && quote.validUntil.getTime() > Date.now()
+            ? `${((process.env.NEXT_PUBLIC_SITE_URL?.trim() || "https://www.namibiatransport.com").endsWith("/") ? (process.env.NEXT_PUBLIC_SITE_URL?.trim() || "https://www.namibiatransport.com").slice(0, -1) : (process.env.NEXT_PUBLIC_SITE_URL?.trim() || "https://www.namibiatransport.com"))}/charter-quote/${quote.publicToken}`
             : null}
         />
 
