@@ -364,7 +364,7 @@ function PlacePicker({
 
   React.useEffect(() => {
     const term = query.trim();
-    if (term.length < 2 || !open) { setRemoteMatches([]); setRemoteError(null); return; }
+    if (term.length < 3 || !open) { setRemoteMatches([]); setRemoteError(null); return; }
     const controller = new AbortController();
     const timer = window.setTimeout(() => {
       setRemoteLoading(true); setRemoteError(null);
@@ -373,7 +373,7 @@ function PlacePicker({
         .then((data) => setRemoteMatches(Array.isArray(data.results) ? data.results : []))
         .catch((error: unknown) => { if (!(error instanceof DOMException && error.name === "AbortError")) setRemoteError(error instanceof Error ? error.message : "Destination search failed."); })
         .finally(() => setRemoteLoading(false));
-    }, 250);
+    }, 650);
     return () => { window.clearTimeout(timer); controller.abort(); };
   }, [query, open]);
 
@@ -442,7 +442,7 @@ function PlacePicker({
           }}
           onKeyDown={handleKeyDown}
           onBlur={() => setOpen(false)}
-          placeholder="Search towns, airports and places"
+          placeholder="Search towns, mines, lodges and addresses"
           autoComplete="off"
           className="border-input bg-background focus-visible:ring-ring h-11 w-full min-w-0 rounded-md border pr-3 pl-9 text-sm focus-visible:ring-[3px] focus-visible:outline-none"
         />
