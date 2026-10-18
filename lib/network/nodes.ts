@@ -547,7 +547,7 @@ function normaliseSearch(value: string): string {
   return value
     .toLocaleLowerCase()
     .normalize("NFD")
-    .replace(/[\\u0300-\\u036f]/g, "")
+    .replace(/\\p{M}/gu, "")
     .replace(/[^a-z0-9]+/g, " ")
     .trim()
     .replace(/\\s+/g, " ");
@@ -570,7 +570,7 @@ export function searchNodes(query: string, limit = 10): PlaceNode[] {
       REGION_LABELS[node.region],
       ...aliases,
     ].map(normaliseSearch);
-    return searchable.some((candidate) => candidate.includes(q) || q.includes(candidate));
+    return searchable.filter(Boolean).some((candidate) => candidate.includes(q) || q.includes(candidate));
   }).slice(0, Math.max(0, limit));
 }
 
