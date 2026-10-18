@@ -11,10 +11,10 @@ export const dynamic = "force-dynamic";
 /** Return URL parameters are untrusted; settlement comes only from PayToday's query API. */
 export async function GET(request: NextRequest) {
   const token = request.nextUrl.searchParams.get("token")?.trim() ?? "";
-  if (!/^[A-Za-z0-9_-]{32,100}$/.test(token)) {
+  if (!/^[A-Za-z0-9_-]{10,100}$/.test(token)) {
     return NextResponse.redirect(new URL("/", request.url), { status: 303 });
   }
-  const pageUrl = new URL(`/charter-quote/${token}`, request.url);
+  const pageUrl = new URL(`/q/${token}`, request.url);
   if (!isDatabaseConfigured() || !isLiveGatewayConfigured()) {
     pageUrl.searchParams.set("payment", "contact");
     return NextResponse.redirect(pageUrl, { status: 303 });
