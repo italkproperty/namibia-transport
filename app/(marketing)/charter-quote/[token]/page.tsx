@@ -36,7 +36,6 @@ export default async function PublicCharterQuotePage({ params }: { params: Promi
   const vehicle = obj(snapshot.vehicle);
   const brief = obj(snapshot.customerBrief);
   const legs = buildPublicCharterLegs(snapshot, version.total);
-  const stops = Array.isArray(request.stops) ? request.stops as { label?: unknown }[] : [];
   const startDate = dateText(brief.requestedStartDate ?? brief.itineraryStartDate);
   const endDate = dateText(brief.requestedEndDate);
   const totalDistance = Number(route.totalDistanceKm);
