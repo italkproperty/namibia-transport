@@ -29,7 +29,11 @@ import { describeRoads, describeVia } from "@/lib/network/roads";
  * anything, exactly as it does for a curated route — this is a preview, not a
  * price the browser gets to decide.
  */
-type ExternalPlace = { id: string; name: string; fullName: string; lat: number; lng: number; category: string; source: "mapbox" };\n\ntype RouteEstimate = { status: string; origin: { name: string }; destination: { name: string }; route: { distanceKm: number; durationMin: number; surfaceAssumption: string }; fare: { currency: string; estimatedCustomerPrice: number; estimatedDriverPayout: number; estimatedContribution: number; overnightCount: number }; bookable: false; explanation: string };\n\nexport function JourneyPlanner({
+type ExternalPlace = { id: string; name: string; fullName: string; lat: number; lng: number; category: string; source: "mapbox" };
+
+type RouteEstimate = { status: string; origin: { name: string }; destination: { name: string }; route: { distanceKm: number; durationMin: number; surfaceAssumption: string }; fare: { currency: string; estimatedCustomerPrice: number; estimatedDriverPayout: number; estimatedContribution: number; overnightCount: number }; bookable: false; explanation: string };
+
+export function JourneyPlanner({
   routes,
   vehicleClasses,
   initialFrom,
@@ -42,7 +46,12 @@ type ExternalPlace = { id: string; name: string; fullName: string; lat: number; 
   initialTo: string;
 }) {
   const [from, setFrom] = React.useState(initialFrom);
-  const [to, setTo] = React.useState(initialTo);\n  const [externalFrom, setExternalFrom] = React.useState<ExternalPlace | null>(null);\n  const [externalTo, setExternalTo] = React.useState<ExternalPlace | null>(null);\n  const [routeEstimate, setRouteEstimate] = React.useState<RouteEstimate | null>(null);\n  const [estimateLoading, setEstimateLoading] = React.useState(false);\n  const [estimateError, setEstimateError] = React.useState<string | null>(null);
+  const [to, setTo] = React.useState(initialTo);
+  const [externalFrom, setExternalFrom] = React.useState<ExternalPlace | null>(null);
+  const [externalTo, setExternalTo] = React.useState<ExternalPlace | null>(null);
+  const [routeEstimate, setRouteEstimate] = React.useState<RouteEstimate | null>(null);
+  const [estimateLoading, setEstimateLoading] = React.useState(false);
+  const [estimateError, setEstimateError] = React.useState<string | null>(null);
 
   const groups = React.useMemo(() => nodesByRegion(), []);
 
@@ -66,7 +75,35 @@ type ExternalPlace = { id: string; name: string; fullName: string; lat: number; 
   }, [from, to, routes]);
 
   const curated = curatedByPair.get(`${from}>${to}`) ?? null;
-  const route = curated ?? journey?.route ?? null;\n\n  React.useEffect(() => {\n    if (route || (!externalFrom && !externalTo) || !from && !externalFrom || !to && !externalTo) {\n      setRouteEstimate(null);\n      setEstimateError(null);\n      return;\n    }\n    const nodes = groups.flatMap((group) => group.nodes);\n    const origin = externalFrom ?? nodes.find((node) => node.slug === from);\n    const destination = externalTo ?? nodes.find((node) => node.slug === to);\n    if (!origin || !destination) return;\n    let cancelled = false;\n    const controller = new AbortController();\n    setEstimateLoading(true);\n    setEstimateError(null);\n    setRouteEstimate(null);\n    fetch("/api/destinations/route-preview", {\n      method: "POST", headers: { "Content-Type": "application/json" }, signal: controller.signal,\n      body: JSON.stringify({ origin: { name: origin.name, lat: origin.lat, lng: origin.lng }, destination: { name: destination.name, lat: destination.lat, lng: destination.lng } }),\n    }).then(async (response) => {\n      const data = await response.json();\n      if (!response.ok) throw new Error(data.error ?? "Could not calculate this route.");\n      return data as RouteEstimate;\n    }).then((data) => { if (!cancelled) setRouteEstimate(data); })\n      .catch((error: unknown) => { if (!cancelled && !(error instanceof DOMException && error.name === "AbortError")) setEstimateError(error instanceof Error ? error.message : "Could not calculate this route."); })\n      .finally(() => { if (!cancelled) setEstimateLoading(false); });\n    return () => { cancelled = true; controller.abort(); };\n  }, [route, externalFrom, externalTo, from, to, groups]);
+  const route = curated ?? journey?.route ?? null;
+
+  React.useEffect(() => {
+    if (route || (!externalFrom && !externalTo) || !from && !externalFrom || !to && !externalTo) {
+      setRouteEstimate(null);
+      setEstimateError(null);
+      return;
+    }
+    const nodes = groups.flatMap((group) => group.nodes);
+    const origin = externalFrom ?? nodes.find((node) => node.slug === from);
+    const destination = externalTo ?? nodes.find((node) => node.slug === to);
+    if (!origin || !destination) return;
+    let cancelled = false;
+    const controller = new AbortController();
+    setEstimateLoading(true);
+    setEstimateError(null);
+    setRouteEstimate(null);
+    fetch("/api/destinations/route-preview", {
+      method: "POST", headers: { "Content-Type": "application/json" }, signal: controller.signal,
+      body: JSON.stringify({ origin: { name: origin.name, lat: origin.lat, lng: origin.lng }, destination: { name: destination.name, lat: destination.lat, lng: destination.lng } }),
+    }).then(async (response) => {
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error ?? "Could not calculate this route.");
+      return data as RouteEstimate;
+    }).then((data) => { if (!cancelled) setRouteEstimate(data); })
+      .catch((error: unknown) => { if (!cancelled && !(error instanceof DOMException && error.name === "AbortError")) setEstimateError(error instanceof Error ? error.message : "Could not calculate this route."); })
+      .finally(() => { if (!cancelled) setEstimateLoading(false); });
+    return () => { cancelled = true; controller.abort(); };
+  }, [route, externalFrom, externalTo, from, to, groups]);
 
   /** The same drive in the other direction, for the note below the quote. */
   const reverse = React.useMemo(() => {
@@ -134,7 +171,20 @@ type ExternalPlace = { id: string; name: string; fullName: string; lat: number; 
           Swap
         </button>
 
-        {journey && <RoadDetail journey={journey} />}\n        {(externalFrom || externalTo) && (estimateLoading || routeEstimate || estimateError) && (\n          <div className="mt-4 rounded-lg border p-4" aria-live="polite">\n            {estimateLoading && <p className="text-sm">Calculating the driving route and conservative estimate…</p>}\n            {estimateError && <p className="text-sm text-destructive">{estimateError}</p>}\n            {routeEstimate && <div className="grid gap-2 text-sm">\n              <p className="font-medium">Provisional route estimate — verification required</p>\n              <p>{routeEstimate.route.distanceKm.toLocaleString()} km · approximately {formatDuration(routeEstimate.route.durationMin)}</p>\n              <p className="text-lg font-semibold">Estimated fare: <Fare nad={routeEstimate.fare.estimatedCustomerPrice} /></p>\n              <p className="text-muted-foreground text-xs">Conservative estimate assumes the entire route is gravel. It is not bookable until road surface, destination access and return/repositioning are verified.</p>\n              <Link href="/contact" className="text-brand font-medium underline underline-offset-4">Verify this route and confirm the fare</Link>\n            </div>}\n          </div>\n        )}
+        {journey && <RoadDetail journey={journey} />}
+        {(externalFrom || externalTo) && (estimateLoading || routeEstimate || estimateError) && (
+          <div className="mt-4 rounded-lg border p-4" aria-live="polite">
+            {estimateLoading && <p className="text-sm">Calculating the driving route and conservative estimate…</p>}
+            {estimateError && <p className="text-sm text-destructive">{estimateError}</p>}
+            {routeEstimate && <div className="grid gap-2 text-sm">
+              <p className="font-medium">Provisional route estimate — verification required</p>
+              <p>{routeEstimate.route.distanceKm.toLocaleString()} km · approximately {formatDuration(routeEstimate.route.durationMin)}</p>
+              <p className="text-lg font-semibold">Estimated fare: <Fare nad={routeEstimate.fare.estimatedCustomerPrice} /></p>
+              <p className="text-muted-foreground text-xs">Conservative estimate assumes the entire route is gravel. It is not bookable until road surface, destination access and return/repositioning are verified.</p>
+              <Link href="/contact" className="text-brand font-medium underline underline-offset-4">Verify this route and confirm the fare</Link>
+            </div>}
+          </div>
+        )}
       </div>
 
       {/* ------------------------------------------------------ the quote */}
@@ -273,12 +323,16 @@ function PlacePicker({
   label,
   value,
   onChange,
+  onExternalChange,
+  externalValue,
   groups,
 }: {
   id: string;
   label: string;
   value: string;
   onChange: (slug: string) => void;
+  onExternalChange: (place: ExternalPlace | null) => void;
+  externalValue: ExternalPlace | null;
   groups: ReturnType<typeof nodesByRegion>;
 }) {
   const allNodes = React.useMemo(
@@ -290,20 +344,46 @@ function PlacePicker({
     selected ? nodeLabel(selected) : value,
   );
   const [open, setOpen] = React.useState(false);
-  const [activeIndex, setActiveIndex] = React.useState(0);\n  const [remoteMatches, setRemoteMatches] = React.useState<ExternalPlace[]>([]);\n  const [remoteLoading, setRemoteLoading] = React.useState(false);\n  const [remoteError, setRemoteError] = React.useState<string | null>(null);
+  const [activeIndex, setActiveIndex] = React.useState(0);
+  const [remoteMatches, setRemoteMatches] = React.useState<ExternalPlace[]>([]);
+  const [remoteLoading, setRemoteLoading] = React.useState(false);
+  const [remoteError, setRemoteError] = React.useState<string | null>(null);
   const inputRef = React.useRef<HTMLInputElement | null>(null);
 
   React.useEffect(() => {
     const node = allNodes.find((item) => item.slug === value);
     if (node) setQuery(nodeLabel(node));
-  }, [allNodes, value]);
+    else if (externalValue) setQuery(externalValue.name);
+  }, [allNodes, value, externalValue]);
 
-  React.useEffect(() => {\n    const term = query.trim();\n    if (term.length < 2 || !open) { setRemoteMatches([]); setRemoteError(null); return; }\n    const controller = new AbortController();\n    const timer = window.setTimeout(() => {\n      setRemoteLoading(true); setRemoteError(null);\n      fetch(`/api/destinations/search?q=${encodeURIComponent(term)}`, { signal: controller.signal })\n        .then(async (response) => { const data = await response.json(); if (!response.ok) throw new Error(data.error ?? "Destination search failed."); return data; })\n        .then((data) => setRemoteMatches(Array.isArray(data.results) ? data.results : []))\n        .catch((error: unknown) => { if (!(error instanceof DOMException && error.name === "AbortError")) setRemoteError(error instanceof Error ? error.message : "Destination search failed."); })\n        .finally(() => setRemoteLoading(false));\n    }, 250);\n    return () => { window.clearTimeout(timer); controller.abort(); };\n  }, [query, open]);\n\n  const matches = React.useMemo(() => {
+  React.useEffect(() => {
+    const term = query.trim();
+    if (term.length < 2 || !open) { setRemoteMatches([]); setRemoteError(null); return; }
+    const controller = new AbortController();
+    const timer = window.setTimeout(() => {
+      setRemoteLoading(true); setRemoteError(null);
+      fetch(`/api/destinations/search?q=${encodeURIComponent(term)}`, { signal: controller.signal })
+        .then(async (response) => { const data = await response.json(); if (!response.ok) throw new Error(data.error ?? "Destination search failed."); return data; })
+        .then((data) => setRemoteMatches(Array.isArray(data.results) ? data.results : []))
+        .catch((error: unknown) => { if (!(error instanceof DOMException && error.name === "AbortError")) setRemoteError(error instanceof Error ? error.message : "Destination search failed."); })
+        .finally(() => setRemoteLoading(false));
+    }, 250);
+    return () => { window.clearTimeout(timer); controller.abort(); };
+  }, [query, open]);
+
+  const matches = React.useMemo(() => {
     if (!query.trim()) return allNodes.slice(0, 10);
     return searchNodes(query, 10);
   }, [allNodes, query]);
 
-  function chooseExternal(place: ExternalPlace) {\n    onExternalChange(place);\n    setQuery(place.name);\n    setOpen(false);\n    setActiveIndex(0);\n  }\n\n  function choose(slug: string) {
+  function chooseExternal(place: ExternalPlace) {
+    onExternalChange(place);
+    setQuery(place.name);
+    setOpen(false);
+    setActiveIndex(0);
+  }
+
+  function choose(slug: string) {
     const node = allNodes.find((item) => item.slug === slug);
     if (!node) return;
     onChange(node.slug);
@@ -350,6 +430,7 @@ function PlacePicker({
           onChange={(event) => {
             setQuery(event.target.value);
             onChange("");
+            onExternalChange(null as unknown as ExternalPlace);
             setOpen(true);
             setActiveIndex(0);
           }}
@@ -368,7 +449,7 @@ function PlacePicker({
           aria-label={`${label} suggestions`}
           className="bg-popover text-popover-foreground absolute top-full z-30 mt-1 max-h-72 w-full overflow-y-auto rounded-md border p-1 shadow-md"
         >
-          {matches.length > 0 ? matches.map((node, index) => (
+          {matches.map((node, index) => (
             <button
               key={node.slug}
               id={`${id}-option-${node.slug}`}
@@ -388,9 +469,18 @@ function PlacePicker({
               </span>
               {node.slug === value && <CheckIcon className="text-brand size-4 shrink-0" aria-hidden />}
             </button>
-          )) : (
+          ))}
+          {remoteMatches.map((place) => (
+            <button key={place.id || `${place.name}-${place.lat}-${place.lng}`} type="button" role="option" aria-selected={externalValue?.id === place.id} onMouseDown={(event) => event.preventDefault()} onClick={() => chooseExternal(place)} className="flex w-full items-center justify-between gap-3 rounded-sm px-3 py-2 text-left hover:bg-muted">
+              <span className="min-w-0"><span className="block truncate text-sm">{place.name}</span><span className="text-muted-foreground block truncate text-xs">{place.fullName} · Live result, route verification required</span></span>
+              {externalValue?.id === place.id && <CheckIcon className="text-brand size-4 shrink-0" aria-hidden />}
+            </button>
+          ))}
+          {remoteLoading && <p className="px-3 py-2 text-xs text-muted-foreground">Searching all Namibian destinations…</p>}
+          {remoteError && <p className="px-3 py-2 text-xs text-destructive">{remoteError}</p>}
+          {matches.length === 0 && remoteMatches.length === 0 && !remoteLoading ? (
             <div className="px-3 py-3 text-sm">
-              <p>No instant-price match in the current road network.</p>
+              <p>No matching destination found. You can request a manual quote.</p>
               <Link
                 href="/contact"
                 className="text-brand mt-1 inline-block font-medium underline underline-offset-4"
@@ -400,8 +490,8 @@ function PlacePicker({
                 Request a quote for this destination
               </Link>
             </div>
-          )}
-          {matches.length > 0 && (
+          ) : null}
+          {(matches.length > 0 || remoteMatches.length > 0) && (
             <p className="text-muted-foreground border-t px-3 py-2 text-xs">
               Unlisted lodge, farm or private address?{" "}
               <Link href="/contact" className="text-foreground underline underline-offset-2" onMouseDown={(event) => event.preventDefault()} onClick={() => setOpen(false)}>
