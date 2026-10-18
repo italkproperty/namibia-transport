@@ -50,8 +50,10 @@ function env(name: string): string | null {
 }
 
 export function getCompanyInfo(): CompanyInfo {
-  const whatsapp = env("NEXT_PUBLIC_SUPPORT_WHATSAPP");
   const phone = env("NEXT_PUBLIC_SUPPORT_PHONE");
+  // Prefer the dedicated WhatsApp setting, but let the configured support
+  // phone power WhatsApp CTAs when that separate variable is not present.
+  const whatsapp = env("NEXT_PUBLIC_SUPPORT_WHATSAPP") ?? phone;
   const email = env("NEXT_PUBLIC_SUPPORT_EMAIL");
 
   return {
