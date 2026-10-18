@@ -11,6 +11,7 @@ import { formatDate } from "@/lib/format";
 import { formatNad } from "@/lib/money";
 import { IssueCharterQuoteForm } from "@/components/admin/issue-charter-quote-form";
 import { CharterCommercialPricingEditor } from "@/components/admin/charter-commercial-pricing-editor";
+import { CreateCharterQuoteRevision } from "@/components/admin/create-charter-quote-revision";
 
 export const metadata: Metadata = {
   title: "Charter quote detail",
@@ -272,6 +273,8 @@ export default async function CharterQuoteDraftDetailPage({
           </div>
           {snapshot?.changeReason && <p className="mt-4 text-sm"><span className="text-muted-foreground">Internal note:</span> {snapshot.changeReason}</p>}
         </section>
+
+        {quote.status === "sent" && <CreateCharterQuoteRevision quoteId={quote.id} />}
 
         <CharterCommercialPricingEditor
           quoteId={quote.id}
