@@ -21,13 +21,23 @@ function resolveSiteUrl(): string {
 }
 
 /** Brand-level constants. Kept in one place so rebranding is a single edit. */
+const supportWhatsappNumber =
+  process.env.NEXT_PUBLIC_SUPPORT_WHATSAPP?.trim() ||
+  process.env.NEXT_PUBLIC_SUPPORT_PHONE?.trim() ||
+  "";
+
+/**
+ * WhatsApp's wa.me links require the international number without punctuation.
+ * The dedicated WhatsApp setting takes precedence; the support phone is the
+ * fallback so existing Vercel deployments do not need another variable.
+ */
 export const SITE = {
   name: "Namibia Transport",
   tagline: "Ground transport across Namibia",
   description:
     "Fixed-price ground transport across Namibia — airport transfers, intercity journeys and corporate mobility, with professional local drivers and no meter.",
   url: resolveSiteUrl(),
-  supportWhatsapp: process.env.NEXT_PUBLIC_SUPPORT_WHATSAPP ?? "",
+  supportWhatsapp: supportWhatsappNumber.replace(/\D/g, ""),
 } as const;
 
 /** What every transfer includes, quoted on the home page and route pages. */
