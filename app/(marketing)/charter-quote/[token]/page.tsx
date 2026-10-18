@@ -29,7 +29,8 @@ export default async function PublicCharterQuotePage({ params, searchParams }: {
   if (!/^[A-Za-z0-9_-]{10,100}$/.test(token) || !isDatabaseConfigured()) notFound();
   const db = getDb();
   const [quote] = await db.select().from(charterQuotes).where(eq(charterQuotes.publicToken, token)).limit(1);
-  if (!quote || quote.status !== "sent" || !quote.validUntil || quote.validUntil.getTime() < Date.now()) notFound();
+  if (!quote || (quote.status !== "sent" && quote.status !== "paid") ||
+      (quote.status === "sent" && (!quote.validUntil || quote.validUntil.getTime() < Date.now()))) notFound();
   const [version] = await db.select().from(charterQuoteVersions)
     .where(eq(charterQuoteVersions.quoteId, quote.id))
     .orderBy(desc(charterQuoteVersions.version)).limit(1);
@@ -44,7 +45,7 @@ export default async function PublicCharterQuotePage({ params, searchParams }: {
     paymentLedgerAvailable = false;
     console.error("[charter-payment] payment ledger unavailable; bank transfer remains available", error);
   }
-  const paymentStatus = payment ?? (latestPayment?.status === "paid" ? "received" : undefined);
+  const paymentStatus = payment ?? (quote.status === "paid" || latestPayment?.status === "paid" ? "received" : undefined);
   const liveCheckoutAvailable = isLiveGatewayConfigured();
   const bank = getBankDetails();
   const transferLines = bank ? bankTransferLines(bank, quote.quoteNumber) : null;
@@ -84,7 +85,7 @@ export default async function PublicCharterQuotePage({ params, searchParams }: {
         <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Private charter proposal</p>
         <div className="mt-2 flex flex-wrap items-start justify-between gap-4">
           <div><h1 className="text-2xl font-semibold sm:text-3xl">Your Namibia journey</h1><p className="mt-2 text-sm text-muted-foreground">Proposal {quote.quoteNumber} · Prepared for {String(customer.name ?? quote.customerName)}</p></div>
-          <span className="rounded-full border px-3 py-1 text-xs">Valid until {dateText(quote.validUntil.toISOString())}</span>
+          <span className="rounded-full border px-3 py-1 text-xs">{quote.validUntil ? `Valid until ${dateText(quote.validUntil.toISOString())}` : "Payment received"}</span>
         </div>
         <section className="mt-7 rounded-xl border bg-card p-5">
           <h2 className="font-semibold">Trip overview</h2>
@@ -178,7 +179,7 @@ export default async function PublicCharterQuotePage({ params, searchParams }: {
           )}
           <a className="mt-3 inline-flex rounded-md border px-4 py-2 text-sm font-medium" href={"https://wa.me/264817278410?text=" + encodeURIComponent("Hello Namibia Transport, I am reviewing charter proposal " + quote.quoteNumber + " for " + formatNad(quote.total) + ". Please assist with payment and booking confirmation.")} target="_blank" rel="noopener noreferrer">Contact us on WhatsApp</a>
         </section>
-        <p className="mt-6 text-xs text-muted-foreground">This link is private and expires on {dateText(quote.validUntil.toISOString())}. Internal operating costs and margin are not shown.</p>
+        <p className="mt-6 text-xs text-muted-foreground">{quote.validUntil ? `This link is private and expires on ${dateText(quote.validUntil.toISOString())}.` : "This paid proposal is retained for your records."} Internal operating costs and margin are not shown.</p>
       </main>
       <SiteFooter />
     </div>
