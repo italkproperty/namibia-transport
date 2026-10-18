@@ -143,6 +143,14 @@ export default async function CharterQuoteDraftDetailPage({
     : null;
   const briefList = (value: unknown) => Array.isArray(value) ? value.filter((item): item is string => typeof item === "string" && item.trim().length > 0) : [];
 
+  const configuredSiteUrl = process.env.NEXT_PUBLIC_SITE_URL?.trim() || "https://www.namibiatransport.com";
+  const siteOrigin = process.env.VERCEL_ENV !== "production" && process.env.VERCEL_URL?.trim()
+    ? "https://" + process.env.VERCEL_URL.trim()
+    : configuredSiteUrl.endsWith("/") ? configuredSiteUrl.slice(0, -1) : configuredSiteUrl;
+  const existingCustomerUrl = quote.publicToken && quote.status === "sent" && quote.validUntil && quote.validUntil.getTime() > Date.now()
+    ? siteOrigin + "/charter-quote/" + quote.publicToken
+    : null;
+
   return (
     <AdminShell active="/admin/quotes">
       <div className="space-y-6">
@@ -254,11 +262,7 @@ export default async function CharterQuoteDraftDetailPage({
 
         <IssueCharterQuoteForm
           quoteId={quote.id}
-          existingUrl={quote.publicToken && quote.status === "sent" && quote.validUntil && quote.validUntil.getTime() > Date.now()
-            ? `${(process.env.VERCEL_ENV !== "production" && process.env.VERCEL_URL?.trim()
-                ? `https://${process.env.VERCEL_URL.trim()}`
-                : (process.env.NEXT_PUBLIC_SITE_URL?.trim() || "https://www.namibiatransport.com").replace(/\\/$/, ""))}/charter-quote/${quote.publicToken}`
-            : null}
+          existingUrl={existingCustomerUrl}
         />
 
         <section className="rounded-xl border bg-card p-4">
