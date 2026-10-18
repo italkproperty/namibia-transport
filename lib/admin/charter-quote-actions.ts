@@ -367,7 +367,12 @@ export async function issueCharterQuoteAction(
     }).where(eq(charterQuotes.id, id));
     revalidatePath("/admin/quotes/charter/drafts");
     revalidatePath(`/admin/quotes/charter/drafts/${id}`);
-    const origin = process.env.NEXT_PUBLIC_SITE_URL?.trim() || "https://www.namibiatransport.com";
+    // Use this deployment host for preview links so a token issued against a preview database
+    // is not sent to production, where that preview-only quote does not exist.
+    const deploymentHost = process.env.VERCEL_URL?.trim();
+    const origin = process.env.VERCEL_ENV !== "production" && deploymentHost
+      ? `https://${deploymentHost}`
+      : process.env.NEXT_PUBLIC_SITE_URL?.trim() || "https://www.namibiatransport.com";
     const cleanOrigin = origin.endsWith("/") ? origin.slice(0, -1) : origin;
     return { ok: true, url: `${cleanOrigin}/charter-quote/${token}`, validUntil: validUntil.toISOString() };
   } catch (error) {
