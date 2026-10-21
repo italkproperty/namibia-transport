@@ -29,7 +29,7 @@ import { describeRoads, describeVia } from "@/lib/network/roads";
  * anything, exactly as it does for a curated route — this is a preview, not a
  * price the browser gets to decide.
  */
-type ExternalPlace = { id: string; name: string; fullName: string; lat: number; lng: number; category: string; source: "mapbox" };
+type ExternalPlace = { id: string; name: string; fullName: string; lat: number; lng: number; category: string; source: "mapbox" | "openstreetmap" };
 
 type RouteEstimate = { status: string; origin: { name: string }; destination: { name: string }; route: { distanceKm: number; durationMin: number; surfaceAssumption: string }; fare: { currency: string; estimatedCustomerPrice: number; estimatedDriverPayout: number; estimatedContribution: number; overnightCount: number }; bookable: false; explanation: string };
 
