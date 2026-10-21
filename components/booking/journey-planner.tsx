@@ -364,17 +364,57 @@ function PlacePicker({
 
   React.useEffect(() => {
     const term = query.trim();
-    if (term.length < 3 || !open) { setRemoteMatches([]); setRemoteError(null); return; }
+    if (term.length < 3 || !open) {
+      setRemoteMatches([]);
+      setRemoteError(null);
+      setRemoteLoading(false);
+      return;
+    }
+
     const controller = new AbortController();
+    let cancelled = false;
+    // Keep local results instant, but start live lookup sooner so destination
+    // search feels responsive on mobile without sending a request per keystroke.
     const timer = window.setTimeout(() => {
-      setRemoteLoading(true); setRemoteError(null);
-      fetch(`/api/destinations/search?q=${encodeURIComponent(term)}`, { signal: controller.signal })
-        .then(async (response) => { const data = await response.json(); if (!response.ok) throw new Error(data.error ?? "Destination search failed."); return data; })
-        .then((data) => setRemoteMatches(Array.isArray(data.results) ? data.results : []))
-        .catch((error: unknown) => { if (!(error instanceof DOMException && error.name === "AbortError")) setRemoteError(error instanceof Error ? error.message : "Destination search failed."); })
-        .finally(() => setRemoteLoading(false));
-    }, 650);
-    return () => { window.clearTimeout(timer); controller.abort(); };
+      setRemoteLoading(true);
+      setRemoteError(null);
+      fetch(`/api/destinations/search?q=${encodeURIComponent(term)}`, {
+        signal: controller.signal,
+      })
+        .then(async (response) => {
+          const data = await response.json();
+          if (!response.ok) {
+            throw new Error(data.error ?? "Destination search failed.");
+          }
+          return data;
+        })
+        .then((data) => {
+          if (!cancelled) {
+            setRemoteMatches(Array.isArray(data.results) ? data.results : []);
+          }
+        })
+        .catch((error: unknown) => {
+          if (
+            !cancelled &&
+            !(error instanceof DOMException && error.name === "AbortError")
+          ) {
+            setRemoteError(
+              error instanceof Error
+                ? error.message
+                : "Destination search failed.",
+            );
+          }
+        })
+        .finally(() => {
+          if (!cancelled) setRemoteLoading(false);
+        });
+    }, 350);
+
+    return () => {
+      cancelled = true;
+      window.clearTimeout(timer);
+      controller.abort();
+    };
   }, [query, open]);
 
   const matches = React.useMemo(() => {
