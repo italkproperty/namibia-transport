@@ -199,35 +199,34 @@ export async function ReviewsSection() {
     getPublishedReviews(),
     getReviewSummary(),
   ]);
-  if (reviews.length === 0 || !summary) return null;
+  if (reviews.length === 0) return null;
 
   return (
     <section aria-labelledby="reviews-heading">
       <div className="flex flex-wrap items-end justify-between gap-3">
         <h2 id="reviews-heading" className="text-xl sm:text-2xl">
-          From travellers we have driven
+          What our travellers say
         </h2>
-        <p className="flex items-center gap-2 text-sm">
-          <span className="text-brand flex" aria-hidden>
-            {Array.from({ length: 5 }, (_, i) => (
-              <StarIcon
-                key={i}
-                className="size-4"
-                fill={i < Math.round(summary.average) ? "currentColor" : "none"}
-                strokeWidth={1.5}
-              />
-            ))}
-          </span>
-          <span className="tabular font-semibold">
-            {summary.average.toFixed(1)}/5
-          </span>
-          <span className="text-muted-foreground">
-            from {summary.count} traveller{summary.count === 1 ? "" : "s"}
-          </span>
-        </p>
+        {summary && (
+          <p className="flex items-center gap-2 text-sm">
+            <span className="text-brand flex" aria-hidden>
+              {Array.from({ length: 5 }, (_, i) => (
+                <StarIcon
+                  key={i}
+                  className="size-4"
+                  fill={i < Math.round(summary.average) ? "currentColor" : "none"}
+                  strokeWidth={1.5}
+                />
+              ))}
+            </span>
+            <span className="tabular font-semibold">
+              {summary.average.toFixed(1)}/5
+            </span>
+          </p>
+        )}
       </div>
 
-      <ul className="mt-5 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+      <ul className="mt-5 grid gap-4 sm:grid-cols-2">
         {reviews.slice(0, 6).map((review) => (
           <li key={review.id} className="bg-card rounded-xl border p-4">
             <p
