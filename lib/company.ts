@@ -57,13 +57,13 @@ export function getCompanyInfo(): CompanyInfo {
   const phone = env("NEXT_PUBLIC_SUPPORT_PHONE") ?? DEFAULT_SUPPORT_PHONE;
   // Prefer the dedicated WhatsApp setting, then the configured support phone.
   const whatsapp = env("NEXT_PUBLIC_SUPPORT_WHATSAPP") ?? phone;
-  const email = env("NEXT_PUBLIC_SUPPORT_EMAIL");
+  const email = env("NEXT_PUBLIC_SUPPORT_EMAIL") ?? "bookings@namibiatransport.com";
 
   return {
     whatsapp,
     phone,
     email,
-    location: env("NEXT_PUBLIC_COMPANY_LOCATION") ?? "Windhoek, Namibia",
+    location: env("NEXT_PUBLIC_COMPANY_LOCATION") ?? "Unit 8, 2 Schmerenbeck Street, Windhoek, Khomas, Namibia",
     registration: env("NEXT_PUBLIC_COMPANY_REGISTRATION"),
     hasContactChannel: Boolean(whatsapp || phone || email),
   };
