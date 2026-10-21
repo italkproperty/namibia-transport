@@ -70,9 +70,11 @@ export default async function JourneyPage({ searchParams }: PageProps) {
         <div className="mx-auto max-w-2xl px-4 py-8 sm:px-6 sm:py-12">
           <h1 className="text-2xl sm:text-3xl">Price any journey in Namibia</h1>
           <p className="text-muted-foreground mt-2 text-sm sm:text-base">
-            Not just to and from the airport. Pick where you are and where you
-            are going, and you get the distance, the roads, how long the drive
-            actually takes and a price that is fixed when you book.
+            Not just to and from the airport. Search our priced road-network
+            places and get road distance, driving time and a vehicle-specific
+            fare that is revalidated on the server before booking. For an
+            unlisted lodge, guest farm, campsite or private address, request a
+            route quote instead of relying on a guessed distance or price.
           </p>
 
           <div className="mt-6">

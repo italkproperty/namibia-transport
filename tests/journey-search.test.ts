@@ -1,0 +1,30 @@
+import assert from "node:assert/strict";
+import { searchNodes } from "../lib/network/nodes";
+import { modelJourney } from "../lib/network/journey";
+
+const luderitz = searchNodes("Luderitz");
+assert.ok(luderitz.some((node) => node.slug === "luderitz"), "accent-free spelling finds Lüderitz");
+
+const airport = searchNodes("WDH airport");
+assert.ok(airport.some((node) => node.slug === "hosea-kutako"), "airport codes and aliases are searchable");
+
+const etosha = searchNodes("Etosha");
+assert.ok(etosha.some((node) => node.slug === "etosha-okaukuejo"));
+assert.ok(etosha.some((node) => node.slug === "etosha-namutoni"), "similarly named gates remain distinct");
+
+const grossBarmen = searchNodes("gross barmen");
+assert.ok(grossBarmen.some((node) => node.slug === "gross-barmen"), "Gross Barmen aliases resolve");
+assert.equal(modelJourney("windhoek", "gross-barmen"), null, "search-only destinations must not receive a guessed graph fare");
+
+const onkoshi = searchNodes("onkoshi camp");
+assert.ok(onkoshi.some((node) => node.slug === "onkoshi-camp"), "Onkoshi alias resolves to a normalized slug");
+
+const roshPinah = searchNodes("Rosh Pinah");
+assert.ok(roshPinah.some((node) => node.slug === "rosh-pinah"), "Rosh Pinah town is searchable");
+assert.ok(roshPinah.some((node) => node.slug === "rosh-pinah-zinc-mine"), "Rosh Pinah mine is separately searchable");
+assert.ok(searchNodes("Skorpion Zinc Mine").some((node) => node.slug === "skorpion-zinc-mine"), "Skorpion mine aliases resolve");
+assert.equal(modelJourney("windhoek", "rosh-pinah-zinc-mine"), null, "mine gate must not be priced until a verified road route is available");
+
+assert.deepEqual(searchNodes("place that does not exist"), [], "unknown places are not mapped to a guessed node");
+
+console.log("Journey place search tests passed.");

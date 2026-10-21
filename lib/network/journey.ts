@@ -160,6 +160,7 @@ function nearestNode(point: { lat: number; lng: number }): PlaceNode | null {
   let best: PlaceNode | null = null;
   let bestKm = SAME_PLACE_KM;
   for (const node of PLACE_NODES) {
+    if (node.searchOnly) continue;
     const km = haversineKm(point, node);
     if (km <= bestKm) {
       best = node;

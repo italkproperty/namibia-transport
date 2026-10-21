@@ -61,6 +61,7 @@ export async function SiteHeader() {
           aria-label="Main"
           className="ml-auto hidden items-center gap-6 lg:flex"
         >
+          <NavLink href="/journey">Price any route</NavLink>
           {navRoutes.length > 0 && <RouteMenu routes={navRoutes} />}
           <PlanMenu />
           {NAV_LINKS.map((link) => (

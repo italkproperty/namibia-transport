@@ -134,6 +134,14 @@ export function MobileMenu({
             ]}
           />
 
+          <Link
+            href="/journey"
+            onClick={() => setOpen(false)}
+            className="bg-brand-subtle/50 focus-ring mt-5 block rounded-lg px-3 py-3 text-sm font-semibold"
+          >
+            Price any route in Namibia
+          </Link>
+
           <ul className="mt-5 grid gap-0.5 border-t pt-4">
             {NAV_LINKS.map((link) => (
               <li key={link.href}>
