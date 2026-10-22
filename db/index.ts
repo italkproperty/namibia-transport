@@ -40,27 +40,19 @@ function buildDb() {
     postgres(connectionString, {
       // Supabase's transaction pooler cannot prepare statements.
       prepare: false,
-      // Without this a pooler that is not answering — wrong host, connection
-      // limit reached, credentials rotated — leaves the query hanging until
-      // Vercel kills the whole function. The operator gets
-      // 504 FUNCTION_INVOCATION_TIMEOUT, which says nothing about what
-      // failed, and /admin/bookings is unreachable with money waiting to be
-      // confirmed on it. Five seconds keeps connection establishment inside the six-second
-      // admin read deadline and is short enough to fail inside the function's own budget, so the catch
-      // blocks run and the page can say what broke.
+      // Bound query execution as well as connection establishment. A stalled
+      // pooler/query must reject so server actions can return an actionable
+      // error instead of leaving admin forms spinning until Vercel kills them.
+      // Keep below the usual serverless request budget so catch/finally paths run.
       connect_timeout: 5,
+      query_timeout: 7_000,
       // Per serverless instance, not per deployment. Vercel runs many of these
       // at once and they all share one pooler, so a generous number here is
       // multiplied by however many instances are warm.
-      // Vercel can keep many function instances warm. Four sockets per
-      // instance multiplies quickly under traffic and can starve Supavisor;
-      // this app's queries are short and should share one transaction-mode
-      // connection per warm instance.
+      // One socket per warm instance limits pressure on Supavisor.
       max: 1,
-      // Without this, postgres.js holds every socket it ever opened. A warm
-      // instance that served one booking at 06:00 was still holding four
-      // connections at noon, and the pooler counts them against the limit all
-      // day. Twenty seconds is longer than any request here takes.
+      // Release idle sockets so warm serverless instances do not consume pooler
+      // connections indefinitely.
       idle_timeout: 20,
       // The pooler recycles server-side; a client that never retires a socket
       // eventually hands a query to one that has already gone.
@@ -80,14 +72,7 @@ export function isDatabaseConfigured(): boolean {
 /**
  * Throws when no database is configured — use for writes, which need one.
  *
- * The cache is not a development convenience. It used to be written only when
- * `NODE_ENV !== "production"`, which is the Next.js hot-reload idiom applied
- * backwards: in production every one of the forty-odd call sites built its own
- * pool, so a single request could open several and a warm instance never
- * closed them. The pooler's connection limit is per project and shared, and
- * the symptom of exhausting it is not an error page — queries fail, the
- * catalogue fallback renders, and an operator sees an admin table that is
- * simply empty. One pool per instance, in both environments.
+ * The client is cached once per serverless instance in both environments.
  */
 export function getDb() {
   const db = globalForDb.__transferDb ?? buildDb();
