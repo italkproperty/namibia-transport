@@ -35,9 +35,17 @@ function buildDb() {
       // Supabase's transaction pooler cannot prepare statements.
       prepare: false,
       // Bound connection establishment so a broken pooler fails promptly.
-      // postgres.js query_timeout is not supported by this project's installed
-      // version; do not configure an option that breaks the production build.
+      // Bound database work at PostgreSQL itself. postgres.js does not support
+      // a top-level query_timeout option; these are PostgreSQL connection
+      // runtime parameters and are enforced by the server, including through
+      // Supabase's transaction pooler.
       connect_timeout: 5,
+      connection: {
+        statement_timeout: 8_000,
+        lock_timeout: 3_000,
+        idle_in_transaction_session_timeout: 8_000,
+        application_name: "namibia-transport-vercel",
+      },
       // One socket per warm instance limits pressure on Supavisor.
       max: 1,
       // Release idle sockets so warm serverless instances do not consume pooler
