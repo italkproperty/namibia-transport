@@ -4,7 +4,7 @@ CREATE TABLE "invoices" (
   "invoice_number" text,
   "public_token" text,
   "status" "invoice_status" DEFAULT 'draft' NOT NULL,
-  "customer_id" uuid NOT NULL,
+  "customer_id" uuid,
   "booking_id" uuid,
   "corporate_quote_id" uuid,
   "charter_quote_id" uuid,
@@ -24,7 +24,7 @@ CREATE TABLE "invoices" (
   "created_at" timestamp with time zone DEFAULT now() NOT NULL,
   "updated_at" timestamp with time zone DEFAULT now() NOT NULL
 );--> statement-breakpoint
-ALTER TABLE "invoices" ADD CONSTRAINT "invoices_customer_id_customers_id_fk" FOREIGN KEY ("customer_id") REFERENCES "public"."customers"("id") ON DELETE restrict ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "invoices" ADD CONSTRAINT "invoices_customer_id_customers_id_fk" FOREIGN KEY ("customer_id") REFERENCES "public"."customers"("id") ON DELETE set null ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "invoices" ADD CONSTRAINT "invoices_booking_id_bookings_id_fk" FOREIGN KEY ("booking_id") REFERENCES "public"."bookings"("id") ON DELETE restrict ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "invoices" ADD CONSTRAINT "invoices_corporate_quote_id_corporate_quotes_id_fk" FOREIGN KEY ("corporate_quote_id") REFERENCES "public"."corporate_quotes"("id") ON DELETE restrict ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "invoices" ADD CONSTRAINT "invoices_charter_quote_id_charter_quotes_id_fk" FOREIGN KEY ("charter_quote_id") REFERENCES "public"."charter_quotes"("id") ON DELETE restrict ON UPDATE no action;--> statement-breakpoint
