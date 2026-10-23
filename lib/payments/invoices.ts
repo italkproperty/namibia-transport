@@ -28,11 +28,6 @@ function escapeHtml(value: string): string {
  * server-side before this function is called.
  */
 export async function issuePaidInvoice(input: PaidInvoiceInput): Promise<void> {
-  if (!input.customerEmail?.trim()) {
-    console.warn("[invoices] invoice not emailed: customer has no email", { reference: input.reference });
-    return;
-  }
-
   const supabase = createServiceRoleClient();
   const token = randomBytes(32).toString("hex");
   const invoiceNumber = `NTI-${new Date().getUTCFullYear()}-${randomBytes(4).toString("hex").toUpperCase()}`;
@@ -87,6 +82,10 @@ export async function issuePaidInvoice(input: PaidInvoiceInput): Promise<void> {
   }
 
   if (invoice.emailed_at) return;
+  if (!input.customerEmail?.trim()) {
+    console.warn("[invoices] invoice created but not emailed: customer has no email", { reference: input.reference, invoice: invoice.invoice_number });
+    return;
+  }
 
   const siteUrl = (process.env.NEXT_PUBLIC_SITE_URL?.trim() || "https://namibiatransport.com").replace(/\/$/, "");
   const invoiceUrl = `${siteUrl}/invoice/${invoice.public_token}`;
