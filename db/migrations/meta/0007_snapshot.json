@@ -2633,8 +2633,9 @@
         "currency": {
           "name": "currency",
           "type": "char(3)",
-          "primaryKey": "NAD",
-          "notNull": true
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'NAD'"
         },
         "subtotal": {
           "name": "subtotal",
@@ -2736,7 +2737,7 @@
             {
               "expression": "created_at",
               "isExpression": false,
-              "asc": true,
+              "asc": false,
               "nulls": "last"
             }
           ],
@@ -2898,8 +2899,9 @@
         "quantity": {
           "name": "quantity",
           "type": "numeric(10, 2)",
-          "primaryKey": "'1.00'",
-          "notNull": true
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'1.00'"
         },
         "unit_price": {
           "name": "unit_price",
@@ -2916,14 +2918,16 @@
         "currency": {
           "name": "currency",
           "type": "char(3)",
-          "primaryKey": "'NAD'",
-          "notNull": true
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'NAD'"
         },
         "sort_order": {
           "name": "sort_order",
           "type": "smallint",
-          "primaryKey": 0,
-          "notNull": true
+          "primaryKey": false,
+          "notNull": true,
+          "default": 0
         },
         "created_at": {
           "name": "created_at",
@@ -2990,8 +2994,9 @@
         "last_number": {
           "name": "last_number",
           "type": "integer",
-          "primaryKey": 0,
-          "notNull": true
+          "primaryKey": false,
+          "notNull": true,
+          "default": 0
         },
         "updated_at": {
           "name": "updated_at",
