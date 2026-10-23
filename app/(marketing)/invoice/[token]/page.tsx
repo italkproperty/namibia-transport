@@ -62,8 +62,7 @@ export default async function PublicInvoicePage({ params }: PageProps) {
             <div className="text-left text-sm sm:text-right">
               <p className="font-semibold">Namibia Transport</p>
               <p className="mt-1 text-muted-foreground">Namibia</p>
-              <p className="text-muted-foreground">{SITE.supportEmail}</p>
-              <p className="text-muted-foreground">{SITE.phone}</p>
+              {SITE.supportWhatsapp && <p className="text-muted-foreground">WhatsApp: +{SITE.supportWhatsapp}</p>}
             </div>
           </header>
 
@@ -123,7 +122,7 @@ export default async function PublicInvoicePage({ params }: PageProps) {
           </footer>
         </article>
 
-        <p className="mt-4 text-center text-xs text-muted-foreground print:hidden">Need help with this invoice? Contact {SITE.supportEmail}.</p>
+        <p className="mt-4 text-center text-xs text-muted-foreground print:hidden">Please quote the invoice number if you contact Namibia Transport about this document.</p>
       </div>
     </main>
   );
