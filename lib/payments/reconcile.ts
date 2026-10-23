@@ -7,6 +7,7 @@ import { bookings, customers, payments, routes } from "@/db/schema";
 import type { Payment, PaymentStatus } from "@/db/schema";
 import { parseMoney } from "@/lib/money";
 import { sendPaymentNotification } from "@/lib/payments/payment-notification";
+import { issuePaidInvoice } from "@/lib/payments/invoices";
 
 import { INTENT_TTL_MS } from "./paytoday/config";
 import { defaultReturnUrl } from "./paytoday/provider";
@@ -233,6 +234,17 @@ export async function reconcileBookingPayment(
       customerName: booking.customerName,
       customerEmail: booking.customerEmail,
       description: `${booking.pickupLabel} to ${booking.dropoffLabel} (pickup ${booking.scheduledAt.toISOString()})`,
+      paidAt: updated.paidAt,
+    });
+    await issuePaidInvoice({
+      paymentType: "booking",
+      paymentId: updated.id,
+      reference: booking.ref,
+      amount: updated.amount,
+      currency: updated.currency,
+      customerName: booking.customerName,
+      customerEmail: booking.customerEmail,
+      description: `${booking.pickupLabel} to ${booking.dropoffLabel}`,
       paidAt: updated.paidAt,
     });
   }
