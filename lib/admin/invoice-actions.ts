@@ -1,6 +1,6 @@
 "use server";
 
-import { and, eq, ilike, or, sql } from "drizzle-orm";
+import { and, eq, or, sql, type SQL } from "drizzle-orm";
 import { randomBytes } from "node:crypto";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
@@ -68,9 +68,9 @@ export async function createInvoiceDraft(formData: FormData): Promise<void> {
 
   const db = getDb();
   try {
-    const contactConditions = [];
+    const contactConditions: SQL[] = [];
     if (billingWhatsapp) contactConditions.push(eq(customers.whatsapp, billingWhatsapp));
-    if (billingEmail) contactConditions.push(ilike(customers.email, billingEmail));
+    if (billingEmail) contactConditions.push(eq(customers.email, billingEmail));
     const [matchedCustomer] = contactConditions.length
       ? await db.select({ id: customers.id }).from(customers)
           .where(contactConditions.length === 1 ? contactConditions[0] : or(...contactConditions))
