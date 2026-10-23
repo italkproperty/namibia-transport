@@ -5,6 +5,7 @@ import { charterQuotes, charterQuotePayments } from "@/db/schema";
 import { getPaymentProvider, isLiveGatewayConfigured } from "@/lib/payments";
 import { parseMoney } from "@/lib/money";
 import { sendPaymentNotification } from "@/lib/payments/payment-notification";
+import { issuePaidInvoice } from "@/lib/payments/invoices";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -56,6 +57,17 @@ export async function GET(request: NextRequest) {
         if (updated && status === "paid") {
           await sendPaymentNotification({
             kind: "charter quote",
+            reference: quote.quoteNumber,
+            amount: updated.amount,
+            currency: updated.currency,
+            customerName: quote.customerName,
+            customerEmail: quote.customerEmail,
+            description: `Charter quotation ${quote.quoteNumber}`,
+            paidAt: updated.paidAt,
+          });
+          await issuePaidInvoice({
+            paymentType: "charter_quote",
+            paymentId: updated.id,
             reference: quote.quoteNumber,
             amount: updated.amount,
             currency: updated.currency,
