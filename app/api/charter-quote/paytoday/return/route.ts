@@ -4,6 +4,7 @@ import { getDb, isDatabaseConfigured } from "@/db";
 import { charterQuotes, charterQuotePayments } from "@/db/schema";
 import { getPaymentProvider, isLiveGatewayConfigured } from "@/lib/payments";
 import { parseMoney } from "@/lib/money";
+import { sendPaymentNotification } from "@/lib/payments/payment-notification";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -38,9 +39,10 @@ export async function GET(request: NextRequest) {
         const status = remote.status === "paid" && matches ? "paid" :
           remote.status === "failed" ? "failed" :
           remote.status === "cancelled" ? "cancelled" : "pending";
-        await db.update(charterQuotePayments).set({
+        const paidAt = status === "paid" ? (payment.paidAt ?? new Date()) : payment.paidAt;
+        const [updated] = await db.update(charterQuotePayments).set({
           status,
-          paidAt: status === "paid" ? (payment.paidAt ?? new Date()) : payment.paidAt,
+          paidAt,
           raw: {
             ...(typeof payment.raw === "object" && payment.raw !== null ? payment.raw as Record<string, unknown> : {}),
             latestQuery: remote.raw ?? {},
@@ -48,7 +50,21 @@ export async function GET(request: NextRequest) {
             reconciledAt: new Date().toISOString(),
           },
           updatedAt: new Date(),
-        }).where(eq(charterQuotePayments.id, payment.id));
+        }).where(and(eq(charterQuotePayments.id, payment.id), eq(charterQuotePayments.status, "pending"))).returning();
+
+        // Notify only for the request that successfully changes PENDING to PAID.
+        if (updated && status === "paid") {
+          await sendPaymentNotification({
+            kind: "charter quote",
+            reference: quote.quoteNumber,
+            amount: updated.amount,
+            currency: updated.currency,
+            customerName: quote.customerName,
+            customerEmail: quote.customerEmail,
+            description: `Charter quotation ${quote.quoteNumber}`,
+            paidAt: updated.paidAt,
+          });
+        }
         pageUrl.searchParams.set("payment", status === "paid" ? "received" : status === "pending" ? "pending" : "contact");
       } else {
         pageUrl.searchParams.set("payment", "pending");
