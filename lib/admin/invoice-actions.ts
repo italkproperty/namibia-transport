@@ -16,9 +16,10 @@ function textField(formData: FormData, key: string): string {
 function parseAmount(raw: string): string | null {
   const value = raw.replace(/[\s,]/g, "");
   if (!/^\d{1,8}(?:\.\d{1,2})?$/.test(value)) return null;
-  const amount = Number(value);
-  if (!Number.isFinite(amount) || amount <= 0) return null;
-  return amount.toFixed(2);
+  const [whole, fraction = ""] = value.split(".");
+  const cents = BigInt(whole) * 100n + BigInt(fraction.padEnd(2, "0") || "0");
+  if (cents <= 0n || cents > 9999999999n) return null;
+  return (BigInt(whole).toString()) + "." + fraction.padEnd(2, "0");
 }
 
 function dueDate(raw: string): Date | null {
@@ -225,7 +226,7 @@ export async function issueInvoice(formData: FormData): Promise<void> {
         .onConflictDoUpdate({
           target: invoiceSequences.year,
           set: {
-            lastNumber: sql.raw('"invoice_sequences"."last_number" + 1'),
+            lastNumber: sql.raw('"last_number" + 1'),
             updatedAt: new Date(),
           },
         })
