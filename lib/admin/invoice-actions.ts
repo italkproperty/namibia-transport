@@ -200,6 +200,9 @@ export async function issueInvoice(formData: FormData): Promise<void> {
 
   const id = textField(formData, "invoiceId");
   if (!/^[0-9a-f-]{36}$/i.test(id)) safeAdminRedirect("/admin/invoices", "Invalid invoice reference.");
+  if (textField(formData, "confirmIssue") !== "yes") {
+    safeAdminRedirect("/admin/invoices/" + id, "Confirm that you reviewed the invoice before issuing it.");
+  }
 
   try {
     await getDb().transaction(async (tx) => {
