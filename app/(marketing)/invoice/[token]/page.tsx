@@ -24,8 +24,8 @@ export default async function PublicInvoicePage({ params }: PageProps) {
   const { token } = await params;
   if (!/^[A-Za-z0-9_-]{40,60}$/.test(token) || !isDatabaseConfigured()) notFound();
 
-  let invoice;
-  let lines;
+  let invoice: typeof invoices.$inferSelect;
+  let lines: Array<typeof invoiceLines.$inferSelect>;
   try {
     const db = getDb();
     const [found] = await db.select().from(invoices)
