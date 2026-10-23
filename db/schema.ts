@@ -625,9 +625,9 @@ export const bookings = pgTable(
       () => vehicleClasses.id,
       { onDelete: "set null" },
     ),
-    customerId: uuid("customer_id")
-      .notNull()
-      .references(() => customers.id, { onDelete: "restrict" }),
+    customerId: uuid("customer_id").references(() => customers.id, {
+      onDelete: "set null",
+    }),
     pickupLabel: text("pickup_label").notNull(),
     dropoffLabel: text("dropoff_label").notNull(),
     /**
