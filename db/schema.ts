@@ -138,6 +138,9 @@ export const quoteStatusEnum = pgEnum("quote_status", [
   "fulfilled",
 ]);
 
+/** Invoice lifecycle. Payment state is derived from verified allocations. */
+export const invoiceStatusEnum = pgEnum("invoice_status", ["draft", "issued", "void"]);
+
 /* -------------------------------------------------------------------------- */
 /* Catalogue                                                                   */
 /* -------------------------------------------------------------------------- */
@@ -966,6 +969,97 @@ export const reviews = pgTable(
   (t) => [index("reviews_published_idx").on(t.isPublished)],
 );
 
+
+/* -------------------------------------------------------------------------- */
+/* Invoicing                                                                   */
+/* -------------------------------------------------------------------------- */
+
+/**
+ * Issued invoices preserve a billing and commercial snapshot. Payment status
+ * is derived from verified payment allocations in the finance layer; an invoice
+ * being opened or a payment redirect returning is never evidence of payment.
+ */
+export const invoices = pgTable(
+  "invoices",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    invoiceNumber: text("invoice_number"),
+    publicToken: text("public_token"),
+    status: invoiceStatusEnum("status").notNull().default("draft"),
+    customerId: uuid("customer_id")
+      .notNull()
+      .references(() => customers.id, { onDelete: "restrict" }),
+    bookingId: uuid("booking_id").references(() => bookings.id, {
+      onDelete: "restrict",
+    }),
+    corporateQuoteId: uuid("corporate_quote_id").references(() => corporateQuotes.id, {
+      onDelete: "restrict",
+    }),
+    charterQuoteId: uuid("charter_quote_id").references(() => charterQuotes.id, {
+      onDelete: "restrict",
+    }),
+    billingName: text("billing_name").notNull(),
+    billingEmail: text("billing_email"),
+    billingWhatsapp: text("billing_whatsapp"),
+    billingAddress: text("billing_address"),
+    description: text("description").notNull(),
+    currency: currency(),
+    subtotal: money("subtotal").notNull(),
+    discountAmount: money("discount_amount").notNull().default("0.00"),
+    total: money("total").notNull(),
+    issuedAt: timestamp("issued_at", { withTimezone: true }),
+    dueAt: timestamp("due_at", { withTimezone: true }),
+    terms: text("terms"),
+    internalNotes: text("internal_notes"),
+    ...timestamps,
+  },
+  (t) => [
+    uniqueIndex("invoices_number_key").on(t.invoiceNumber),
+    uniqueIndex("invoices_public_token_key").on(t.publicToken),
+    index("invoices_customer_created_idx").on(t.customerId, t.createdAt.desc()),
+    index("invoices_status_due_idx").on(t.status, t.dueAt),
+    index("invoices_booking_idx").on(t.bookingId),
+    index("invoices_corporate_quote_idx").on(t.corporateQuoteId),
+    index("invoices_charter_quote_idx").on(t.charterQuoteId),
+  ],
+);
+
+/** Invoice line items are immutable after the invoice is issued. */
+export const invoiceLines = pgTable(
+  "invoice_lines",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    invoiceId: uuid("invoice_id")
+      .notNull()
+      .references(() => invoices.id, { onDelete: "cascade" }),
+    description: text("description").notNull(),
+    quantity: numeric("quantity", { precision: 10, scale: 2 }).notNull().default("1.00"),
+    unitPrice: money("unit_price").notNull(),
+    lineTotal: money("line_total").notNull(),
+    currency: currency(),
+    sortOrder: smallint("sort_order").notNull().default(0),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (t) => [
+    index("invoice_lines_invoice_sort_idx").on(t.invoiceId, t.sortOrder),
+  ],
+);
+
+/**
+ * A row per calendar year. Issuing uses an atomic upsert to allocate the next
+ * number under concurrency, then the invoice number unique index is a final
+ * integrity guard.
+ */
+export const invoiceSequences = pgTable("invoice_sequences", {
+  year: integer("year").primaryKey(),
+  lastNumber: integer("last_number").notNull().default(0),
+  updatedAt: timestamp("updated_at", { withTimezone: true })
+    .notNull()
+    .defaultNow(),
+});
+
 /* -------------------------------------------------------------------------- */
 /* Inferred types                                                              */
 /* -------------------------------------------------------------------------- */
@@ -981,6 +1075,8 @@ export type NewBooking = typeof bookings.$inferInsert;
 export type Payment = typeof payments.$inferSelect;
 export type NewPayment = typeof payments.$inferInsert;
 
+export type Invoice = typeof invoices.$inferSelect;
+export type InvoiceLine = typeof invoiceLines.$inferSelect;
 export type CharterQuote = typeof charterQuotes.$inferSelect;
 export type CharterQuoteVersion = typeof charterQuoteVersions.$inferSelect;
 
