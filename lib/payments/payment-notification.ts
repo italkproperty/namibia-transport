@@ -39,7 +39,7 @@ export async function sendPaymentNotification(input: PaymentNotificationInput): 
     `Recorded at: ${paidAt.toISOString()}`,
     "",
     "This alert is generated only after the server queries PayToday and verifies the payment amount.",
-  ].join("\\n");
+  ].join("\n");
 
   try {
     const result = await getMessenger().send({
