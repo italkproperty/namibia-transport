@@ -1,5 +1,6 @@
 import { notFound } from "next/navigation";
 import { createServiceRoleClient } from "@/lib/supabase/server";
+import InvoicePrintButton from "./print-button";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -71,7 +72,7 @@ export default async function InvoicePage({ params }: { params: Promise<{ token:
         </div>
         <p className="mt-8 rounded-lg bg-slate-50 p-4 text-sm text-slate-600">Namibia Transport is not VAT registered. VAT has not been charged on this invoice. Payment status: paid.</p>
         <footer className="mt-10 border-t border-slate-200 pt-5 text-xs text-slate-500">This invoice was generated electronically by Namibia Transport.</footer>
-        <div className="mt-8 print:hidden"><button onClick={() => window.print()} className="rounded-lg bg-slate-900 px-5 py-3 text-sm font-semibold text-white">Print / Save as PDF</button></div>
+        <div className="mt-8 print:hidden"><InvoicePrintButton /></div>
       </article>
     </main>
   );
