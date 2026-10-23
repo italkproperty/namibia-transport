@@ -2574,7 +2574,8 @@
           "type": "invoice_status",
           "primaryKey": false,
           "notNull": true,
-          "default": "'draft'"
+          "default": "'draft'",
+          "typeSchema": "public"
         },
         "customer_id": {
           "name": "customer_id",
