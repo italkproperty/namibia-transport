@@ -57,8 +57,8 @@ export default async function InvoiceDetailPage({ params, searchParams }: PagePr
   }
   if (!/^[0-9a-f-]{36}$/i.test(id)) notFound();
 
-  let invoice;
-  let lines;
+  let invoice: typeof invoices.$inferSelect;
+  let lines: Array<typeof invoiceLines.$inferSelect>;
   try {
     const db = getDb();
     const [found] = await db.select().from(invoices).where(eq(invoices.id, id)).limit(1);
