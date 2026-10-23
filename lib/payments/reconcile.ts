@@ -6,6 +6,7 @@ import { getDb, isDatabaseConfigured } from "@/db";
 import { bookings, customers, payments, routes } from "@/db/schema";
 import type { Payment, PaymentStatus } from "@/db/schema";
 import { parseMoney } from "@/lib/money";
+import { sendPaymentNotification } from "@/lib/payments/payment-notification";
 
 import { INTENT_TTL_MS } from "./paytoday/config";
 import { defaultReturnUrl } from "./paytoday/provider";
@@ -132,8 +133,14 @@ export async function reconcileBookingPayment(
       ref: bookings.ref,
       status: bookings.status,
       customerPrice: bookings.customerPrice,
+      customerName: customers.fullName,
+      customerEmail: customers.email,
+      pickupLabel: bookings.pickupLabel,
+      dropoffLabel: bookings.dropoffLabel,
+      scheduledAt: bookings.scheduledAt,
     })
     .from(bookings)
+    .innerJoin(customers, eq(bookings.customerId, customers.id))
     .where(eq(bookings.ref, bookingRef))
     .limit(1);
 
@@ -201,19 +208,36 @@ export async function reconcileBookingPayment(
       },
       updatedAt: new Date(),
     })
-    .where(eq(payments.id, payment.id))
+    .where(and(eq(payments.id, payment.id), eq(payments.status, payment.status)))
     .returning();
+
+  // If another request already reconciled this payment, it returned no row;
+  // only the request that performed the transition sends the notification.
+  if (!updated) return { payment, changed: false };
 
   // Payment confirms the booking. A decline does not cancel it — travellers
   // retry with another card, and cancelling their trip under them is hostile.
-  if (status === "paid" && booking.status === "pending_payment") {
-    await db
-      .update(bookings)
-      .set({ status: "confirmed", updatedAt: new Date() })
-      .where(and(eq(bookings.id, booking.id), eq(bookings.status, "pending_payment")));
+  if (status === "paid") {
+    if (booking.status === "pending_payment") {
+      await db
+        .update(bookings)
+        .set({ status: "confirmed", updatedAt: new Date() })
+        .where(and(eq(bookings.id, booking.id), eq(bookings.status, "pending_payment")));
+    }
+
+    await sendPaymentNotification({
+      kind: "booking",
+      reference: booking.ref,
+      amount: updated.amount,
+      currency: updated.currency,
+      customerName: booking.customerName,
+      customerEmail: booking.customerEmail,
+      description: `${booking.pickupLabel} to ${booking.dropoffLabel} (pickup ${booking.scheduledAt.toISOString()})`,
+      paidAt: updated.paidAt,
+    });
   }
 
-  return { payment: updated ?? payment, changed: true };
+  return { payment: updated, changed: true };
 }
 
 /**
