@@ -25,9 +25,16 @@ function parseAmount(raw: string): string | null {
 function dueDate(raw: string): Date | null {
   if (!raw) return null;
   if (!/^\d{4}-\d{2}-\d{2}$/.test(raw)) throw new Error("Choose a valid due date.");
-  const value = new Date(raw + "T23:59:59+02:00");
-  if (!Number.isFinite(value.getTime())) throw new Error("Choose a valid due date.");
-  return value;
+  const [year, month, day] = raw.split("-").map(Number);
+  const calendarDate = new Date(Date.UTC(year, month - 1, day));
+  if (
+    calendarDate.getUTCFullYear() !== year ||
+    calendarDate.getUTCMonth() !== month - 1 ||
+    calendarDate.getUTCDate() !== day
+  ) {
+    throw new Error("Choose a real calendar date.");
+  }
+  return new Date(raw + "T23:59:59+02:00");
 }
 
 function safeAdminRedirect(path: string, message: string): never {
