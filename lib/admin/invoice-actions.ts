@@ -154,7 +154,7 @@ export async function updateInvoiceDraft(formData: FormData): Promise<void> {
 
       const contactConditions = [];
       if (billingWhatsapp) contactConditions.push(eq(customers.whatsapp, billingWhatsapp));
-      if (billingEmail) contactConditions.push(ilike(customers.email, billingEmail));
+      if (billingEmail) contactConditions.push(eq(customers.email, billingEmail));
       const [matchedCustomer] = contactConditions.length
         ? await tx.select({ id: customers.id }).from(customers)
             .where(contactConditions.length === 1 ? contactConditions[0] : or(...contactConditions))
