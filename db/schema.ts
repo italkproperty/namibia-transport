@@ -986,9 +986,9 @@ export const invoices = pgTable(
     invoiceNumber: text("invoice_number"),
     publicToken: text("public_token"),
     status: invoiceStatusEnum("status").notNull().default("draft"),
-    customerId: uuid("customer_id")
-      .notNull()
-      .references(() => customers.id, { onDelete: "restrict" }),
+    customerId: uuid("customer_id").references(() => customers.id, {
+      onDelete: "set null",
+    }),
     bookingId: uuid("booking_id").references(() => bookings.id, {
       onDelete: "restrict",
     }),
