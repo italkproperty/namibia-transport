@@ -140,12 +140,25 @@ export default async function AdminBookingsPage({ searchParams }: PageProps) {
     direction: dirParam === "asc" ? ("asc" as const) : ("desc" as const),
   };
 
-  const [rows, total, summary, driverRows, assignments] = await Promise.all([
+  // These reads are independent. Keep them in one concurrent wave so
+  // the page pays the slowest read once instead of waiting for a second wave
+  // before it can render the payment and traveller-detail queues.
+  const [
+    rows,
+    total,
+    summary,
+    driverRows,
+    assignments,
+    pendingTransfers,
+    submittedDetails,
+  ] = await Promise.all([
     listBookings(filters),
     countBookings(filters),
     getAdminSummary(),
     listDrivers(),
     assignmentsByBooking(),
+    listPendingTransfers(),
+    listSubmittedDetails(),
   ]);
 
   const pendingPaymentRefs = rows
@@ -192,13 +205,6 @@ export default async function AdminBookingsPage({ searchParams }: PageProps) {
     const qs = query.toString();
     return qs ? `/admin/bookings?${qs}` : "/admin/bookings";
   }
-
-  // Money a traveller says they have sent. Above everything else on the page
-  // because it is the only item here with somebody waiting on the other end.
-  const [pendingTransfers, submittedDetails] = await Promise.all([
-    listPendingTransfers(),
-    listSubmittedDetails(),
-  ]);
 
   /**
    * What did not load.
