@@ -50,6 +50,13 @@
       "when": 1788212940927,
       "tag": "0006_redundant_fantastic_four",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1792782745690,
+      "tag": "0007_invoice_foundation",
+      "breakpoints": true
     }
   ]
 }
