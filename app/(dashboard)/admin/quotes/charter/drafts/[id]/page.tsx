@@ -10,6 +10,8 @@ import { READ_DEADLINE_MS, withDeadline } from "@/lib/deadline";
 import { formatDate } from "@/lib/format";
 import { formatNad } from "@/lib/money";
 import { IssueCharterQuoteForm } from "@/components/admin/issue-charter-quote-form";
+import { CharterCommercialPricingEditor } from "@/components/admin/charter-commercial-pricing-editor";
+import { CreateCharterQuoteRevision } from "@/components/admin/create-charter-quote-revision";
 
 export const metadata: Metadata = {
   title: "Charter quote detail",
@@ -20,6 +22,11 @@ export const dynamic = "force-dynamic";
 
 type StopSnapshot = { label?: string; coordinates?: { lat?: number; lng?: number } };
 type QuoteSnapshot = {
+  commercialPricing?: {
+    legs?: { from?: string; to?: string; price?: number }[];
+    extras?: { id?: string; label?: string; quantity?: number; unit?: string; unitPrice?: number; amount?: number }[];
+    total?: string;
+  };
   schemaVersion?: number;
   request?: {
     positioningKm?: number;
@@ -142,6 +149,13 @@ export default async function CharterQuoteDraftDetailPage({
     ? rawCustomerBrief as NonNullable<QuoteSnapshot["customerBrief"]>
     : null;
   const briefList = (value: unknown) => Array.isArray(value) ? value.filter((item): item is string => typeof item === "string" && item.trim().length > 0) : [];
+  const commercialPricing = readObject(snapshot?.commercialPricing);
+  const savedCommercialPricing = {
+    legs: Array.isArray(commercialPricing.legs) ? commercialPricing.legs as { from: string; to: string; price: number }[] : undefined,
+    extras: Array.isArray(commercialPricing.extras) ? commercialPricing.extras as { id: string; label: string; quantity: number; unit: string; unitPrice: number }[] : undefined,
+  };
+  const routeLegs = Array.isArray(route?.legs) ? route.legs : [];
+  const stopLabels = stops.map((stop, index) => typeof stop.label === "string" && stop.label.trim() ? stop.label.trim() : `Stop ${index + 1}`);
 
   const configuredSiteUrl = process.env.NEXT_PUBLIC_SITE_URL?.trim() || "https://www.namibiatransport.com";
   const siteOrigin = process.env.VERCEL_ENV !== "production" && process.env.VERCEL_URL?.trim()
@@ -259,6 +273,17 @@ export default async function CharterQuoteDraftDetailPage({
           </div>
           {snapshot?.changeReason && <p className="mt-4 text-sm"><span className="text-muted-foreground">Internal note:</span> {snapshot.changeReason}</p>}
         </section>
+
+        {quote.status === "sent" && <CreateCharterQuoteRevision quoteId={quote.id} />}
+
+        <CharterCommercialPricingEditor
+          quoteId={quote.id}
+          status={quote.status}
+          total={Number(quote.total)}
+          routeLegs={routeLegs}
+          stopLabels={stopLabels}
+          savedPricing={savedCommercialPricing.legs ? savedCommercialPricing : null}
+        />
 
         <IssueCharterQuoteForm
           quoteId={quote.id}

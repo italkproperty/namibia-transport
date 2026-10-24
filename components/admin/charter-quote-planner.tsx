@@ -94,6 +94,7 @@ export function CharterQuotePlanner({ vehicles }: { vehicles: VehicleOption[] })
   const [positioningKm, setPositioningKm] = React.useState("0");
   const [localKm, setLocalKm] = React.useState("0");
   const [driverDays, setDriverDays] = React.useState("1");
+  const [driverMealAllowanceDays, setDriverMealAllowanceDays] = React.useState("1");
 
   const serialisedStops = JSON.stringify(stops.filter((stop): stop is ResolvedDestination => Boolean(stop)));
   const updateStop = (index: number, stop: ResolvedDestination | null) => setStops((current) => current.map((item, i) => i === index ? stop : item));
@@ -142,7 +143,7 @@ export function CharterQuotePlanner({ vehicles }: { vehicles: VehicleOption[] })
       }
       const start = typeof intake.requestedStartDate === "string" ? Date.parse(intake.requestedStartDate + "T00:00:00Z") : NaN;
       const end = typeof intake.requestedEndDate === "string" ? Date.parse(intake.requestedEndDate + "T00:00:00Z") : NaN;
-      if (Number.isFinite(start) && Number.isFinite(end) && end >= start) setDriverDays(String(Math.floor((end - start) / 86400000) + 1));
+      if (Number.isFinite(start) && Number.isFinite(end) && end >= start) { const days = String(Math.floor((end - start) / 86400000) + 1); setDriverDays(days); setDriverMealAllowanceDays(days); }
       setChangeReason("Prepared from AI intake. Confirm dates, route, inclusions and price against the original conversation.");
       setAiBrief(intake);
       document.getElementById("charter-quote-planner")?.scrollIntoView({ behavior: "smooth", block: "start" });
@@ -197,6 +198,8 @@ export function CharterQuotePlanner({ vehicles }: { vehicles: VehicleOption[] })
             <div className="space-y-1"><label htmlFor="driverDailyRate" className="text-xs font-medium">Driver cost per day (N$)</label><Input id="driverDailyRate" name="driverDailyRate" type="number" min="0" step="1" defaultValue="0" /></div>
             <div className="space-y-1"><label htmlFor="accommodationNights" className="text-xs font-medium">Driver accommodation nights</label><Input id="accommodationNights" name="accommodationNights" type="number" min="0" step="1" defaultValue="0" /></div>
             <div className="space-y-1"><label htmlFor="accommodationRate" className="text-xs font-medium">Accommodation per night (N$)</label><Input id="accommodationRate" name="accommodationRate" type="number" min="0" step="1" defaultValue="0" /></div>
+            <div className="space-y-1"><label htmlFor="driverMealAllowanceDays" className="text-xs font-medium">Driver meal-allowance days</label><Input id="driverMealAllowanceDays" name="driverMealAllowanceDays" type="number" min="0" step="1" value={driverMealAllowanceDays} onChange={(event) => setDriverMealAllowanceDays(event.target.value)} /></div>
+            <div className="space-y-1"><label htmlFor="driverMealAllowanceRate" className="text-xs font-medium">Meal allowance per day (N$)</label><Input id="driverMealAllowanceRate" name="driverMealAllowanceRate" type="number" min="0" step="1" defaultValue="0" /></div>
             <div className="space-y-1"><label htmlFor="parkFees" className="text-xs font-medium">Park / permit fees (N$ total)</label><Input id="parkFees" name="parkFees" type="number" min="0" step="1" defaultValue="0" /></div>
             <div className="space-y-1"><label htmlFor="otherCosts" className="text-xs font-medium">Other supplier costs (N$ total)</label><Input id="otherCosts" name="otherCosts" type="number" min="0" step="1" defaultValue="0" /></div>
           </div>

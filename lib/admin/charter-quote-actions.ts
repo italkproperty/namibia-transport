@@ -34,6 +34,8 @@ export type CharterDraftRequest = {
   driverDailyRate: number;
   accommodationNights: number;
   accommodationRate: number;
+  driverMealAllowanceDays: number;
+  driverMealAllowanceRate: number;
   parkFees: number;
   otherCosts: number;
 };
@@ -113,6 +115,7 @@ async function calculateRequest(request: CharterDraftRequest) {
     items: [
       { id: "driver-days", label: "Driver days", quantity: request.driverDays, unitCost: request.driverDailyRate, unit: "day" },
       { id: "accommodation", label: "Driver accommodation", quantity: request.accommodationNights, unitCost: request.accommodationRate, unit: "night" },
+      { id: "driver-meals", label: "Driver meal allowance", quantity: request.driverMealAllowanceDays, unitCost: request.driverMealAllowanceRate, unit: "day" },
       { id: "park-fees", label: "Park and permit fees", quantity: 1, unitCost: request.parkFees, unit: "trip" },
       { id: "other-suppliers", label: "Other supplier costs", quantity: 1, unitCost: request.otherCosts, unit: "trip" },
     ],
@@ -196,6 +199,8 @@ export async function priceCharterItineraryAction(_previous: CharterPriceState, 
       driverDailyRate: readNumber(form, "driverDailyRate", "Driver daily rate"),
       accommodationNights: readNumber(form, "accommodationNights", "Accommodation nights", 365),
       accommodationRate: readNumber(form, "accommodationRate", "Accommodation rate"),
+      driverMealAllowanceDays: readNumber(form, "driverMealAllowanceDays", "Driver meal-allowance days", 365),
+      driverMealAllowanceRate: readNumber(form, "driverMealAllowanceRate", "Driver meal allowance per day"),
       parkFees: readNumber(form, "parkFees", "Park and permit fees"),
       otherCosts: readNumber(form, "otherCosts", "Other supplier costs"),
     };
@@ -327,6 +332,229 @@ export async function saveCharterQuoteDraftAction(_previous: SaveCharterDraftSta
   }
 }
 
+
+
+export type SaveCharterCommercialPricingState = { ok: true; total: string; version: number; belowTargetMargin: boolean } | { ok: false; message: string } | null;
+
+/**
+ * Saves operator-edited customer line prices as a new immutable quote version.
+ * Prices are validated and totals/margins are recomputed on the server.
+ */
+export async function saveCharterCommercialPricingAction(
+  _previous: SaveCharterCommercialPricingState,
+  form: FormData,
+): Promise<SaveCharterCommercialPricingState> {
+  const gate = await getAdminGateState();
+  if (gate.state !== "signed-in") return { ok: false, message: "Sign in before editing charter prices." };
+  if (!isDatabaseConfigured()) return { ok: false, message: "No database is configured on this deployment." };
+
+  const id = String(form.get("quoteId") ?? "");
+  const changeReason = String(form.get("changeReason") ?? "").trim();
+  let input: unknown;
+  try { input = JSON.parse(String(form.get("commercialPricing") ?? "")); }
+  catch { return { ok: false, message: "The pricing lines could not be read. Refresh the draft and try again." }; }
+  if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id)) {
+    return { ok: false, message: "The quote reference is invalid." };
+  }
+  if (changeReason.length > 500) return { ok: false, message: "The change reason must be 500 characters or fewer." };
+  if (!input || typeof input !== "object" || Array.isArray(input)) return { ok: false, message: "Invalid pricing data." };
+
+  const candidate = input as { legs?: unknown; extras?: unknown };
+  if (!Array.isArray(candidate.legs) || candidate.legs.length < 1 || candidate.legs.length > 24 || !Array.isArray(candidate.extras) || candidate.extras.length > 30) {
+    return { ok: false, message: "The itinerary pricing lines are invalid. Refresh the draft and try again." };
+  }
+  const legs: { from: string; to: string; price: number }[] = [];
+  for (const [index, item] of candidate.legs.entries()) {
+    if (!item || typeof item !== "object") return { ok: false, message: `Route leg ${index + 1} is invalid.` };
+    const line = item as { from?: unknown; to?: unknown; price?: unknown };
+    const price = Number(line.price);
+    if (typeof line.from !== "string" || !line.from.trim() || typeof line.to !== "string" || !line.to.trim() || !Number.isFinite(price) || price < 0 || price > 100000000) {
+      return { ok: false, message: `Enter a valid non-negative price for route leg ${index + 1}.` };
+    }
+    legs.push({ from: line.from.trim().slice(0, 300), to: line.to.trim().slice(0, 300), price: Math.round(price * 100) / 100 });
+  }
+  const extras: { id: string; label: string; quantity: number; unit: string; unitPrice: number; amount: number }[] = [];
+  const seen = new Set<string>();
+  for (const [index, item] of candidate.extras.entries()) {
+    if (!item || typeof item !== "object") return { ok: false, message: `Additional line ${index + 1} is invalid.` };
+    const line = item as { id?: unknown; label?: unknown; quantity?: unknown; unit?: unknown; unitPrice?: unknown };
+    const idValue = typeof line.id === "string" ? line.id.trim() : "";
+    const label = typeof line.label === "string" ? line.label.trim() : "";
+    const unit = typeof line.unit === "string" ? line.unit.trim() : "";
+    const quantity = Number(line.quantity);
+    const unitPrice = Number(line.unitPrice);
+    if (!idValue || seen.has(idValue) || !label || label.length > 160 || !unit || unit.length > 40 ||
+      !Number.isFinite(quantity) || quantity < 0 || quantity > 100000 ||
+      !Number.isFinite(unitPrice) || unitPrice < 0 || unitPrice > 100000000) {
+      return { ok: false, message: `Enter valid details for additional line ${index + 1}.` };
+    }
+    seen.add(idValue);
+    extras.push({ id: idValue, label, quantity, unit, unitPrice: Math.round(unitPrice * 100) / 100, amount: Math.round(quantity * unitPrice * 100) / 100 });
+  }
+
+  const totalCents = legs.reduce((sum, line) => sum + Math.round(line.price * 100), 0) +
+    extras.reduce((sum, line) => sum + Math.round(line.amount * 100), 0);
+  const total = totalCents / 100;
+  if (!Number.isSafeInteger(totalCents) || total <= 0 || total > 100000000) {
+    return { ok: false, message: "The customer total must be greater than zero and within the supported range." };
+  }
+
+  try {
+    const db = getDb();
+    const result = await db.transaction(async (tx) => {
+      const [quote] = await tx.select().from(charterQuotes).where(eq(charterQuotes.id, id)).limit(1);
+      if (!quote) throw new Error("The charter draft could not be found.");
+      if (quote.status !== "draft" && quote.status !== "approved") {
+        throw new Error("Only a private draft can be edited. Create a new draft revision rather than changing an issued quote.");
+      }
+      const [latest] = await tx.select().from(charterQuoteVersions)
+        .where(eq(charterQuoteVersions.quoteId, id))
+        .orderBy(desc(charterQuoteVersions.version)).limit(1);
+      if (!latest) throw new Error("The saved quote version could not be found.");
+      const snapshot = latest.snapshot && typeof latest.snapshot === "object" && !Array.isArray(latest.snapshot)
+        ? { ...(latest.snapshot as Record<string, unknown>) } : {};
+      const requestSnapshot = snapshot.request && typeof snapshot.request === "object" ? snapshot.request as Record<string, unknown> : {};
+      const savedStops = Array.isArray(requestSnapshot.stops) ? requestSnapshot.stops as { label?: unknown }[] : [];
+      const routeSnapshot = snapshot.route && typeof snapshot.route === "object" ? snapshot.route as Record<string, unknown> : {};
+      const savedRouteLegs = Array.isArray(routeSnapshot.legs) ? routeSnapshot.legs as unknown[] : [];
+      if (savedStops.length < 2 || savedRouteLegs.length !== legs.length || savedStops.length !== legs.length + 1) {
+        throw new Error("The number of commercial prices must match the saved, verified itinerary. Recalculate the route before editing prices.");
+      }
+      for (let index = 0; index < legs.length; index += 1) {
+        const from = typeof savedStops[index]?.label === "string" ? String(savedStops[index].label).trim() : "";
+        const to = typeof savedStops[index + 1]?.label === "string" ? String(savedStops[index + 1].label).trim() : "";
+        if (!from || !to || legs[index].from !== from || legs[index].to !== to) {
+          throw new Error(`Route leg ${index + 1} does not match the saved itinerary order. Refresh the draft and try again.`);
+        }
+      }
+      const resultSnapshot = snapshot.result && typeof snapshot.result === "object" ? snapshot.result as Record<string, unknown> : {};
+      const costs = resultSnapshot.costs && typeof resultSnapshot.costs === "object" ? resultSnapshot.costs as Record<string, unknown> : {};
+      const settings = snapshot.settings && typeof snapshot.settings === "object" ? snapshot.settings as Record<string, unknown> : {};
+      const expectedCost = Number(costs.expectedCost);
+      const feeRate = Number(settings.paymentFeeRate ?? 0);
+      const marginTarget = Number(settings.targetContributionMargin ?? 0);
+      if (!Number.isFinite(expectedCost) || expectedCost < 0 || !Number.isFinite(feeRate) || feeRate < 0 || feeRate > 0.3) {
+        throw new Error("The saved cost assumptions are incomplete. Recalculate this quote before editing prices.");
+      }
+      const paymentFee = Math.round(total * feeRate * 100) / 100;
+      const contribution = Math.round((total - expectedCost - paymentFee) * 100) / 100;
+      const contributionMargin = total > 0 ? contribution / total : 0;
+      const belowTargetMargin = contributionMargin + 1e-9 < marginTarget;
+      const nextVersion = latest.version + 1;
+      const commercialPricing = { currency: quote.currency, legs, extras, total: total.toFixed(2), editedAt: new Date().toISOString() };
+      const nextSnapshot = {
+        ...snapshot,
+        commercialPricing,
+        result: {
+          ...resultSnapshot,
+          finalPrice: total,
+          actual: { paymentFee, contribution, contributionMargin },
+          belowTargetMargin,
+        },
+        requiresMarginReview: belowTargetMargin,
+        changeReason: changeReason || "Commercial line prices edited",
+        calculatedAt: new Date().toISOString(),
+      };
+      await tx.insert(charterQuoteVersions).values({
+        quoteId: id, version: nextVersion, status: quote.status, snapshot: nextSnapshot,
+        total: total.toFixed(2), changeReason: changeReason || "Commercial line prices edited", actor: "admin",
+      });
+      await tx.update(charterQuotes).set({
+        total: total.toFixed(2), currentVersion: nextVersion,
+        pricingSnapshot: { ...((quote.pricingSnapshot && typeof quote.pricingSnapshot === "object" ? quote.pricingSnapshot : {}) as Record<string, unknown>), actual: { paymentFee, contribution, contributionMargin }, belowTargetMargin },
+        updatedAt: new Date(),
+      }).where(eq(charterQuotes.id, id));
+      return { version: nextVersion, belowTargetMargin };
+    });
+    revalidatePath("/admin/quotes");
+    revalidatePath("/admin/quotes/charter/drafts");
+    revalidatePath(`/admin/quotes/charter/drafts/${id}`);
+    return { ok: true, total: total.toFixed(2), version: result.version, belowTargetMargin: result.belowTargetMargin };
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "The quote prices could not be saved.";
+    console.error("[charter-quote] commercial pricing save failed", error);
+    return { ok: false, message };
+  }
+}
+
+export type CreateCharterQuoteRevisionState = { ok: true; id: string; quoteNumber: string } | { ok: false; message: string } | null;
+
+/** Copy an issued quote into a new private draft; never mutate the issued terms. */
+export async function createCharterQuoteRevisionAction(
+  _previous: CreateCharterQuoteRevisionState,
+  form: FormData,
+): Promise<CreateCharterQuoteRevisionState> {
+  const gate = await getAdminGateState();
+  if (gate.state !== "signed-in") return { ok: false, message: "Sign in before creating a quote revision." };
+  if (!isDatabaseConfigured()) return { ok: false, message: "No database is configured on this deployment." };
+  const id = String(form.get("quoteId") ?? "");
+  if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id)) {
+    return { ok: false, message: "The quote reference is invalid." };
+  }
+  try {
+    const db = getDb();
+    const [source] = await db.select().from(charterQuotes).where(eq(charterQuotes.id, id)).limit(1);
+    if (!source) return { ok: false, message: "The original quote could not be found." };
+    if (source.status === "paid" || source.status === "cancelled") {
+      return { ok: false, message: "Paid or cancelled quotes cannot be revised here." };
+    }
+    const [latest] = await db.select().from(charterQuoteVersions)
+      .where(eq(charterQuoteVersions.quoteId, id))
+      .orderBy(desc(charterQuoteVersions.version)).limit(1);
+    if (!latest) return { ok: false, message: "The latest saved quote version could not be found." };
+    const originalSnapshot = latest.snapshot && typeof latest.snapshot === "object" && !Array.isArray(latest.snapshot)
+      ? latest.snapshot as Record<string, unknown> : {};
+    const snapshot = { ...originalSnapshot, changeReason: `Draft revision of ${source.quoteNumber}`, requiresMarginReview: Boolean((originalSnapshot.result as { belowTargetMargin?: boolean } | undefined)?.belowTargetMargin) };
+    const year = new Date().getFullYear();
+    let created: { id: string; quoteNumber: string } | undefined;
+    for (let attempt = 0; attempt < 3; attempt += 1) {
+      const quoteNumber = `NT-CQ-${year}-${randomBytes(8).toString("hex").toUpperCase()}`;
+      try {
+        created = await db.transaction(async (tx) => {
+          const [quote] = await tx.insert(charterQuotes).values({
+            quoteNumber,
+            status: "draft",
+            customerName: source.customerName,
+            customerEmail: source.customerEmail,
+            customerWhatsapp: source.customerWhatsapp,
+            vehicleClassId: source.vehicleClassId,
+            itinerarySnapshot: source.itinerarySnapshot,
+            costSnapshot: source.costSnapshot,
+            pricingSnapshot: source.pricingSnapshot,
+            total: latest.total,
+            currency: source.currency,
+            currentVersion: 1,
+            publicToken: null,
+            issuedAt: null,
+            validUntil: null,
+          }).returning({ id: charterQuotes.id, quoteNumber: charterQuotes.quoteNumber });
+          await tx.insert(charterQuoteVersions).values({
+            quoteId: quote.id,
+            version: 1,
+            status: "draft",
+            snapshot,
+            total: latest.total,
+            changeReason: `Draft revision of ${source.quoteNumber}`,
+            actor: "admin",
+          });
+          return quote;
+        });
+        break;
+      } catch (error) {
+        const dbError = error as { code?: string; constraint?: string; cause?: { code?: string; constraint?: string } };
+        if ((dbError.code ?? dbError.cause?.code) === "23505" && (dbError.constraint ?? dbError.cause?.constraint) === "charter_quotes_number_key" && attempt < 2) continue;
+        throw error;
+      }
+    }
+    if (!created) throw new Error("Could not allocate a unique quote number. Try again.");
+    revalidatePath("/admin/quotes");
+    revalidatePath("/admin/quotes/charter/drafts");
+    return { ok: true, ...created };
+  } catch (error) {
+    console.error("[charter-quote] revision creation failed", error);
+    return { ok: false, message: error instanceof Error ? error.message : "Could not create a draft revision." };
+  }
+}
 
 export type IssueCharterQuoteState = { ok: true; url: string; validUntil: string } | { ok: false; message: string } | null;
 
