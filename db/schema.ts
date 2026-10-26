@@ -1060,6 +1060,33 @@ export const invoiceSequences = pgTable("invoice_sequences", {
     .defaultNow(),
 });
 
+/**
+ * Manually verified payments allocated to an issued invoice. This is an
+ * allocation ledger, not proof of payment by itself: admins must verify the
+ * funds in the bank/gateway before recording them here.
+ */
+export const invoicePayments = pgTable(
+  "invoice_payments",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    invoiceId: uuid("invoice_id")
+      .notNull()
+      .references(() => invoices.id, { onDelete: "restrict" }),
+    amount: money("amount").notNull(),
+    currency: currency(),
+    method: text("method").notNull(),
+    reference: text("reference"),
+    paidAt: timestamp("paid_at", { withTimezone: true }).notNull(),
+    notes: text("notes"),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (t) => [
+    index("invoice_payments_invoice_paid_idx").on(t.invoiceId, t.paidAt),
+  ],
+);
+
 /* -------------------------------------------------------------------------- */
 /* Inferred types                                                              */
 /* -------------------------------------------------------------------------- */
