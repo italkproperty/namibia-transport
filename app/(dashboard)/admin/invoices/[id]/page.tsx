@@ -6,7 +6,7 @@ import { eq } from "drizzle-orm";
 import { AdminShell } from "@/components/admin/shell";
 import { Button } from "@/components/ui/button";
 import { getDb, isDatabaseConfigured } from "@/db";
-import { invoiceLines, invoices } from "@/db/schema";
+import { invoices } from "@/db/schema";
 import { getAdminGateState } from "@/lib/admin/auth";
 import { issueInvoice, updateInvoiceDraft } from "@/lib/admin/invoice-actions";
 import { formatDate } from "@/lib/format";
@@ -58,13 +58,11 @@ export default async function InvoiceDetailPage({ params, searchParams }: PagePr
   if (!/^[0-9a-f-]{36}$/i.test(id)) notFound();
 
   let invoice: typeof invoices.$inferSelect;
-  let lines: Array<typeof invoiceLines.$inferSelect>;
   try {
     const db = getDb();
     const [found] = await db.select().from(invoices).where(eq(invoices.id, id)).limit(1);
     if (!found) notFound();
     invoice = found;
-    lines = await db.select().from(invoiceLines).where(eq(invoiceLines.invoiceId, id)).orderBy(invoiceLines.sortOrder);
   } catch (error) {
     if (error && typeof error === "object" && "digest" in error &&
         typeof (error as { digest?: unknown }).digest === "string" &&
@@ -164,7 +162,7 @@ export default async function InvoiceDetailPage({ params, searchParams }: PagePr
         ) : invoice.status === "issued" ? (
           <div className="rounded-xl border p-5">
             <h2 className="font-semibold">Issued document</h2>
-            <p className="mt-1 text-sm text-muted-foreground">Open the client-facing version and use the browser's Print / Save as PDF function. Automatic payment allocation and receipts are scheduled for the next finance phase.</p>
+            <p className="mt-1 text-sm text-muted-foreground">Open the client-facing version and use the browser&apos;s Print / Save as PDF function. Automatic payment allocation and receipts are scheduled for the next finance phase.</p>
             {publicUrl && <Button asChild className="mt-4"><a href={publicUrl} target="_blank" rel="noreferrer">View / print invoice</a></Button>}
           </div>
         ) : null}
