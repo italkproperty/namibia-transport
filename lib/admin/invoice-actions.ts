@@ -17,9 +17,9 @@ function parseAmount(raw: string): string | null {
   const value = raw.replace(/[\s,]/g, "");
   if (!/^\d{1,8}(?:\.\d{1,2})?$/.test(value)) return null;
   const [whole, fraction = ""] = value.split(".");
-  const cents = BigInt(whole) * 100n + BigInt(fraction.padEnd(2, "0") || "0");
-  if (cents <= 0n || cents > 9999999999n) return null;
-  return (BigInt(whole).toString()) + "." + fraction.padEnd(2, "0");
+  const cents = Number(whole) * 100 + Number(fraction.padEnd(2, "0") || "0");
+  if (!Number.isSafeInteger(cents) || cents <= 0 || cents > 9999999999) return null;
+  return String(Number(whole)) + "." + fraction.padEnd(2, "0");
 }
 
 function dueDate(raw: string): Date | null {
@@ -158,48 +158,36 @@ export async function updateInvoiceDraft(formData: FormData): Promise<void> {
         .from(invoices).where(eq(invoices.id, id)).limit(1);
       if (!invoice) throw new Error("Invoice not found.");
       if (invoice.status !== "draft") throw new Error("Issued invoices cannot be edited.");
-
-      const contactConditions = [];
-      if (billingWhatsapp) contactConditions.push(eq(customers.whatsapp, billingWhatsapp));
-      if (billingEmail) contactConditions.push(eq(customers.email, billingEmail));
-      const [matchedCustomer] = contactConditions.length
-        ? await tx.select({ id: customers.id }).from(customers)
-            .where(contactConditions.length === 1 ? contactConditions[0] : or(...contactConditions))
-            .limit(1)
-        : [];
-
       await tx.update(invoices).set({
-        customerId: matchedCustomer?.id ?? null,
         billingName,
         billingEmail: billingEmail || null,
         billingWhatsapp: billingWhatsapp || null,
         billingAddress: billingAddress || null,
         description,
         subtotal: amount,
+        discountAmount: "0.00",
         total: amount,
         dueAt,
         terms: terms || null,
         updatedAt: new Date(),
       }).where(eq(invoices.id, id));
-
       await tx.update(invoiceLines).set({
         description,
         quantity: "1.00",
         unitPrice: amount,
         lineTotal: amount,
-        currency: "NAD",
       }).where(eq(invoiceLines.invoiceId, id));
     });
     revalidatePath("/admin/invoices");
     revalidatePath("/admin/invoices/" + id);
+    redirect("/admin/invoices/" + id + "?saved=1");
   } catch (error) {
+    if (error && typeof error === "object" && "digest" in error &&
+        typeof (error as { digest?: unknown }).digest === "string" &&
+        (error as { digest: string }).digest.startsWith("NEXT_REDIRECT")) throw error;
     console.error("[invoices] draft update failed", error);
-    safeAdminRedirect("/admin/invoices/" + id, error instanceof Error && error.message === "Issued invoices cannot be edited."
-      ? error.message
-      : "The draft could not be updated. Check the details and retry.");
+    safeAdminRedirect("/admin/invoices/" + id, "The draft could not be updated. Check the details and retry.");
   }
-
-  redirect("/admin/invoices/" + id + "?saved=1");
 }
 
 export async function issueInvoice(formData: FormData): Promise<void> {
@@ -208,57 +196,46 @@ export async function issueInvoice(formData: FormData): Promise<void> {
 
   const id = textField(formData, "invoiceId");
   if (!/^[0-9a-f-]{36}$/i.test(id)) safeAdminRedirect("/admin/invoices", "Invalid invoice reference.");
-  if (textField(formData, "confirmIssue") !== "yes") {
-    safeAdminRedirect("/admin/invoices/" + id, "Confirm that you reviewed the invoice before issuing it.");
-  }
+  if (textField(formData, "confirmIssue") !== "yes") safeAdminRedirect("/admin/invoices/" + id, "Confirm the invoice details before issuing.");
 
   try {
-    await getDb().transaction(async (tx) => {
-      const [invoice] = await tx.select({
-        id: invoices.id,
-        status: invoices.status,
-      }).from(invoices).where(eq(invoices.id, id)).limit(1);
-
+    const issuedInvoice = await getDb().transaction(async (tx) => {
+      const [invoice] = await tx.select().from(invoices).where(eq(invoices.id, id)).limit(1);
       if (!invoice) throw new Error("Invoice not found.");
-      if (invoice.status === "issued") return;
-      if (invoice.status !== "draft") throw new Error("Only a draft can be issued.");
+      if (invoice.status !== "draft") throw new Error("Only a draft invoice can be issued.");
+      if (!invoice.billingName || !invoice.description || !invoice.total || Number(invoice.total) <= 0) {
+        throw new Error("The invoice needs a customer name, service description and positive total.");
+      }
 
-      const year = Number(new Intl.DateTimeFormat("en", {
-        timeZone: "Africa/Windhoek",
-        year: "numeric",
-      }).format(new Date()));
-
-      const [sequence] = await tx.insert(invoiceSequences)
-        .values({ year, lastNumber: 1, updatedAt: new Date() })
+      const year = new Date().getFullYear();
+      const [sequence] = await tx.insert(invoiceSequences).values({ year, lastNumber: 1 })
         .onConflictDoUpdate({
           target: invoiceSequences.year,
-          set: {
-            lastNumber: sql.raw('"last_number" + 1'),
-            updatedAt: new Date(),
-          },
+          set: { lastNumber: sql`${invoiceSequences.lastNumber} + 1` },
         })
         .returning({ lastNumber: invoiceSequences.lastNumber });
-
-      const invoiceNumber = "NT-INV-" + year + "-" + String(sequence.lastNumber).padStart(5, "0");
-      const token = randomBytes(32).toString("base64url");
+      const invoiceNumber = "NT-" + year + "-" + String(sequence.lastNumber).padStart(5, "0");
+      const publicToken = randomBytes(32).toString("base64url");
 
       const [updated] = await tx.update(invoices).set({
         invoiceNumber,
-        publicToken: token,
+        publicToken,
         status: "issued",
         issuedAt: new Date(),
         updatedAt: new Date(),
-      }).where(and(eq(invoices.id, id), eq(invoices.status, "draft")))
-        .returning({ id: invoices.id });
-
-      if (!updated) throw new Error("Invoice changed while issuing. Reload and try again.");
+      }).where(and(eq(invoices.id, id), eq(invoices.status, "draft"))).returning();
+      if (!updated) throw new Error("This invoice has already been issued or changed. Refresh before trying again.");
+      return updated;
     });
-  } catch (error) {
-    console.error("[invoices] issue failed", error);
-    safeAdminRedirect("/admin/invoices/" + id, "The invoice could not be issued. Refresh and try again.");
-  }
 
-  revalidatePath("/admin/invoices");
-  revalidatePath("/admin/invoices/" + id);
-  redirect("/admin/invoices/" + id + "?issued=1");
+    revalidatePath("/admin/invoices");
+    revalidatePath("/admin/invoices/" + id);
+    redirect("/admin/invoices/" + issuedInvoice.id + "?issued=1");
+  } catch (error) {
+    if (error && typeof error === "object" && "digest" in error &&
+        typeof (error as { digest?: unknown }).digest === "string" &&
+        (error as { digest: string }).digest.startsWith("NEXT_REDIRECT")) throw error;
+    console.error("[invoices] issue failed", error);
+    safeAdminRedirect("/admin/invoices/" + id, error instanceof Error ? error.message : "The invoice could not be issued.");
+  }
 }
