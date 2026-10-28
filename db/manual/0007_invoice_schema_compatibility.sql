@@ -161,6 +161,30 @@ BEGIN
   END IF;
 END $;
 
+-- The new contract allows a customer to be unmatched and allows WhatsApp-only
+-- contacts, no due date, and no terms. Relax legacy NOT NULL constraints on these
+-- optional fields so the admin draft form behaves as designed.
+DO $
+DECLARE
+  legacy_column text;
+BEGIN
+  FOREACH legacy_column IN ARRAY ARRAY[
+    'customer_id',
+    'customer_email',
+    'customer_whatsapp',
+    'due_date',
+    'terms'
+  ]
+  LOOP
+    IF EXISTS (
+      SELECT 1 FROM information_schema.columns
+      WHERE table_schema='public' AND table_name='invoices' AND column_name=legacy_column
+    ) THEN
+      EXECUTE format('ALTER TABLE public.invoices ALTER COLUMN %I DROP NOT NULL', legacy_column);
+    END IF;
+  END LOOP;
+END $;
+
 -- Keep legacy columns populated for older reports and constraints while the app uses
 -- canonical names. JSONB lets this trigger work whether a particular legacy column
 -- exists in this database version or not.
