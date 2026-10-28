@@ -167,6 +167,7 @@ BEGIN
   WHERE c.table_schema='public' AND c.table_name='invoices' AND c.column_name='status';
 
   IF current_type IS DISTINCT FROM 'invoice_status' THEN
+    ALTER TABLE public.invoices ALTER COLUMN status DROP DEFAULT;
     UPDATE public.invoices
     SET status = CASE
       WHEN lower(status::text) = 'draft' THEN 'draft'
@@ -177,7 +178,8 @@ BEGIN
       ALTER COLUMN status TYPE public.invoice_status
       USING status::text::public.invoice_status;
   END IF;
-END $$;
+  ALTER TABLE public.invoices ALTER COLUMN status SET DEFAULT 'draft'::public.invoice_status;
+END $;
 
 CREATE UNIQUE INDEX IF NOT EXISTS invoices_number_key
   ON public.invoices (invoice_number);
