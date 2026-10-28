@@ -178,7 +178,7 @@ ALTER TABLE public.invoices ALTER COLUMN invoice_number DROP NOT NULL;
 
 -- Legacy source is not part of the new invoice contract. Allow it to be empty for
 -- manually created drafts; its CHECK constraint, if present, accepts NULL.
-DO $
+DO $$
 BEGIN
   IF EXISTS (
     SELECT 1 FROM information_schema.columns
@@ -186,12 +186,12 @@ BEGIN
   ) THEN
     ALTER TABLE public.invoices ALTER COLUMN source DROP NOT NULL;
   END IF;
-END $;
+END $$;
 
 -- The new contract allows a customer to be unmatched and allows WhatsApp-only
 -- contacts, no due date, and no terms. Relax legacy NOT NULL constraints on these
 -- optional fields so the admin draft form behaves as designed.
-DO $
+DO $$
 DECLARE
   legacy_column text;
 BEGIN
@@ -210,7 +210,7 @@ BEGIN
       EXECUTE format('ALTER TABLE public.invoices ALTER COLUMN %I DROP NOT NULL', legacy_column);
     END IF;
   END LOOP;
-END $;
+END $$;
 
 -- Keep legacy columns populated for older reports and constraints while the app uses
 -- canonical names. JSONB lets this trigger work whether a particular legacy column
@@ -218,7 +218,7 @@ END $;
 CREATE OR REPLACE FUNCTION public.sync_invoice_legacy_columns()
 RETURNS trigger
 LANGUAGE plpgsql
-AS $
+AS $$
 DECLARE
   row_data jsonb := to_jsonb(NEW);
 BEGIN
@@ -254,7 +254,7 @@ BEGIN
   NEW := jsonb_populate_record(NEW, row_data);
   RETURN NEW;
 END;
-$;
+$$;
 
 DROP TRIGGER IF EXISTS invoices_sync_legacy_columns ON public.invoices;
 CREATE TRIGGER invoices_sync_legacy_columns
@@ -295,7 +295,7 @@ BEGIN
       USING status::text::public.invoice_status;
   END IF;
   ALTER TABLE public.invoices ALTER COLUMN status SET DEFAULT 'draft'::public.invoice_status;
-END $;
+END $$;
 
 CREATE UNIQUE INDEX IF NOT EXISTS invoices_number_key
   ON public.invoices (invoice_number);
@@ -365,79 +365,14 @@ INSERT INTO public.invoice_sequences (year, last_number)
 SELECT parsed_year, MAX(parsed_number)
 FROM (
   SELECT
-    (regexp_match(invoice_number, '^NT-(?:INV-)?([0-9]{4})-([0-9]+)
-WHERE parsed_year IS NOT NULL AND parsed_number IS NOT NULL
-GROUP BY parsed_year
-ON CONFLICT (year) DO UPDATE
-SET last_number = GREATEST(public.invoice_sequences.last_number, EXCLUDED.last_number),
-    updated_at = now();
-
-COMMIT;
-
--- Verification summary: one row per invoice-related table; this does not alter data.
-SELECT
-  table_name,
-  COUNT(*) AS column_count
-FROM information_schema.columns
-WHERE table_schema = 'public'
-  AND table_name IN ('invoices', 'invoice_lines', 'invoice_payments', 'invoice_sequences')
-GROUP BY table_name
-ORDER BY table_name;
-))[1]::integer AS parsed_year,
-    (regexp_match(invoice_number, '^NT-(?:INV-)?([0-9]{4})-([0-9]+)
-WHERE parsed_year IS NOT NULL AND parsed_number IS NOT NULL
-GROUP BY parsed_year
-ON CONFLICT (year) DO UPDATE
-SET last_number = GREATEST(public.invoice_sequences.last_number, EXCLUDED.last_number),
-    updated_at = now();
-
-COMMIT;
-
--- Verification summary: one row per invoice-related table; this does not alter data.
-SELECT
-  table_name,
-  COUNT(*) AS column_count
-FROM information_schema.columns
-WHERE table_schema = 'public'
-  AND table_name IN ('invoices', 'invoice_lines', 'invoice_payments', 'invoice_sequences')
-GROUP BY table_name
-ORDER BY table_name;
-))[2]::integer AS parsed_number
+    (regexp_match(invoice_number, '^NT-(?:INV-)?([0-9]{4})-([0-9]+)$'))[1]::integer AS parsed_year,
+    (regexp_match(invoice_number, '^NT-(?:INV-)?([0-9]{4})-([0-9]+)$'))[2]::integer AS parsed_number
   FROM public.invoices
-  WHERE invoice_number ~ '^NT-(INV-)?[0-9]{4}-[0-9]+
-WHERE parsed_year IS NOT NULL AND parsed_number IS NOT NULL
-GROUP BY parsed_year
-ON CONFLICT (year) DO UPDATE
-SET last_number = GREATEST(public.invoice_sequences.last_number, EXCLUDED.last_number),
-    updated_at = now();
-
-COMMIT;
-
--- Verification summary: one row per invoice-related table; this does not alter data.
-SELECT
-  table_name,
-  COUNT(*) AS column_count
-FROM information_schema.columns
-WHERE table_schema = 'public'
-  AND table_name IN ('invoices', 'invoice_lines', 'invoice_payments', 'invoice_sequences')
-GROUP BY table_name
-ORDER BY table_name;
-
+  WHERE invoice_number ~ '^NT-(?:INV-)?[0-9]{4}-[0-9]+$'
 ) parsed
 WHERE parsed_year IS NOT NULL AND parsed_number IS NOT NULL
 GROUP BY parsed_year
 ON CONFLICT (year) DO UPDATE
 SET last_number = GREATEST(public.invoice_sequences.last_number, EXCLUDED.last_number),
     updated_at = now();
-
 COMMIT;
-
--- Verification summary: one row per invoice-related table; this does not alter data.
-SELECT
-  table_name,
-  COUNT(*) AS column_count
-FROM information_schema.columns
-WHERE table_schema = 'public'
-  AND table_name IN ('invoices', 'invoice_lines', 'invoice_payments', 'invoice_sequences')
-GROUP BY table_name
-ORDER BY table_name;
