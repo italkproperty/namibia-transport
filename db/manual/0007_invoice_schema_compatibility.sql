@@ -145,6 +145,71 @@ ALTER TABLE public.invoices
   ALTER COLUMN updated_at SET DEFAULT now(),
   ALTER COLUMN updated_at SET NOT NULL;
 
+-- Drafts in the new workflow intentionally have no invoice number until issuance.
+-- The legacy table required invoice_number immediately, so relax that legacy constraint.
+ALTER TABLE public.invoices ALTER COLUMN invoice_number DROP NOT NULL;
+
+-- Legacy source is not part of the new invoice contract. Allow it to be empty for
+-- manually created drafts; its CHECK constraint, if present, accepts NULL.
+DO $
+BEGIN
+  IF EXISTS (
+    SELECT 1 FROM information_schema.columns
+    WHERE table_schema='public' AND table_name='invoices' AND column_name='source'
+  ) THEN
+    ALTER TABLE public.invoices ALTER COLUMN source DROP NOT NULL;
+  END IF;
+END $;
+
+-- Keep legacy columns populated for older reports and constraints while the app uses
+-- canonical names. JSONB lets this trigger work whether a particular legacy column
+-- exists in this database version or not.
+CREATE OR REPLACE FUNCTION public.sync_invoice_legacy_columns()
+RETURNS trigger
+LANGUAGE plpgsql
+AS $
+DECLARE
+  row_data jsonb := to_jsonb(NEW);
+BEGIN
+  IF row_data ? 'customer_name' AND row_data ? 'billing_name' THEN
+    IF NULLIF(row_data->>'customer_name', '') IS NULL THEN
+      row_data := jsonb_set(row_data, '{customer_name}', COALESCE(row_data->'billing_name', 'null'::jsonb), true);
+    END IF;
+    IF NULLIF(row_data->>'billing_name', '') IS NULL THEN
+      row_data := jsonb_set(row_data, '{billing_name}', COALESCE(row_data->'customer_name', 'null'::jsonb), true);
+    END IF;
+  END IF;
+
+  IF row_data ? 'customer_email' AND row_data ? 'billing_email'
+     AND row_data->'customer_email' = 'null'::jsonb THEN
+    row_data := jsonb_set(row_data, '{customer_email}', COALESCE(row_data->'billing_email', 'null'::jsonb), true);
+  END IF;
+
+  IF row_data ? 'customer_whatsapp' AND row_data ? 'billing_whatsapp'
+     AND row_data->'customer_whatsapp' = 'null'::jsonb THEN
+    row_data := jsonb_set(row_data, '{customer_whatsapp}', COALESCE(row_data->'billing_whatsapp', 'null'::jsonb), true);
+  END IF;
+
+  IF row_data ? 'total_amount' AND row_data ? 'total'
+     AND (row_data->'total_amount' = 'null'::jsonb OR row_data->>'total_amount' = '0') THEN
+    row_data := jsonb_set(row_data, '{total_amount}', COALESCE(row_data->'total', '0'::jsonb), true);
+  END IF;
+
+  IF row_data ? 'due_date' AND row_data ? 'due_at'
+     AND row_data->'due_date' = 'null'::jsonb THEN
+    row_data := jsonb_set(row_data, '{due_date}', COALESCE(row_data->'due_at', 'null'::jsonb), true);
+  END IF;
+
+  NEW := jsonb_populate_record(NEW, row_data);
+  RETURN NEW;
+END;
+$;
+
+DROP TRIGGER IF EXISTS invoices_sync_legacy_columns ON public.invoices;
+CREATE TRIGGER invoices_sync_legacy_columns
+BEFORE INSERT OR UPDATE ON public.invoices
+FOR EACH ROW EXECUTE FUNCTION public.sync_invoice_legacy_columns();
+
 -- Drizzle expects the invoice_status enum. Replace the legacy check constraint
 -- before converting the status column; preserve old non-draft states as issued,
 -- and legacy cancelled states as void.
