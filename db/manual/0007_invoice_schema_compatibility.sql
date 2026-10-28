@@ -65,6 +65,24 @@ BEGIN
     $q$;
   END IF;
 
+  -- If the legacy invoice references a customer record, use its canonical contact
+  -- details before falling back to a generic name.
+  IF EXISTS (
+    SELECT 1 FROM information_schema.columns
+    WHERE table_schema='public' AND table_name='invoices' AND column_name='customer_id'
+  ) AND to_regclass('public.customers') IS NOT NULL THEN
+    EXECUTE $q$
+      UPDATE public.invoices i
+      SET billing_name = COALESCE(NULLIF(i.billing_name, ''), c.full_name),
+          billing_email = COALESCE(i.billing_email, c.email),
+          billing_whatsapp = COALESCE(i.billing_whatsapp, c.whatsapp)
+      FROM public.customers c
+      WHERE i.customer_id = c.id
+        AND (i.billing_name IS NULL OR i.billing_name = ''
+          OR i.billing_email IS NULL OR i.billing_whatsapp IS NULL)
+    $q$;
+  END IF;
+
   IF EXISTS (
     SELECT 1 FROM information_schema.columns
     WHERE table_schema='public' AND table_name='invoices' AND column_name='total_amount'
@@ -229,10 +247,64 @@ INSERT INTO public.invoice_sequences (year, last_number)
 SELECT parsed_year, MAX(parsed_number)
 FROM (
   SELECT
-    substring(invoice_number from 'NT-(?:INV-)?([0-9]{4})-([0-9]+)')::integer AS parsed_year,
-    substring(invoice_number from 'NT-(?:INV-)?([0-9]{4})-([0-9]+)')::integer AS parsed_number
+    (regexp_match(invoice_number, '^NT-(?:INV-)?([0-9]{4})-([0-9]+)
+WHERE parsed_year IS NOT NULL AND parsed_number IS NOT NULL
+GROUP BY parsed_year
+ON CONFLICT (year) DO UPDATE
+SET last_number = GREATEST(public.invoice_sequences.last_number, EXCLUDED.last_number),
+    updated_at = now();
+
+COMMIT;
+
+-- Verification summary: one row per invoice-related table; this does not alter data.
+SELECT
+  table_name,
+  COUNT(*) AS column_count
+FROM information_schema.columns
+WHERE table_schema = 'public'
+  AND table_name IN ('invoices', 'invoice_lines', 'invoice_payments', 'invoice_sequences')
+GROUP BY table_name
+ORDER BY table_name;
+))[1]::integer AS parsed_year,
+    (regexp_match(invoice_number, '^NT-(?:INV-)?([0-9]{4})-([0-9]+)
+WHERE parsed_year IS NOT NULL AND parsed_number IS NOT NULL
+GROUP BY parsed_year
+ON CONFLICT (year) DO UPDATE
+SET last_number = GREATEST(public.invoice_sequences.last_number, EXCLUDED.last_number),
+    updated_at = now();
+
+COMMIT;
+
+-- Verification summary: one row per invoice-related table; this does not alter data.
+SELECT
+  table_name,
+  COUNT(*) AS column_count
+FROM information_schema.columns
+WHERE table_schema = 'public'
+  AND table_name IN ('invoices', 'invoice_lines', 'invoice_payments', 'invoice_sequences')
+GROUP BY table_name
+ORDER BY table_name;
+))[2]::integer AS parsed_number
   FROM public.invoices
-  WHERE invoice_number ~ '^NT-(INV-)?[0-9]{4}-[0-9]+$'
+  WHERE invoice_number ~ '^NT-(INV-)?[0-9]{4}-[0-9]+
+WHERE parsed_year IS NOT NULL AND parsed_number IS NOT NULL
+GROUP BY parsed_year
+ON CONFLICT (year) DO UPDATE
+SET last_number = GREATEST(public.invoice_sequences.last_number, EXCLUDED.last_number),
+    updated_at = now();
+
+COMMIT;
+
+-- Verification summary: one row per invoice-related table; this does not alter data.
+SELECT
+  table_name,
+  COUNT(*) AS column_count
+FROM information_schema.columns
+WHERE table_schema = 'public'
+  AND table_name IN ('invoices', 'invoice_lines', 'invoice_payments', 'invoice_sequences')
+GROUP BY table_name
+ORDER BY table_name;
+
 ) parsed
 WHERE parsed_year IS NOT NULL AND parsed_number IS NOT NULL
 GROUP BY parsed_year
