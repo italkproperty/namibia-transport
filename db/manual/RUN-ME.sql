@@ -318,12 +318,32 @@ CREATE INDEX IF NOT EXISTS "charter_quote_payments_status_idx"
   ON "charter_quote_payments" ("status", "created_at" DESC);
 
 
-/* ---------------------------------------------- 28 October 2026 (invoices) -- */
--- Invoice foundation compatibility. This is the single cumulative rollout script.
--- Existing legacy columns are retained and copied into the canonical columns.
--- No invoice records are deleted. Existing invoice NT-INV-2026-00001 is preserved.
+-- Namibia Transport: reconcile legacy invoice tables with the invoice admin workflow.
+-- This migration is additive/idempotent: it preserves legacy columns and existing records.
+-- The original manual setup created invoices with legacy names such as customer_name
+-- and total_amount. Add the canonical columns expected by db/schema.ts while retaining
+-- legacy fields for compatibility and auditability.
+ALTER TABLE public.invoices
+  ADD COLUMN IF NOT EXISTS public_token text,
+  ADD COLUMN IF NOT EXISTS customer_id uuid,
+  ADD COLUMN IF NOT EXISTS corporate_quote_id uuid,
+  ADD COLUMN IF NOT EXISTS billing_name text,
+  ADD COLUMN IF NOT EXISTS billing_email text,
+  ADD COLUMN IF NOT EXISTS billing_whatsapp text,
+  ADD COLUMN IF NOT EXISTS billing_address text,
+  ADD COLUMN IF NOT EXISTS description text,
+  ADD COLUMN IF NOT EXISTS currency char(3) DEFAULT 'NAD',
+  ADD COLUMN IF NOT EXISTS subtotal numeric(10,2) DEFAULT 0,
+  ADD COLUMN IF NOT EXISTS discount_amount numeric(10,2) DEFAULT 0,
+  ADD COLUMN IF NOT EXISTS total numeric(10,2) DEFAULT 0,
+  ADD COLUMN IF NOT EXISTS issued_at timestamptz,
+  ADD COLUMN IF NOT EXISTS due_at timestamptz,
+  ADD COLUMN IF NOT EXISTS terms text,
+  ADD COLUMN IF NOT EXISTS internal_notes text,
+  ADD COLUMN IF NOT EXISTS created_at timestamptz DEFAULT now(),
+  ADD COLUMN IF NOT EXISTS updated_at timestamptz DEFAULT now();
 
--- Ensure the child tables exist before the compatibility ALTERs below.
+-- Ensure child tables exist if this script is run independently of RUN-ME.sql.
 CREATE TABLE IF NOT EXISTS public.invoice_lines (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   invoice_id uuid NOT NULL REFERENCES public.invoices(id) ON DELETE CASCADE,
@@ -349,29 +369,6 @@ CREATE TABLE IF NOT EXISTS public.invoice_payments (
   notes text,
   created_at timestamptz NOT NULL DEFAULT now()
 );
-
--- The original manual setup created invoices with legacy names such as customer_name
--- and total_amount. Add the canonical columns expected by db/schema.ts while retaining
--- legacy fields for compatibility and auditability.
-ALTER TABLE public.invoices
-  ADD COLUMN IF NOT EXISTS public_token text,
-  ADD COLUMN IF NOT EXISTS customer_id uuid,
-  ADD COLUMN IF NOT EXISTS corporate_quote_id uuid,
-  ADD COLUMN IF NOT EXISTS billing_name text,
-  ADD COLUMN IF NOT EXISTS billing_email text,
-  ADD COLUMN IF NOT EXISTS billing_whatsapp text,
-  ADD COLUMN IF NOT EXISTS billing_address text,
-  ADD COLUMN IF NOT EXISTS description text,
-  ADD COLUMN IF NOT EXISTS currency char(3) DEFAULT 'NAD',
-  ADD COLUMN IF NOT EXISTS subtotal numeric(10,2) DEFAULT 0,
-  ADD COLUMN IF NOT EXISTS discount_amount numeric(10,2) DEFAULT 0,
-  ADD COLUMN IF NOT EXISTS total numeric(10,2) DEFAULT 0,
-  ADD COLUMN IF NOT EXISTS issued_at timestamptz,
-  ADD COLUMN IF NOT EXISTS due_at timestamptz,
-  ADD COLUMN IF NOT EXISTS terms text,
-  ADD COLUMN IF NOT EXISTS internal_notes text,
-  ADD COLUMN IF NOT EXISTS created_at timestamptz DEFAULT now(),
-  ADD COLUMN IF NOT EXISTS updated_at timestamptz DEFAULT now();
 
 -- Copy legacy data only when the legacy column exists. Existing values in canonical
 -- columns always win; this is safe to re-run.
@@ -496,7 +493,7 @@ ALTER TABLE public.invoices ALTER COLUMN invoice_number DROP NOT NULL;
 
 -- Legacy source is not part of the new invoice contract. Allow it to be empty for
 -- manually created drafts; its CHECK constraint, if present, accepts NULL.
-DO $
+DO $$
 BEGIN
   IF EXISTS (
     SELECT 1 FROM information_schema.columns
@@ -504,12 +501,12 @@ BEGIN
   ) THEN
     ALTER TABLE public.invoices ALTER COLUMN source DROP NOT NULL;
   END IF;
-END $;
+END $$;
 
 -- The new contract allows a customer to be unmatched and allows WhatsApp-only
 -- contacts, no due date, and no terms. Relax legacy NOT NULL constraints on these
 -- optional fields so the admin draft form behaves as designed.
-DO $
+DO $$
 DECLARE
   legacy_column text;
 BEGIN
@@ -528,7 +525,7 @@ BEGIN
       EXECUTE format('ALTER TABLE public.invoices ALTER COLUMN %I DROP NOT NULL', legacy_column);
     END IF;
   END LOOP;
-END $;
+END $$;
 
 -- Keep legacy columns populated for older reports and constraints while the app uses
 -- canonical names. JSONB lets this trigger work whether a particular legacy column
@@ -536,7 +533,7 @@ END $;
 CREATE OR REPLACE FUNCTION public.sync_invoice_legacy_columns()
 RETURNS trigger
 LANGUAGE plpgsql
-AS $
+AS $$
 DECLARE
   row_data jsonb := to_jsonb(NEW);
 BEGIN
@@ -572,7 +569,7 @@ BEGIN
   NEW := jsonb_populate_record(NEW, row_data);
   RETURN NEW;
 END;
-$;
+$$;
 
 DROP TRIGGER IF EXISTS invoices_sync_legacy_columns ON public.invoices;
 CREATE TRIGGER invoices_sync_legacy_columns
@@ -613,7 +610,7 @@ BEGIN
       USING status::text::public.invoice_status;
   END IF;
   ALTER TABLE public.invoices ALTER COLUMN status SET DEFAULT 'draft'::public.invoice_status;
-END $;
+END $$;
 
 CREATE UNIQUE INDEX IF NOT EXISTS invoices_number_key
   ON public.invoices (invoice_number);
@@ -683,22 +680,24 @@ INSERT INTO public.invoice_sequences (year, last_number)
 SELECT parsed_year, MAX(parsed_number)
 FROM (
   SELECT
-    (regexp_match(invoice_number, '^NT-(?:INV-)?([0-9]{4})-([0-9]+)
+    (regexp_match(invoice_number, '^NT-(?:INV-)?([0-9]{4})-([0-9]+)$'))[1]::integer AS parsed_year,
+    (regexp_match(invoice_number, '^NT-(?:INV-)?([0-9]{4})-([0-9]+)$'))[2]::integer AS parsed_number
+  FROM public.invoices
+  WHERE invoice_number ~ '^NT-(?:INV-)?[0-9]{4}-[0-9]+$'
+) parsed
 WHERE parsed_year IS NOT NULL AND parsed_number IS NOT NULL
 GROUP BY parsed_year
 ON CONFLICT (year) DO UPDATE
 SET last_number = GREATEST(public.invoice_sequences.last_number, EXCLUDED.last_number),
     updated_at = now();
 
-
 -- Invoice schema verification (results should show all four tables).
 SELECT table_name, COUNT(*) AS column_count
 FROM information_schema.columns
-WHERE table_schema='public'
+WHERE table_schema = 'public'
   AND table_name IN ('invoices','invoice_lines','invoice_payments','invoice_sequences')
 GROUP BY table_name
 ORDER BY table_name;
-
 
 COMMIT;
 
