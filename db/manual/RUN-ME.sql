@@ -226,7 +226,7 @@ CREATE TABLE IF NOT EXISTS "charter_vehicle_cost_profiles" (
   CONSTRAINT "charter_vehicle_cost_profiles_vehicle_class_key" UNIQUE ("vehicle_class_id")
 );
 
-DO $
+DO $$
 BEGIN
   IF NOT EXISTS (
     SELECT 1 FROM pg_constraint
@@ -244,7 +244,7 @@ BEGIN
       ADD CONSTRAINT "pricing_settings_charter_fee_check"
       CHECK ("charter_payment_fee_rate" BETWEEN 0.000 AND 0.150);
   END IF;
-END $;
+END $$;
 
 
 /* ---------------------------------------------- 15 October 2026 (quotes) -- */
