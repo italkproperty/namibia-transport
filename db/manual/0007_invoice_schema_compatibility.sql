@@ -386,10 +386,56 @@ ALTER TABLE public.invoice_lines
 CREATE INDEX IF NOT EXISTS invoice_lines_invoice_sort_idx
   ON public.invoice_lines (invoice_id, sort_order);
 
--- Payment allocation table may predate the current schema; add missing columns.
+-- Payment allocation table may predate the current schema. Add columns used by
+-- the current workflow before updating rows or creating indexes. Legacy records are
+-- preserved; missing required metadata receives conservative defaults only where safe.
 ALTER TABLE public.invoice_payments
+  ADD COLUMN IF NOT EXISTS invoice_id uuid,
+  ADD COLUMN IF NOT EXISTS amount numeric(10,2),
   ADD COLUMN IF NOT EXISTS currency char(3) DEFAULT 'NAD',
+  ADD COLUMN IF NOT EXISTS method text,
+  ADD COLUMN IF NOT EXISTS reference text,
+  ADD COLUMN IF NOT EXISTS paid_at timestamptz,
+  ADD COLUMN IF NOT EXISTS notes text,
   ADD COLUMN IF NOT EXISTS created_at timestamptz DEFAULT now();
+
+-- If an old payment table contains equivalent legacy fields, backfill them without
+-- overwriting canonical values. Dynamic SQL avoids referencing absent legacy columns.
+DO $
+BEGIN
+  IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema='public' AND table_name='invoice_payments' AND column_name='payment_method') THEN
+    EXECUTE $q$ UPDATE public.invoice_payments SET method = COALESCE(method, payment_method::text) WHERE method IS NULL $q$;
+  END IF;
+  IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema='public' AND table_name='invoice_payments' AND column_name='payment_date') THEN
+    EXECUTE $q$ UPDATE public.invoice_payments SET paid_at = COALESCE(paid_at, payment_date::timestamptz) WHERE paid_at IS NULL $q$;
+  END IF;
+  IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema='public' AND table_name='invoice_payments' AND column_name='payment_reference') THEN
+    EXECUTE $q$ UPDATE public.invoice_payments SET reference = COALESCE(reference, payment_reference::text) WHERE reference IS NULL $q$;
+  END IF;
+END $;
+
+-- Do not invent amounts, invoice links, or paid dates for legacy rows. Abort clearly
+-- rather than silently misclassifying them as verified invoice payments.
+DO $
+BEGIN
+  IF EXISTS (
+    SELECT 1 FROM public.invoice_payments
+    WHERE invoice_id IS NULL OR amount IS NULL OR amount <= 0 OR paid_at IS NULL
+      OR method IS NULL OR method NOT IN ('bank_transfer', 'card', 'cash', 'other')
+  ) THEN
+    RAISE EXCEPTION 'Legacy invoice_payments rows need manual reconciliation before this migration can continue. Inspect invoice_id, amount, method and paid_at; no rows were deleted.';
+  END IF;
+END $;
+
+ALTER TABLE public.invoice_payments
+  ALTER COLUMN invoice_id SET NOT NULL,
+  ALTER COLUMN amount SET NOT NULL,
+  ALTER COLUMN currency SET DEFAULT 'NAD',
+  ALTER COLUMN currency SET NOT NULL,
+  ALTER COLUMN method SET NOT NULL,
+  ALTER COLUMN paid_at SET NOT NULL,
+  ALTER COLUMN created_at SET DEFAULT now(),
+  ALTER COLUMN created_at SET NOT NULL;
 
 UPDATE public.invoice_payments
 SET currency = COALESCE(currency, 'NAD'),
