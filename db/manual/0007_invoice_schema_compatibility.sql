@@ -328,16 +328,22 @@ BEGIN
   WHERE c.table_schema='public' AND c.table_name='invoices' AND c.column_name='status';
 
   IF current_type IS DISTINCT FROM 'invoice_status' THEN
+    -- Convert through text first. A legacy status column may itself be an enum
+    -- whose labels do not include the new value 'void'; assigning the CASE result
+    -- directly to that old enum can fail before the intended conversion.
     ALTER TABLE public.invoices ALTER COLUMN status DROP DEFAULT;
+    ALTER TABLE public.invoices
+      ALTER COLUMN status TYPE text
+      USING status::text;
     UPDATE public.invoices
     SET status = CASE
-      WHEN lower(status::text) = 'draft' THEN 'draft'
-      WHEN lower(status::text) IN ('void', 'cancelled', 'canceled') THEN 'void'
+      WHEN lower(status) = 'draft' THEN 'draft'
+      WHEN lower(status) IN ('void', 'cancelled', 'canceled') THEN 'void'
       ELSE 'issued'
     END;
     ALTER TABLE public.invoices
       ALTER COLUMN status TYPE public.invoice_status
-      USING status::text::public.invoice_status;
+      USING status::public.invoice_status;
   END IF;
   ALTER TABLE public.invoices ALTER COLUMN status SET DEFAULT 'draft'::public.invoice_status;
 END $$;
