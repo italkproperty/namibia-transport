@@ -214,7 +214,7 @@ export async function issueInvoice(formData: FormData): Promise<void> {
           set: { lastNumber: sql`${invoiceSequences.lastNumber} + 1` },
         })
         .returning({ lastNumber: invoiceSequences.lastNumber });
-      const invoiceNumber = "NT-" + year + "-" + String(sequence.lastNumber).padStart(5, "0");
+      const invoiceNumber = "NT-INV-" + year + "-" + String(sequence.lastNumber).padStart(5, "0");
       const publicToken = randomBytes(32).toString("base64url");
 
       const [updated] = await tx.update(invoices).set({
