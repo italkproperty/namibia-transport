@@ -6,7 +6,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
 import { getDb, isDatabaseConfigured } from "@/db";
-import { customers, invoiceLines, invoiceSequences, invoices } from "@/db/schema";
+import { customers, invoiceLines, invoicePayments, invoiceSequences, invoices } from "@/db/schema";
 import { getAdminGateState } from "@/lib/admin/auth";
 
 function textField(formData: FormData, key: string): string {
@@ -237,5 +237,78 @@ export async function issueInvoice(formData: FormData): Promise<void> {
         (error as { digest: string }).digest.startsWith("NEXT_REDIRECT")) throw error;
     console.error("[invoices] issue failed", error);
     safeAdminRedirect("/admin/invoices/" + id, error instanceof Error ? error.message : "The invoice could not be issued.");
+  }
+}
+
+
+/**
+ * Records a payment only after an administrator has independently verified
+ * that the funds were received. This does not query or alter gateway status.
+ */
+export async function recordInvoicePayment(formData: FormData): Promise<void> {
+  await requireAdmin();
+  if (!isDatabaseConfigured()) safeAdminRedirect("/admin/invoices", "The database is not configured.");
+
+  const id = textField(formData, "invoiceId");
+  if (!/^[0-9a-f-]{36}$/i.test(id)) safeAdminRedirect("/admin/invoices", "Invalid invoice reference.");
+  if (textField(formData, "confirmVerified") !== "yes") {
+    safeAdminRedirect("/admin/invoices/" + id, "Confirm that you have independently verified receipt of the funds.");
+  }
+
+  const amount = parseAmount(textField(formData, "amount"));
+  const method = textField(formData, "method");
+  const reference = textField(formData, "reference").slice(0, 200);
+  const notes = textField(formData, "notes").slice(0, 1000);
+  const paidAtRaw = textField(formData, "paidAt");
+  if (!amount) safeAdminRedirect("/admin/invoices/" + id, "Enter a valid positive payment amount.");
+  if (!["bank_transfer", "card", "cash", "other"].includes(method)) {
+    safeAdminRedirect("/admin/invoices/" + id, "Choose a valid payment method.");
+  }
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(paidAtRaw)) {
+    safeAdminRedirect("/admin/invoices/" + id, "Choose the date the payment was received.");
+  }
+  const [year, month, day] = paidAtRaw.split("-").map(Number);
+  const paidDate = new Date(Date.UTC(year, month - 1, day));
+  if (paidDate.getUTCFullYear() !== year || paidDate.getUTCMonth() !== month - 1 || paidDate.getUTCDate() !== day) {
+    safeAdminRedirect("/admin/invoices/" + id, "Choose a real payment date.");
+  }
+  const paidAt = new Date(paidAtRaw + "T12:00:00+02:00");
+
+  try {
+    await getDb().transaction(async (tx) => {
+      const [invoice] = await tx.select().from(invoices)
+        .where(eq(invoices.id, id)).for("update").limit(1);
+      if (!invoice) throw new Error("Invoice not found.");
+      if (invoice.status !== "issued") throw new Error("Payments can only be allocated to issued invoices.");
+
+      const [allocation] = await tx.select({
+        paid: sql<string>`coalesce(sum(${invoicePayments.amount}), 0)`,
+      }).from(invoicePayments).where(eq(invoicePayments.invoiceId, id));
+      const alreadyPaid = Number(allocation?.paid ?? 0);
+      const total = Number(invoice.total);
+      const incoming = Number(amount);
+      if (!Number.isFinite(alreadyPaid) || !Number.isFinite(total) || incoming > total - alreadyPaid + 0.000001) {
+        throw new Error("This payment exceeds the invoice balance. Refresh the invoice and check existing allocations.");
+      }
+
+      await tx.insert(invoicePayments).values({
+        invoiceId: id,
+        amount,
+        currency: "NAD",
+        method,
+        reference: reference || null,
+        notes: notes || null,
+        paidAt,
+      });
+    });
+    revalidatePath("/admin/invoices");
+    revalidatePath("/admin/invoices/" + id);
+    redirect("/admin/invoices/" + id + "?payment=recorded");
+  } catch (error) {
+    if (error && typeof error === "object" && "digest" in error &&
+        typeof (error as { digest?: unknown }).digest === "string" &&
+        (error as { digest: string }).digest.startsWith("NEXT_REDIRECT")) throw error;
+    console.error("[invoices] payment allocation failed", error);
+    safeAdminRedirect("/admin/invoices/" + id, error instanceof Error ? error.message : "The payment could not be recorded.");
   }
 }

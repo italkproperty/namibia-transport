@@ -1,14 +1,14 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { eq } from "drizzle-orm";
+import { asc, eq } from "drizzle-orm";
 
 import { AdminShell } from "@/components/admin/shell";
 import { Button } from "@/components/ui/button";
 import { getDb, isDatabaseConfigured } from "@/db";
-import { invoices } from "@/db/schema";
+import { invoicePayments, invoices } from "@/db/schema";
 import { getAdminGateState } from "@/lib/admin/auth";
-import { issueInvoice, updateInvoiceDraft } from "@/lib/admin/invoice-actions";
+import { issueInvoice, recordInvoicePayment, updateInvoiceDraft } from "@/lib/admin/invoice-actions";
 import { formatDate } from "@/lib/format";
 import { formatNad } from "@/lib/money";
 import { SITE } from "@/lib/site";
@@ -48,6 +48,7 @@ export default async function InvoiceDetailPage({ params, searchParams }: PagePr
   const error = one(query.error);
   const issued = one(query.issued);
   const saved = one(query.saved);
+  const payment = one(query.payment);
 
   if (gate.state !== "signed-in") {
     return <AdminShell active="/admin/invoices"><div /></AdminShell>;
@@ -58,11 +59,16 @@ export default async function InvoiceDetailPage({ params, searchParams }: PagePr
   if (!/^[0-9a-f-]{36}$/i.test(id)) notFound();
 
   let invoice: typeof invoices.$inferSelect;
+  let paymentRows: Array<typeof invoicePayments.$inferSelect> = [];
   try {
     const db = getDb();
     const [found] = await db.select().from(invoices).where(eq(invoices.id, id)).limit(1);
     if (!found) notFound();
     invoice = found;
+    if (found.status === "issued") {
+      paymentRows = await db.select().from(invoicePayments)
+        .where(eq(invoicePayments.invoiceId, id)).orderBy(asc(invoicePayments.paidAt));
+    }
   } catch (error) {
     if (error && typeof error === "object" && "digest" in error &&
         typeof (error as { digest?: unknown }).digest === "string" &&
@@ -71,6 +77,8 @@ export default async function InvoiceDetailPage({ params, searchParams }: PagePr
     return <AdminShell active="/admin/invoices"><p role="alert" className="rounded-xl border border-destructive/40 p-6 text-sm">The invoice could not be loaded. Please retry later.</p></AdminShell>;
   }
 
+  const paidAmount = paymentRows.reduce((sum, row) => sum + Number(row.amount), 0);
+  const balance = Math.max(0, Number(invoice.total) - paidAmount);
   const publicUrl = invoice.publicToken
     ? SITE.url.replace(/\/+$/, "") + "/invoice/" + encodeURIComponent(invoice.publicToken)
     : null;
@@ -90,6 +98,7 @@ export default async function InvoiceDetailPage({ params, searchParams }: PagePr
         {error && <p role="alert" className="rounded-lg border border-destructive/40 bg-destructive/5 p-3 text-sm">{error}</p>}
         {issued && <p role="status" className="rounded-lg border border-emerald-600/30 bg-emerald-500/5 p-3 text-sm">Invoice issued. Its invoice number and issued details are now locked.</p>}
         {saved && <p role="status" className="rounded-lg border p-3 text-sm">Draft changes saved.</p>}
+        {payment && <p role="status" className="rounded-lg border border-emerald-600/30 bg-emerald-500/5 p-3 text-sm">Verified payment allocation recorded.</p>}
 
         <div className="grid gap-4 sm:grid-cols-[1fr_260px]">
           <div className="rounded-xl border p-5 sm:p-6">
@@ -115,6 +124,7 @@ export default async function InvoiceDetailPage({ params, searchParams }: PagePr
               <p className="text-sm text-muted-foreground">Document status</p>
               <p className="mt-1 font-semibold capitalize">{invoice.status}</p>
               <p className="mt-2 text-xs text-muted-foreground">{invoice.status === "draft" ? "No official number has been allocated yet." : "The issued document is immutable."}</p>
+              {invoice.status === "issued" && <div className="mt-4 border-t pt-3 text-sm"><div className="flex justify-between gap-2"><span className="text-muted-foreground">Paid</span><span>{formatNad(paidAmount)}</span></div><div className="mt-2 flex justify-between gap-2 font-medium"><span>Outstanding</span><span>{formatNad(balance)}</span></div><p className="mt-2 text-xs text-muted-foreground">Only manually verified payments recorded by an administrator are included.</p></div>}
             </div>
             {publicUrl && <div className="rounded-xl border p-4">
               <p className="text-sm font-medium">Secure client link</p>
@@ -123,6 +133,44 @@ export default async function InvoiceDetailPage({ params, searchParams }: PagePr
             </div>}
           </aside>
         </div>
+
+
+        {invoice.status === "issued" && (
+          <section className="space-y-4 rounded-xl border p-5 sm:p-6">
+            <div>
+              <h2 className="font-semibold">Payment allocations</h2>
+              <p className="mt-1 text-sm text-muted-foreground">Record a payment only after verifying the funds in the bank or payment provider. This form does not verify gateway transactions automatically.</p>
+            </div>
+            <div className="grid gap-3 sm:grid-cols-3">
+              <Stat label="Invoice total" value={formatNad(Number(invoice.total))} />
+              <Stat label="Payments recorded" value={formatNad(paidAmount)} />
+              <Stat label="Outstanding balance" value={formatNad(balance)} />
+            </div>
+            {paymentRows.length > 0 ? (
+              <div className="overflow-x-auto rounded-lg border">
+                <table className="w-full text-left text-sm">
+                  <thead className="bg-muted/50 text-muted-foreground"><tr><th className="px-3 py-2">Date</th><th className="px-3 py-2">Method</th><th className="px-3 py-2">Reference</th><th className="px-3 py-2 text-right">Amount</th></tr></thead>
+                  <tbody className="divide-y">{paymentRows.map((row) => <tr key={row.id}><td className="px-3 py-2">{formatDate(row.paidAt)}</td><td className="px-3 py-2">{row.method.replace("_", " ")}</td><td className="px-3 py-2">{row.reference ?? "—"}</td><td className="px-3 py-2 text-right tabular-nums">{formatNad(row.amount)}</td></tr>)}</tbody>
+                </table>
+              </div>
+            ) : <p className="rounded-lg border border-dashed p-4 text-sm text-muted-foreground">No payments have been allocated to this invoice yet.</p>}
+            {balance > 0.000001 ? (
+              <form action={recordInvoicePayment} className="space-y-4 rounded-lg bg-muted/30 p-4">
+                <input type="hidden" name="invoiceId" value={invoice.id} />
+                <h3 className="font-medium">Record verified payment</h3>
+                <div className="grid gap-3 sm:grid-cols-2">
+                  <Field label="Amount received (NAD)" name="amount" type="number" min="0.01" max={balance.toFixed(2)} step="0.01" required />
+                  <Field label="Payment date" name="paidAt" type="date" defaultValue={dateInput(new Date())} required />
+                  <div className="space-y-2"><label htmlFor="method" className="text-sm font-medium">Payment method</label><select id="method" name="method" required defaultValue="bank_transfer" className="border-input bg-background h-9 w-full rounded-md border px-3 text-sm"><option value="bank_transfer">Bank transfer</option><option value="card">Card / online gateway</option><option value="cash">Cash</option><option value="other">Other</option></select></div>
+                  <Field label="Bank / gateway reference (optional)" name="reference" />
+                </div>
+                <div className="space-y-2"><label htmlFor="paymentNotes" className="text-sm font-medium">Internal notes (optional)</label><textarea id="paymentNotes" name="notes" rows={2} maxLength={1000} className="border-input bg-background w-full rounded-md border px-3 py-2 text-sm" /></div>
+                <label className="flex items-start gap-2 text-sm"><input className="mt-1" type="checkbox" name="confirmVerified" value="yes" required />I have independently verified that this payment was received and cleared.</label>
+                <div className="flex justify-end"><Button type="submit">Record payment</Button></div>
+              </form>
+            ) : <p role="status" className="rounded-lg border border-emerald-600/30 bg-emerald-500/5 p-3 text-sm">This invoice is fully paid based on recorded allocations.</p>}
+          </section>
+        )}
 
         {invoice.status === "draft" ? (
           <>
@@ -169,6 +217,10 @@ export default async function InvoiceDetailPage({ params, searchParams }: PagePr
       </div>
     </AdminShell>
   );
+}
+
+function Stat({ label, value }: { label: string; value: string }) {
+  return <div className="rounded-lg border p-3"><p className="text-xs text-muted-foreground">{label}</p><p className="mt-1 font-semibold tabular-nums">{value}</p></div>;
 }
 
 function SummaryRow({ label, value }: { label: string; value: string }) {
