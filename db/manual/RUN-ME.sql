@@ -536,41 +536,82 @@ LANGUAGE plpgsql
 AS $$
 DECLARE
   row_data jsonb := to_jsonb(NEW);
+  old_data jsonb := CASE WHEN TG_OP = 'UPDATE' THEN to_jsonb(OLD) ELSE '{}'::jsonb END;
+  canonical_changed boolean;
+  legacy_changed boolean;
 BEGIN
-  IF row_data ? 'customer_name' AND row_data ? 'billing_name' THEN
-    IF NULLIF(row_data->>'customer_name', '') IS NULL THEN
+  /*
+   * Canonical columns are the application's source of truth. On UPDATE, if a
+   * canonical and legacy value both exist, propagate whichever side changed.
+   * On INSERT, prefer canonical values, falling back to legacy values. JSONB
+   * keeps this compatible with installations where optional legacy columns
+   * differ.
+   */
+
+  IF row_data ? 'billing_name' AND row_data ? 'customer_name' THEN
+    canonical_changed := TG_OP = 'UPDATE' AND row_data->'billing_name' IS DISTINCT FROM old_data->'billing_name';
+    legacy_changed := TG_OP = 'UPDATE' AND row_data->'customer_name' IS DISTINCT FROM old_data->'customer_name';
+    IF canonical_changed OR TG_OP = 'INSERT' AND row_data->'billing_name' IS NOT NULL THEN
       row_data := jsonb_set(row_data, '{customer_name}', COALESCE(row_data->'billing_name', 'null'::jsonb), true);
-    END IF;
-    IF NULLIF(row_data->>'billing_name', '') IS NULL THEN
+    ELSIF legacy_changed OR row_data->'billing_name' IS NULL OR row_data->>'billing_name' = '' THEN
       row_data := jsonb_set(row_data, '{billing_name}', COALESCE(row_data->'customer_name', 'null'::jsonb), true);
     END IF;
   END IF;
 
-  IF row_data ? 'customer_email' AND row_data ? 'billing_email'
-     AND row_data->'customer_email' = 'null'::jsonb THEN
-    row_data := jsonb_set(row_data, '{customer_email}', COALESCE(row_data->'billing_email', 'null'::jsonb), true);
+  IF row_data ? 'billing_email' AND row_data ? 'customer_email' THEN
+    canonical_changed := TG_OP = 'UPDATE' AND row_data->'billing_email' IS DISTINCT FROM old_data->'billing_email';
+    legacy_changed := TG_OP = 'UPDATE' AND row_data->'customer_email' IS DISTINCT FROM old_data->'customer_email';
+    IF canonical_changed OR TG_OP = 'INSERT' AND row_data->'billing_email' IS NOT NULL THEN
+      row_data := jsonb_set(row_data, '{customer_email}', COALESCE(row_data->'billing_email', 'null'::jsonb), true);
+    ELSIF legacy_changed OR row_data->'billing_email' IS NULL THEN
+      row_data := jsonb_set(row_data, '{billing_email}', COALESCE(row_data->'customer_email', 'null'::jsonb), true);
+    END IF;
   END IF;
 
-  IF row_data ? 'customer_whatsapp' AND row_data ? 'billing_whatsapp'
-     AND row_data->'customer_whatsapp' = 'null'::jsonb THEN
-    row_data := jsonb_set(row_data, '{customer_whatsapp}', COALESCE(row_data->'billing_whatsapp', 'null'::jsonb), true);
+  IF row_data ? 'billing_whatsapp' AND row_data ? 'customer_whatsapp' THEN
+    canonical_changed := TG_OP = 'UPDATE' AND row_data->'billing_whatsapp' IS DISTINCT FROM old_data->'billing_whatsapp';
+    legacy_changed := TG_OP = 'UPDATE' AND row_data->'customer_whatsapp' IS DISTINCT FROM old_data->'customer_whatsapp';
+    IF canonical_changed OR TG_OP = 'INSERT' AND row_data->'billing_whatsapp' IS NOT NULL THEN
+      row_data := jsonb_set(row_data, '{customer_whatsapp}', COALESCE(row_data->'billing_whatsapp', 'null'::jsonb), true);
+    ELSIF legacy_changed OR row_data->'billing_whatsapp' IS NULL THEN
+      row_data := jsonb_set(row_data, '{billing_whatsapp}', COALESCE(row_data->'customer_whatsapp', 'null'::jsonb), true);
+    END IF;
   END IF;
 
-  IF row_data ? 'total_amount' AND row_data ? 'total'
-     AND (row_data->'total_amount' = 'null'::jsonb OR row_data->>'total_amount' = '0') THEN
-    row_data := jsonb_set(row_data, '{total_amount}', COALESCE(row_data->'total', '0'::jsonb), true);
+  IF row_data ? 'total' AND row_data ? 'total_amount' THEN
+    canonical_changed := TG_OP = 'UPDATE' AND row_data->'total' IS DISTINCT FROM old_data->'total';
+    legacy_changed := TG_OP = 'UPDATE' AND row_data->'total_amount' IS DISTINCT FROM old_data->'total_amount';
+    IF canonical_changed OR TG_OP = 'INSERT' AND row_data->'total' IS NOT NULL THEN
+      row_data := jsonb_set(row_data, '{total_amount}', COALESCE(row_data->'total', '0'::jsonb), true);
+    ELSIF legacy_changed OR row_data->'total' IS NULL OR row_data->>'total' = '0' THEN
+      row_data := jsonb_set(row_data, '{total}', COALESCE(row_data->'total_amount', '0'::jsonb), true);
+    END IF;
   END IF;
 
-  IF row_data ? 'due_date' AND row_data ? 'due_at'
-     AND row_data->'due_date' = 'null'::jsonb THEN
-    row_data := jsonb_set(row_data, '{due_date}', COALESCE(row_data->'due_at', 'null'::jsonb), true);
+  IF row_data ? 'due_at' AND row_data ? 'due_date' THEN
+    canonical_changed := TG_OP = 'UPDATE' AND row_data->'due_at' IS DISTINCT FROM old_data->'due_at';
+    legacy_changed := TG_OP = 'UPDATE' AND row_data->'due_date' IS DISTINCT FROM old_data->'due_date';
+    IF canonical_changed OR TG_OP = 'INSERT' AND row_data->'due_at' IS NOT NULL THEN
+      row_data := jsonb_set(row_data, '{due_date}', COALESCE(row_data->'due_at', 'null'::jsonb), true);
+    ELSIF legacy_changed OR row_data->'due_at' IS NULL THEN
+      row_data := jsonb_set(row_data, '{due_at}', COALESCE(row_data->'due_date', 'null'::jsonb), true);
+    END IF;
+  END IF;
+
+  IF row_data ? 'description' AND row_data ? 'service_description' THEN
+    canonical_changed := TG_OP = 'UPDATE' AND row_data->'description' IS DISTINCT FROM old_data->'description';
+    legacy_changed := TG_OP = 'UPDATE' AND row_data->'service_description' IS DISTINCT FROM old_data->'service_description';
+    IF canonical_changed OR TG_OP = 'INSERT' AND row_data->'description' IS NOT NULL THEN
+      row_data := jsonb_set(row_data, '{service_description}', COALESCE(row_data->'description', 'null'::jsonb), true);
+    ELSIF legacy_changed OR row_data->'description' IS NULL OR row_data->>'description' = '' THEN
+      row_data := jsonb_set(row_data, '{description}', COALESCE(row_data->'service_description', 'null'::jsonb), true);
+    END IF;
   END IF;
 
   NEW := jsonb_populate_record(NEW, row_data);
   RETURN NEW;
 END;
 $$;
-
 DROP TRIGGER IF EXISTS invoices_sync_legacy_columns ON public.invoices;
 CREATE TRIGGER invoices_sync_legacy_columns
 BEFORE INSERT OR UPDATE ON public.invoices
