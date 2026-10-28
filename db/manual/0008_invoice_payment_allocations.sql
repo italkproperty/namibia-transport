@@ -13,6 +13,12 @@ CREATE TABLE IF NOT EXISTS public.invoice_payments (
   created_at timestamptz NOT NULL DEFAULT now()
 );
 
+-- The table may already exist from the earlier manual setup. Ensure the current
+-- application-required columns exist even when CREATE TABLE IF NOT EXISTS was skipped.
+ALTER TABLE public.invoice_payments
+  ADD COLUMN IF NOT EXISTS currency char(3) NOT NULL DEFAULT 'NAD',
+  ADD COLUMN IF NOT EXISTS created_at timestamptz NOT NULL DEFAULT now();
+
 CREATE INDEX IF NOT EXISTS invoice_payments_invoice_paid_idx
   ON public.invoice_payments (invoice_id, paid_at);
 
