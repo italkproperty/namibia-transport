@@ -28,6 +28,33 @@ ALTER TABLE public.invoices
   ADD COLUMN IF NOT EXISTS created_at timestamptz DEFAULT now(),
   ADD COLUMN IF NOT EXISTS updated_at timestamptz DEFAULT now();
 
+-- Ensure child tables exist if this script is run independently of RUN-ME.sql.
+CREATE TABLE IF NOT EXISTS public.invoice_lines (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  invoice_id uuid NOT NULL REFERENCES public.invoices(id) ON DELETE CASCADE,
+  description text NOT NULL,
+  quantity numeric(10,2) NOT NULL DEFAULT 1.00,
+  unit_price numeric(10,2) NOT NULL,
+  line_total numeric(10,2) NOT NULL,
+  tax_rate numeric(5,4) NOT NULL DEFAULT 0,
+  discount_amount numeric(10,2) NOT NULL DEFAULT 0,
+  currency char(3) NOT NULL DEFAULT 'NAD',
+  sort_order smallint NOT NULL DEFAULT 0,
+  created_at timestamptz NOT NULL DEFAULT now()
+);
+
+CREATE TABLE IF NOT EXISTS public.invoice_payments (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  invoice_id uuid NOT NULL REFERENCES public.invoices(id) ON DELETE RESTRICT,
+  amount numeric(10,2) NOT NULL CHECK (amount > 0),
+  currency char(3) NOT NULL DEFAULT 'NAD' CHECK (currency = 'NAD'),
+  method text NOT NULL CHECK (method IN ('bank_transfer', 'card', 'cash', 'other')),
+  reference text,
+  paid_at timestamptz NOT NULL,
+  notes text,
+  created_at timestamptz NOT NULL DEFAULT now()
+);
+
 -- Copy legacy data only when the legacy column exists. Existing values in canonical
 -- columns always win; this is safe to re-run.
 DO $$
