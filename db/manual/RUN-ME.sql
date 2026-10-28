@@ -581,7 +581,11 @@ BEGIN
   IF row_data ? 'total' AND row_data ? 'total_amount' THEN
     canonical_changed := TG_OP = 'UPDATE' AND row_data->'total' IS DISTINCT FROM old_data->'total';
     legacy_changed := TG_OP = 'UPDATE' AND row_data->'total_amount' IS DISTINCT FROM old_data->'total_amount';
-    IF canonical_changed OR TG_OP = 'INSERT' AND row_data->'total' IS NOT NULL THEN
+    IF canonical_changed OR (
+      TG_OP = 'INSERT'
+      AND row_data->'total' IS NOT NULL
+      AND (row_data->>'total' <> '0' OR row_data->'total_amount' IS NULL OR row_data->>'total_amount' = '0')
+    ) THEN
       row_data := jsonb_set(row_data, '{total_amount}', COALESCE(row_data->'total', '0'::jsonb), true);
     ELSIF legacy_changed OR row_data->'total' IS NULL OR row_data->>'total' = '0' THEN
       row_data := jsonb_set(row_data, '{total}', COALESCE(row_data->'total_amount', '0'::jsonb), true);
