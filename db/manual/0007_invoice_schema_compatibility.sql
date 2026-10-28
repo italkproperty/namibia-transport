@@ -401,7 +401,7 @@ ALTER TABLE public.invoice_payments
 
 -- If an old payment table contains equivalent legacy fields, backfill them without
 -- overwriting canonical values. Dynamic SQL avoids referencing absent legacy columns.
-DO $
+DO $$
 BEGIN
   IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema='public' AND table_name='invoice_payments' AND column_name='payment_method') THEN
     EXECUTE $q$ UPDATE public.invoice_payments SET method = COALESCE(method, payment_method::text) WHERE method IS NULL $q$;
@@ -412,11 +412,11 @@ BEGIN
   IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema='public' AND table_name='invoice_payments' AND column_name='payment_reference') THEN
     EXECUTE $q$ UPDATE public.invoice_payments SET reference = COALESCE(reference, payment_reference::text) WHERE reference IS NULL $q$;
   END IF;
-END $;
+END $$;
 
 -- Do not invent amounts, invoice links, or paid dates for legacy rows. Abort clearly
 -- rather than silently misclassifying them as verified invoice payments.
-DO $
+DO $$
 BEGIN
   IF EXISTS (
     SELECT 1 FROM public.invoice_payments
@@ -425,7 +425,7 @@ BEGIN
   ) THEN
     RAISE EXCEPTION 'Legacy invoice_payments rows need manual reconciliation before this migration can continue. Inspect invoice_id, amount, method and paid_at; no rows were deleted.';
   END IF;
-END $;
+END $$;
 
 ALTER TABLE public.invoice_payments
   ALTER COLUMN invoice_id SET NOT NULL,
