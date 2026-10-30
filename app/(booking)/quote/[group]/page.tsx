@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { CheckCircle2Icon, ClockIcon } from "lucide-react";
 
 import { BankTransfer } from "@/components/booking/bank-transfer";
+import { GroupCardCheckoutForm } from "@/components/payments/group-card-checkout-form";
 import { TripDetailsForm } from "@/components/booking/trip-details-form";
 import { SiteFooter } from "@/components/marketing/site-footer";
 import { SiteHeader } from "@/components/marketing/site-header";
@@ -21,6 +22,8 @@ import {
   TRANSFER_NOTE,
 } from "@/lib/payments/bank";
 import { getTransferState } from "@/lib/payments/transfer";
+import { isLiveGatewayConfigured } from "@/lib/payments";
+import { reconcileGroupPayment } from "@/lib/payments/group-checkout";
 
 export const metadata: Metadata = {
   title: "Your quote",
@@ -34,7 +37,15 @@ type PageProps = { params: Promise<{ group: string }> };
 
 export default async function QuoteGroupPage({ params }: PageProps) {
   const { group } = await params;
-  const quote = await getQuoteGroup(decodeURIComponent(group));
+  const groupRef = decodeURIComponent(group);
+  // A traveller may close the PayToday tab before its redirect reaches us.
+  // Re-check an existing itinerary payment whenever its public quote is reopened.
+  try {
+    await reconcileGroupPayment(groupRef);
+  } catch (error) {
+    console.error(`[payments] quote-page reconciliation failed for ${groupRef}`, error);
+  }
+  const quote = await getQuoteGroup(groupRef);
   if (!quote) notFound();
 
   const { routes } = await listRoutes({ activeOnly: true });
@@ -187,6 +198,23 @@ export default async function QuoteGroupPage({ params }: PageProps) {
               and their nights away are all in it.
             </p>
           </section>
+
+          {!quote.isPaid && !quote.isCancelled && !validity.expired && isLiveGatewayConfigured() && (
+            <section aria-labelledby="card-payment-heading" className="mt-6 rounded-xl border bg-card p-4">
+              <h2 id="card-payment-heading" className="font-semibold">
+                Pay securely by card
+              </h2>
+              <p className="text-muted-foreground mt-1 text-sm">
+                One card payment covers all {quote.legs.length} legs of this itinerary.
+              </p>
+              <div className="mt-4">
+                <GroupCardCheckoutForm
+                  groupRef={quote.groupRef}
+                  totalLabel={formatNad(quote.total)}
+                />
+              </div>
+            </section>
+          )}
 
           {!quote.isPaid && bank && (
             <div className="mt-6">
