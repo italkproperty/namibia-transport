@@ -8,6 +8,7 @@ import { redirect } from "next/navigation";
 import { getDb, isDatabaseConfigured } from "@/db";
 import { bookingGroupPayments, bookings, customers } from "@/db/schema";
 import { parseMoney, toMoneyString } from "@/lib/money";
+import { groupValidity } from "@/lib/booking/validity";
 import { SITE } from "@/lib/site";
 
 import { INTENT_TTL_MS } from "./paytoday/config";
@@ -39,7 +40,7 @@ export type GroupCheckoutState = { error: string } | null;
  */
 export async function getOrCreateGroupCheckout(
   groupRef: string,
-  provider: PaymentProvider = getPaymentProvider(),
+  provider?: PaymentProvider,
 ): Promise<{ url: string } | { error: string }> {
   if (!GROUP_REF_PATTERN.test(groupRef)) {
     return { error: "We could not find that quote." };
@@ -65,6 +66,9 @@ export async function getOrCreateGroupCheckout(
   if (rows.length === 0) return { error: "We could not find that quote." };
   if (rows.some(({ booking }) => booking.status === "cancelled")) {
     return { error: "This itinerary has been cancelled. Please contact us for assistance." };
+  }
+  if (groupValidity(rows.map(({ booking }) => ({ scheduledAt: booking.scheduledAt, createdAt: booking.createdAt, status: booking.status }))).expired) {
+    return { error: "This quote has expired. Please contact us for an updated price." };
   }
   if (rows.some(({ booking }) => booking.status !== "pending_payment")) {
     return { error: "This itinerary is not awaiting payment. Please contact us if you believe this is incorrect." };
@@ -106,7 +110,8 @@ export async function getOrCreateGroupCheckout(
 
   try {
     const first = rows[0];
-    const intent = await provider.createPayment({
+    const paymentProvider = provider ?? getPaymentProvider();
+    const intent = await paymentProvider.createPayment({
       bookingId: first.booking.id,
       // PayToday uses this as its invoice reference. The group reference is
       // stable, unique to the itinerary, and returned unchanged by the gateway.
@@ -150,7 +155,7 @@ export async function getOrCreateGroupCheckout(
 /** Reconcile only against PayToday's server-side query response, never URL status. */
 export async function reconcileGroupPayment(
   groupRef: string,
-  provider: PaymentProvider = getPaymentProvider(),
+  provider?: PaymentProvider,
 ): Promise<void> {
   if (!GROUP_REF_PATTERN.test(groupRef) || !isDatabaseConfigured()) return;
 
@@ -167,7 +172,7 @@ export async function reconcileGroupPayment(
 
   let remote;
   try {
-    remote = await provider.getPayment(payment.providerReference);
+    remote = await (provider ?? getPaymentProvider()).getPayment(payment.providerReference);
   } catch (error) {
     console.error(`[payments] could not reconcile itinerary ${groupRef}`, error);
     return;
