@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { CheckCircle2Icon, ClockIcon } from "lucide-react";
 
 import { BankTransfer } from "@/components/booking/bank-transfer";
+import { GroupCardCheckoutForm } from "@/components/payments/group-card-checkout-form";
 import { TripDetailsForm } from "@/components/booking/trip-details-form";
 import { SiteFooter } from "@/components/marketing/site-footer";
 import { SiteHeader } from "@/components/marketing/site-header";
@@ -21,6 +22,7 @@ import {
   TRANSFER_NOTE,
 } from "@/lib/payments/bank";
 import { getTransferState } from "@/lib/payments/transfer";
+import { isLiveGatewayConfigured } from "@/lib/payments";
 
 export const metadata: Metadata = {
   title: "Your quote",
@@ -187,6 +189,23 @@ export default async function QuoteGroupPage({ params }: PageProps) {
               and their nights away are all in it.
             </p>
           </section>
+
+          {!quote.isPaid && !quote.isCancelled && !validity.expired && isLiveGatewayConfigured() && (
+            <section aria-labelledby="card-payment-heading" className="mt-6 rounded-xl border bg-card p-4">
+              <h2 id="card-payment-heading" className="font-semibold">
+                Pay securely by card
+              </h2>
+              <p className="text-muted-foreground mt-1 text-sm">
+                One card payment covers all {quote.legs.length} legs of this itinerary.
+              </p>
+              <div className="mt-4">
+                <GroupCardCheckoutForm
+                  groupRef={quote.groupRef}
+                  totalLabel={formatNad(quote.total)}
+                />
+              </div>
+            </section>
+          )}
 
           {!quote.isPaid && bank && (
             <div className="mt-6">
