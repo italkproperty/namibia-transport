@@ -317,6 +317,30 @@ CREATE INDEX IF NOT EXISTS "charter_quote_payments_quote_idx"
 CREATE INDEX IF NOT EXISTS "charter_quote_payments_status_idx"
   ON "charter_quote_payments" ("status", "created_at" DESC);
 
+/* Multi-leg quote checkout: one payment covers the entire itinerary. */
+CREATE TABLE IF NOT EXISTS public.booking_group_payments (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  group_ref text NOT NULL,
+  provider text NOT NULL,
+  provider_reference text,
+  status public.payment_status NOT NULL DEFAULT 'pending',
+  amount numeric(10,2) NOT NULL CHECK (amount > 0),
+  currency char(3) NOT NULL DEFAULT 'NAD' CHECK (currency = 'NAD'),
+  checkout_url text,
+  expires_at timestamptz,
+  raw jsonb,
+  paid_at timestamptz,
+  created_at timestamptz NOT NULL DEFAULT now(),
+  updated_at timestamptz NOT NULL DEFAULT now()
+);
+CREATE INDEX IF NOT EXISTS booking_group_payments_group_idx
+  ON public.booking_group_payments (group_ref, created_at DESC);
+CREATE UNIQUE INDEX IF NOT EXISTS booking_group_payments_provider_reference_key
+  ON public.booking_group_payments (provider, provider_reference)
+  WHERE provider_reference IS NOT NULL;
+CREATE INDEX IF NOT EXISTS booking_group_payments_status_idx
+  ON public.booking_group_payments (status, created_at DESC);
+
 COMMIT;
 
 /*
