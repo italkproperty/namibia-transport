@@ -225,12 +225,17 @@ export async function startGroupCheckout(
     return { error: "We could not find that quote." };
   }
 
+  let result: Awaited<ReturnType<typeof getOrCreateGroupCheckout>>;
   try {
-    const result = await getOrCreateGroupCheckout(groupRef);
-    if ("error" in result) return result;
-    redirect(result.url);
+    result = await getOrCreateGroupCheckout(groupRef);
   } catch (error) {
     console.error(`[payments] group checkout action failed for ${groupRef}`, error);
     return { error: "Online checkout is temporarily unavailable. Your quote is unchanged — please use bank transfer or contact us." };
   }
+
+  if ("error" in result) return result;
+
+  // Next.js redirect() throws a framework control-flow signal. Keep it outside
+  // the catch above so a successful PayToday URL is not mistaken for failure.
+  redirect(result.url);
 }
