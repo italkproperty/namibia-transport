@@ -2,7 +2,7 @@
 
 import "server-only";
 
-import { asc, desc, eq } from "drizzle-orm";
+import { and, asc, desc, eq } from "drizzle-orm";
 import { redirect } from "next/navigation";
 
 import { getDb, isDatabaseConfigured } from "@/db";
@@ -212,7 +212,7 @@ export async function reconcileGroupPayment(
     await db
       .update(bookings)
       .set({ status: "confirmed", updatedAt: new Date() })
-      .where(eq(bookings.groupRef, groupRef));
+      .where(and(eq(bookings.groupRef, groupRef), eq(bookings.status, "pending_payment")));
   }
 }
 
