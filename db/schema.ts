@@ -789,6 +789,36 @@ export const payments = pgTable(
   ],
 );
 
+/**
+ * A single gateway transaction for a multi-leg itinerary quote.
+ *
+ * The underlying legs remain separate dispatchable bookings. The group payment
+ * is recorded separately so the full itinerary amount is never misrepresented
+ * as a payment against only the first leg.
+ */
+export const bookingGroupPayments = pgTable(
+  "booking_group_payments",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    groupRef: text("group_ref").notNull(),
+    provider: text("provider").notNull(),
+    providerReference: text("provider_reference"),
+    status: paymentStatusEnum("status").notNull().default("pending"),
+    amount: money("amount").notNull(),
+    currency: currency(),
+    checkoutUrl: text("checkout_url"),
+    expiresAt: timestamp("expires_at", { withTimezone: true }),
+    raw: jsonb("raw"),
+    paidAt: timestamp("paid_at", { withTimezone: true }),
+    ...timestamps,
+  },
+  (t) => [
+    index("booking_group_payments_group_idx").on(t.groupRef, t.createdAt.desc()),
+    uniqueIndex("booking_group_payments_provider_reference_key").on(t.provider, t.providerReference),
+    index("booking_group_payments_status_idx").on(t.status, t.createdAt.desc()),
+  ],
+);
+
 export const dispatchAssignments = pgTable(
   "dispatch_assignments",
   {
