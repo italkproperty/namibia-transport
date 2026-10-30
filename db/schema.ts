@@ -814,7 +814,9 @@ export const bookingGroupPayments = pgTable(
   },
   (t) => [
     index("booking_group_payments_group_idx").on(t.groupRef, t.createdAt.desc()),
-    uniqueIndex("booking_group_payments_provider_reference_key").on(t.provider, t.providerReference),
+    uniqueIndex("booking_group_payments_provider_reference_key")
+      .on(t.provider, t.providerReference)
+      .where(sql`${t.providerReference} IS NOT NULL`),
     index("booking_group_payments_status_idx").on(t.status, t.createdAt.desc()),
   ],
 );
