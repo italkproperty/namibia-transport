@@ -225,7 +225,12 @@ export async function startGroupCheckout(
     return { error: "We could not find that quote." };
   }
 
-  const result = await getOrCreateGroupCheckout(groupRef);
-  if ("error" in result) return result;
-  redirect(result.url);
+  try {
+    const result = await getOrCreateGroupCheckout(groupRef);
+    if ("error" in result) return result;
+    redirect(result.url);
+  } catch (error) {
+    console.error(`[payments] group checkout action failed for ${groupRef}`, error);
+    return { error: "Online checkout is temporarily unavailable. Your quote is unchanged — please use bank transfer or contact us." };
+  }
 }
