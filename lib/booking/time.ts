@@ -10,9 +10,14 @@ const NAMIBIA_UTC_OFFSET = "+02:00";
  * Namibian local time — into a real instant.
  */
 export function namibianLocalToInstant(date: string, time: string): Date {
+  // Reject impossible calendar values instead of allowing Date to normalise them.
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(date) || !/^([01]\d|2[0-3]):[0-5]\d$/.test(time)) {
+    throw new Error("Invalid pickup date/time.");
+  }
   const instant = new Date(`${date}T${time}:00${NAMIBIA_UTC_OFFSET}`);
-  if (Number.isNaN(instant.getTime())) {
-    throw new Error(`Invalid pickup date/time: ${date} ${time}`);
+  const local = new Date(instant.getTime() + 2 * 60 * 60 * 1000);
+  if (Number.isNaN(instant.getTime()) || local.toISOString().slice(0, 10) !== date || local.toISOString().slice(11, 16) !== time) {
+    throw new Error("Invalid pickup date/time.");
   }
   return instant;
 }
