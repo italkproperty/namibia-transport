@@ -23,6 +23,7 @@ import {
 } from "@/lib/payments/bank";
 import { getTransferState } from "@/lib/payments/transfer";
 import { isLiveGatewayConfigured } from "@/lib/payments";
+import { reconcileGroupPayment } from "@/lib/payments/group-checkout";
 
 export const metadata: Metadata = {
   title: "Your quote",
@@ -36,7 +37,15 @@ type PageProps = { params: Promise<{ group: string }> };
 
 export default async function QuoteGroupPage({ params }: PageProps) {
   const { group } = await params;
-  const quote = await getQuoteGroup(decodeURIComponent(group));
+  const groupRef = decodeURIComponent(group);
+  // A traveller may close the PayToday tab before its redirect reaches us.
+  // Re-check an existing itinerary payment whenever its public quote is reopened.
+  try {
+    await reconcileGroupPayment(groupRef);
+  } catch (error) {
+    console.error(`[payments] quote-page reconciliation failed for ${groupRef}`, error);
+  }
+  const quote = await getQuoteGroup(groupRef);
   if (!quote) notFound();
 
   const { routes } = await listRoutes({ activeOnly: true });
