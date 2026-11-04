@@ -1,0 +1,54 @@
+{
+  "ref": "Q-20261104-CHEN",
+  "issued": "4 November 2026",
+  "valid_until": "19 December 2026",
+  "title": "Swakopmund to Uis and back, by private vehicle",
+  "subtitle": "A fixed price for the whole car, agreed before you commit. A round trip prices differently depending on whether the car waits for you \u2014 so here are the three shapes.",
+  "client": "Chen",
+  "journey": "Swakopmund &rarr; Uis &rarr; Swakopmund",
+  "vehicle": "SUV / 4x4 &middot; 5 passengers, 4 bags",
+  "options": [
+    {
+      "tag": "A",
+      "title": "Same-day return &mdash; the car waits for you",
+      "note": "Out in the morning, back the same evening. About 6h 10m of driving across the day, so it is a long one, but it works. The driver and vehicle stay with you at Uis throughout.",
+      "price": 3900,
+      "recommend": true
+    },
+    {
+      "tag": "B",
+      "title": "The car and driver stay over with you",
+      "note": "For an overnight or longer at Uis. The vehicle is yours for the whole period, not just the two drives. Each extra night covers the driver&rsquo;s day and their bed.",
+      "price": 5950,
+      "scale": [
+        {
+          "label": "1 night",
+          "price": 5950
+        },
+        {
+          "label": "2 nights",
+          "price": 8050
+        },
+        {
+          "label": "3 nights",
+          "price": 10150
+        }
+      ],
+      "price_prefix": "from "
+    },
+    {
+      "tag": "C",
+      "title": "Two separate one-way transfers",
+      "note": "Right only if the dates are far apart and the car should not wait: our published one-way fares, N$3,500 out and N$2,800 back. A car sent to Uis usually drives home empty.",
+      "price": 6300
+    }
+  ],
+  "next_title": "To go ahead, or to pin it down",
+  "next_body": "Tell us the travel date and how many of you are going, and we will issue a booking reference (NT-XXXXXX) and a link holding the trip, the fare and how to pay. Nothing is charged at that point.",
+  "address": "77 Independence Avenue, Windhoek",
+  "registration": "CC/2024/06403",
+  "whatsapp": "+264 81 278 4828",
+  "phone": "+264 81 727 8410",
+  "email": "bookings@namibiatransport.com",
+  "hours": "06:00&ndash;22:00 CAT, daily"
+}
