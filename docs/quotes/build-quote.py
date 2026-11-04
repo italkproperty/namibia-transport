@@ -20,11 +20,93 @@ ROOT = pathlib.Path(__file__).resolve().parents[2]
 DATA = json.loads(pathlib.Path(sys.argv[1]).read_text())
 OUT = pathlib.Path(sys.argv[2])
 
-fonts = pathlib.Path("/tmp/fonts.css").read_text()
-wordmark = base64.b64encode((ROOT / "docs/invoice/wordmark.png").read_bytes()).decode()
+HERE = pathlib.Path(__file__).resolve().parent
+
+# ---------------------------------------------------------------- typefaces
+# Embedded as data URIs rather than linked, because the PDF has to render the
+# same on a machine with no network and no fonts installed. The files are
+# vendored in fonts/ so this runs on a clean checkout; see fonts/README.md.
+FACES = [
+    ("Archivo", "archivo-variable.woff2", "100 900"),
+    ("IBM Plex Mono", "ibm-plex-mono-400.woff2", "400"),
+    ("IBM Plex Mono", "ibm-plex-mono-500.woff2", "500"),
+]
+
+def font_css() -> str:
+    rules = []
+    for family, filename, weight in FACES:
+        path = HERE / "fonts" / filename
+        if not path.exists():
+            # Never fall back silently. A quote set in the wrong face is a
+            # document that does not look like us, and nothing on screen would
+            # say so - the one failure this script must not have.
+            raise SystemExit(
+                f"Missing {path}. See docs/quotes/fonts/README.md - the file "
+                f"is vendored in the repository and should not be absent."
+            )
+        b64 = base64.b64encode(path.read_bytes()).decode()
+        # Single braces: this string is interpolated verbatim into the HTML
+        # f-string below, so doubling them here would emit invalid CSS and the
+        # whole document would silently fall back to a system face.
+        rules.append(
+            f"@font-face{{font-family:'{family}';font-style:normal;"
+            f"font-weight:{weight};font-display:block;"
+            f"src:url(data:font/woff2;base64,{b64}) format('woff2');}}"
+        )
+    return "\n".join(rules)
+
+fonts = font_css()
+
+# ----------------------------------------------------------------- wordmark
+# The source is 3446px wide because it also drives a vehicle decal. At the
+# 85mm it prints here that is roughly 1000dpi of nothing, and it was most of
+# the file size of a document that has to survive a mobile download. Scaled
+# at build time rather than checked in twice, so there is one wordmark in the
+# repository and no chance of the two drifting.
+WORDMARK_PX = 1200
+
+def wordmark_data_uri() -> str:
+    source = HERE.parent / "invoice" / "wordmark.png"
+    raw = source.read_bytes()
+    try:
+        from PIL import Image
+    except ImportError:
+        # Correct output, merely heavier - so this one degrades rather than
+        # stopping, unlike a missing typeface.
+        print("Pillow not installed; embedding the full-size wordmark.")
+        return base64.b64encode(raw).decode()
+
+    import io
+    im = Image.open(io.BytesIO(raw))
+    if im.width > WORDMARK_PX:
+        im = im.resize(
+            (WORDMARK_PX, round(im.height * WORDMARK_PX / im.width)),
+            Image.LANCZOS,
+        )
+    buf = io.BytesIO()
+    im.save(buf, format="PNG", optimize=True)
+    return base64.b64encode(buf.getvalue()).decode()
+
+wordmark = wordmark_data_uri()
 
 def nad(n: int) -> str:
     return "N$" + f"{n:,}"
+
+
+# Archivo's Latin subset has no U+2192, so a literal arrow drops to whatever
+# sans the renderer finds - a silent substitution that looks fine here and may
+# not elsewhere. Drawn instead, so the document depends on no font we did not
+# ship.
+ARROW = (
+    '<svg class="arw" viewBox="0 0 16 10" aria-hidden="true">'
+    '<path d="M0 5h13M9.5 1.2 13.3 5 9.5 8.8" fill="none" stroke="currentColor" '
+    'stroke-width="1.1" stroke-linecap="round" stroke-linejoin="round"/></svg>'
+)
+
+
+def arrows(text: str) -> str:
+    """Swap arrow characters for the drawn one."""
+    return text.replace("\u2192", ARROW).replace("&rarr;", ARROW)
 
 opts = DATA["options"]
 def scale_strip(o):
@@ -57,6 +139,7 @@ html = f"""<!doctype html>
 body{{margin:0;font-family:'Archivo',system-ui,sans-serif;font-weight:400;
      color:var(--ink);background:var(--surface);font-size:8.8pt;line-height:1.44;
      -webkit-font-smoothing:antialiased}}
+svg.arw{{width:2.7mm;height:1.9mm;vertical-align:-.05mm;margin:0 .5mm;color:var(--muted)}}
 .tabular{{font-family:'IBM Plex Mono',ui-monospace,monospace;font-variant-numeric:tabular-nums}}
 
 header{{display:flex;align-items:flex-start;justify-content:space-between;gap:16mm;
@@ -143,7 +226,7 @@ footer b{{color:var(--ink);font-weight:600}}
 
 <div class="to">
   <div><span class="lbl">Prepared for</span>{DATA['client']}</div>
-  <div><span class="lbl">Journey</span>{DATA['journey']}</div>
+  <div><span class="lbl">Journey</span>{arrows(DATA['journey'])}</div>
   <div><span class="lbl">Vehicle</span>{DATA['vehicle']}</div>
 </div>
 
