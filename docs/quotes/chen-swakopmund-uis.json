@@ -6,7 +6,7 @@
   "subtitle": "A fixed price for the whole car, agreed before you commit. A round trip prices differently depending on whether the car waits for you — so here are the three shapes.",
   "client": "Chen",
   "journey": "Swakopmund → Uis → Swakopmund",
-  "vehicle": "SUV / 4x4 &middot; 5 passengers, 4 bags",
+  "vehicle": "Private — the whole car is yours",
   "options": [
     {
       "tag": "A",
@@ -44,7 +44,7 @@
     }
   ],
   "next_title": "To go ahead, or to pin it down",
-  "next_body": "Tell us the travel date and how many of you are going, and we will issue a booking reference (NT-XXXXXX) and a link holding the trip, the fare and how to pay. Nothing is charged at that point.",
+  "next_body": "Tell us the travel date and how many of you are going, and we will confirm the vehicle and issue a booking reference (NT-XXXXXX) with a link holding the trip, the fare and how to pay. Nothing is charged at that point.",
   "address": "77 Independence Avenue, Windhoek",
   "registration": "CC/2024/06403",
   "whatsapp": "+264 81 278 4828",
