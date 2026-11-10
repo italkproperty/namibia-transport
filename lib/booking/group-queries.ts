@@ -4,6 +4,7 @@ import { asc, eq } from "drizzle-orm";
 
 import { getDb, isDatabaseConfigured } from "@/db";
 import { bookings, customers } from "@/db/schema";
+import { READ_DEADLINE_MS, withDeadline } from "@/lib/deadline";
 
 export type QuoteGroup = {
   groupRef: string;
@@ -52,16 +53,19 @@ export async function getQuoteGroup(
   if (!isDatabaseConfigured()) return null;
 
   try {
-    const rows = await getDb()
-      .select({
-        booking: bookings,
-        customerName: customers.fullName,
-        customerWhatsapp: customers.whatsapp,
-      })
-      .from(bookings)
-      .innerJoin(customers, eq(bookings.customerId, customers.id))
-      .where(eq(bookings.groupRef, groupRef))
-      .orderBy(asc(bookings.scheduledAt));
+    // Bounded: this is the page a traveller opens from the link we sent them.
+    const rows = await withDeadline("quote group", READ_DEADLINE_MS, () =>
+      getDb()
+        .select({
+          booking: bookings,
+          customerName: customers.fullName,
+          customerWhatsapp: customers.whatsapp,
+        })
+        .from(bookings)
+        .innerJoin(customers, eq(bookings.customerId, customers.id))
+        .where(eq(bookings.groupRef, groupRef))
+        .orderBy(asc(bookings.scheduledAt)),
+    );
 
     if (rows.length === 0) return null;
 

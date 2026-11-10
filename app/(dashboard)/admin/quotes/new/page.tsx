@@ -18,6 +18,10 @@ export const metadata: Metadata = {
 };
 
 export const dynamic = "force-dynamic";
+/** Fail inside half a minute, not at the platform's five: a page that has
+ *  not answered by then is stuck behind a dead connection, and the
+ *  operator needs an error they can act on, not a 504 later. */
+export const maxDuration = 30;
 
 export default async function NewQuotePage() {
   const [vehicleClasses, bankReady, pending, pricing] = await Promise.all([

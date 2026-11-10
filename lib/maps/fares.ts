@@ -1,5 +1,6 @@
 import "server-only";
 
+import { cache } from "react";
 import { and, asc, desc, eq } from "drizzle-orm";
 
 import { getDb, isDatabaseConfigured } from "@/db";
@@ -98,7 +99,7 @@ function applyVehiclePriceRules(
 
 /* ------------------------------------------------------------------- reads */
 
-export async function listRoutes(
+async function listRoutesUncached(
   options: { activeOnly?: boolean } = {}
 ): Promise<{ routes: RouteView[]; source: CatalogSource }> {
   const { activeOnly = true } = options;
@@ -206,7 +207,7 @@ export async function getRouteBySlug(slug: string): Promise<RouteView | null> {
   }
 }
 
-export async function listVehicleClasses(): Promise<VehicleClassView[]> {
+async function listVehicleClassesUncached(): Promise<VehicleClassView[]> {
   const fallback = () =>
     CATALOG_VEHICLE_CLASSES.map(catalogVehicleClassToView);
 
@@ -232,3 +233,27 @@ export async function listVehicleClasses(): Promise<VehicleClassView[]> {
 function describe(error: unknown): string {
   return error instanceof Error ? error.message : String(error);
 }
+
+/*
+ * Request-scoped de-duplication.
+ *
+ * Nothing here was cached, so a page that read the catalogue in its body and
+ * again in the header ran the same query twice — and with one database
+ * connection per instance, ran it twice in series. React's `cache` collapses
+ * identical calls within one render or one server action into a single
+ * query, and forgets everything when the request ends, so a fare changed in
+ * the admin is live on the very next request. The key is the boolean, not the
+ * options object: an object literal is a new identity every call and would
+ * never hit.
+ */
+const listRoutesOnce = cache((activeOnly: boolean) =>
+  listRoutesUncached({ activeOnly }),
+);
+
+export async function listRoutes(
+  options: { activeOnly?: boolean } = {},
+): Promise<{ routes: RouteView[]; source: CatalogSource }> {
+  return listRoutesOnce(options.activeOnly ?? true);
+}
+
+export const listVehicleClasses = cache(listVehicleClassesUncached);

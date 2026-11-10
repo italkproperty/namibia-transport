@@ -36,6 +36,10 @@ function route(overrides: Partial<RouteView> = {}): RouteView {
     isActive: true,
     distanceKm: "45.00",
     durationMin: 45,
+    // Required on RouteView since per-class fares; the fixture predates it,
+    // and the missing field made `tsc` — and therefore `npm test` — fail
+    // before a single test ran.
+    vehiclePrices: {},
     seoTitle: null,
     seoDescription: null,
     seoBody: null,

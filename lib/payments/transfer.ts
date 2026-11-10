@@ -4,6 +4,7 @@ import { and, desc, eq, inArray, ne, sql } from "drizzle-orm";
 
 import { getDb, isDatabaseConfigured } from "@/db";
 import { bookings, payments } from "@/db/schema";
+import { READ_DEADLINE_MS, withDeadline } from "@/lib/deadline";
 
 import { getBankDetails, transferReference } from "./bank";
 import {
@@ -364,17 +365,21 @@ export async function getTransferState(
   if (!isDatabaseConfigured()) return none;
 
   const db = getDb();
-  const [row] = await db
-    .select()
-    .from(payments)
-    .where(
-      and(
-        eq(payments.bookingId, bookingId),
-        eq(payments.provider, BANK_TRANSFER_PROVIDER),
-      ),
-    )
-    .orderBy(desc(payments.createdAt))
-    .limit(1);
+  // Bounded: read on the public quote and booking pages, where a hang is a
+  // traveller staring at a blank tab.
+  const [row] = await withDeadline("transfer state", READ_DEADLINE_MS, () =>
+    db
+      .select()
+      .from(payments)
+      .where(
+        and(
+          eq(payments.bookingId, bookingId),
+          eq(payments.provider, BANK_TRANSFER_PROVIDER),
+        ),
+      )
+      .orderBy(desc(payments.createdAt))
+      .limit(1),
+  );
 
   if (!row) return none;
 

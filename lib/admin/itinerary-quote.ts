@@ -2,6 +2,7 @@ import "server-only";
 
 
 import { getDb, isDatabaseConfigured } from "@/db";
+import { DeadlineExceeded, WRITE_DEADLINE_MS, withDeadline } from "@/lib/deadline";
 import { bookings } from "@/db/schema";
 import { generateBookingRef } from "@/lib/booking/ref";
 import { namibianLocalToInstant } from "@/lib/booking/time";
@@ -335,7 +336,12 @@ export async function saveItineraryQuote(
     // legs that survived a failure halfway through would be separately payable,
     // and the quote page would total them and tell the traveller a smaller
     // number than the one they agreed.
-    const refs = await db.transaction(async (tx) => {
+    // Bounded, because a save that never answers used to hang the function
+    // for five minutes and then show the operator a 504. If the deadline
+    // fires the pool is retired and this transaction is abandoned — Postgres
+    // rolls back an open transaction when its connection drops.
+    const refs = await withDeadline("save itinerary quote", WRITE_DEADLINE_MS, () =>
+      db.transaction(async (tx) => {
       const { customer } = await resolveCustomer(tx, {
         fullName: input.fullName,
         whatsapp: input.whatsapp || null,
@@ -402,11 +408,21 @@ export async function saveItineraryQuote(
       }
 
       return saved;
-    });
+      }),
+    );
 
     return { ok: true, groupRef, refs, total };
   } catch (error) {
     console.error("[admin] itinerary quote failed", error);
+    if (error instanceof DeadlineExceeded) {
+      // Honest about the one ambiguity: the commit itself could have been
+      // the statement whose reply was lost. Rare, but a duplicate quote is
+      // worse than a search.
+      return {
+        ok: false,
+        message: `The database did not answer within ${Math.round(WRITE_DEADLINE_MS / 1000)} seconds, so the quote was not confirmed. Check /admin/bookings for ${input.fullName} before creating it again — in almost every case nothing was saved and you can simply retry.`,
+      };
+    }
     const message = error instanceof Error ? error.message : String(error);
     // The most likely cause on a database that has not been migrated.
     if (/group_ref/.test(message)) {

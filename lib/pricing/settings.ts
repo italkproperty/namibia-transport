@@ -1,5 +1,6 @@
 import "server-only";
 
+import { cache } from "react";
 import { eq } from "drizzle-orm";
 
 import { getDb, isDatabaseConfigured } from "@/db";
@@ -90,7 +91,7 @@ function profileFromRow(row: {
  * quote produced from the defaults is the quote the site produced last week,
  * which is a far better outcome than a page that cannot price at all.
  */
-export async function getPricingConfig(): Promise<PricingConfig> {
+async function getPricingConfigUncached(): Promise<PricingConfig> {
   const fallback: PricingConfig = {
     constants: DEFAULT_CONSTANTS,
     profiles: new Map([[BASELINE_PROFILE.slug, BASELINE_PROFILE]]),
@@ -153,3 +154,11 @@ export function profileFor(
 ): VehicleCostProfile {
   return (slug && config.profiles.get(slug)) || BASELINE_PROFILE;
 }
+
+/**
+ * Request-scoped: the new-quote page reads the configuration for the page and
+ * again inside the pricing action, and nothing collapsed the two. One read
+ * per request, forgotten when the request ends, so a saved change is live on
+ * the next one.
+ */
+export const getPricingConfig = cache(getPricingConfigUncached);

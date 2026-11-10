@@ -378,3 +378,23 @@ Rotating the database password and PayToday keys exposed in chat in an earlier s
 still unconfirmed, and a leaked credential is either rotated or it is live.
 
 **Next.** Whatever unblocks the money path, in the order above.
+
+*10 November 2026 — the admin "crash when making a quote", found and fixed.* The Vercel
+error log had the answer: `Task timed out after 300 seconds` on `/admin/quotes/new`, and
+on `/admin/bookings` seven different reads all logging "did not answer within 6000ms" in
+the same second. One mechanism: Supabase's pooler hands out a connection that never
+answers; the read deadline fires but nothing in postgres.js cancels the query, so the one
+socket an instance is allowed (`max: 1`) stays busy; every later query queues behind it,
+reads die at their deadlines, and writes — which had none — hang until the platform kills
+the function. The instance stayed poisoned for the socket's half-hour lifetime.
+Reproduced locally with a proxy that black-holes one connection: before, the request after
+the stall took 12 seconds and a save never returned; after, 85 milliseconds and the save
+answers. Fixed in `lib/deadline.ts` + `db/index.ts` (a deadline retires the pool),
+deadlines on the itinerary and charter saves, `maxDuration = 30` on every admin page and
+the public quote page, request-scoped `cache()` on the catalogue and pricing reads, and the
+404 page no longer queries the database on every render. `tests/stalled-connection.test.ts`
+holds the line. Two more things that fell out: `db/manual/RUN-ME.sql` had `DO $` / `END $;`
+(not `$$`) so it failed at line 229 on any database and skipped everything after it; and
+the builder could save a price computed for a different trip (change a stop after pricing,
+the stale total was carried into "agreed total"). It now puts the price away and disables
+Create until the itinerary is priced again.

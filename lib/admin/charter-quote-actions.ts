@@ -5,6 +5,7 @@ import { createHmac, randomBytes, timingSafeEqual } from "node:crypto";
 import { revalidatePath } from "next/cache";
 import { getDb, isDatabaseConfigured } from "@/db";
 import { charterQuoteVersions, charterQuotes } from "@/db/schema";
+import { WRITE_DEADLINE_MS, withDeadline } from "@/lib/deadline";
 import { getAdminGateState } from "@/lib/admin/auth";
 import { priceCharterItinerary } from "@/lib/charter/itinerary-costing";
 import { getCharterCostSettings } from "@/lib/charter/settings";
@@ -279,7 +280,10 @@ export async function saveCharterQuoteDraftAction(_previous: SaveCharterDraftSta
       const suffix = randomBytes(8).toString("hex").toUpperCase();
       const quoteNumber = `NT-CQ-${year}-${suffix}`;
       try {
-        created = await db.transaction(async (tx) => {
+        // Bounded for the same reason as the itinerary save: a write with no
+        // deadline hangs the function for five minutes when the pooler stalls.
+        created = await withDeadline("save charter draft", WRITE_DEADLINE_MS, () =>
+          db.transaction(async (tx) => {
           const [quote] = await tx.insert(charterQuotes).values({
             quoteNumber,
             status: "draft",
@@ -303,7 +307,8 @@ export async function saveCharterQuoteDraftAction(_previous: SaveCharterDraftSta
             actor: "admin",
           });
           return quote;
-        });
+          }),
+        );
         break;
       } catch (error) {
         const dbError = error as { code?: string; constraint?: string; cause?: { code?: string; constraint?: string } };

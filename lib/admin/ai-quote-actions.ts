@@ -4,6 +4,7 @@ import { desc, eq, inArray, like, or, type SQL } from "drizzle-orm";
 
 import { getDb, isDatabaseConfigured } from "@/db";
 import { bookings, customers, payments } from "@/db/schema";
+import { READ_DEADLINE_MS, withDeadline } from "@/lib/deadline";
 import { getAdminGateState } from "@/lib/admin/auth";
 import { PLACE_NODES } from "@/lib/network/nodes";
 import { routeItineraryIntelligence } from "@/lib/network/place-resolution";
@@ -175,10 +176,15 @@ async function findExistingBookings(text: string): Promise<MatchedBooking[]> {
   const matchedIds = new Set<string>();
 
   if (refs.length > 0) {
-    const rows = await db
-      .select({ id: bookings.id })
-      .from(bookings)
-      .where(inArray(bookings.ref, refs));
+    // Bounded: these lookups sit in front of a model call that already has
+    // its own 60-second budget; an unbounded read here could hold the whole
+    // action for the function's life.
+    const rows = await withDeadline("booking lookup by reference", READ_DEADLINE_MS, () =>
+      db
+        .select({ id: bookings.id })
+        .from(bookings)
+        .where(inArray(bookings.ref, refs)),
+    );
     rows.forEach((row) => matchedIds.add(row.id));
   }
 
@@ -191,34 +197,38 @@ async function findExistingBookings(text: string): Promise<MatchedBooking[]> {
         conditions.push(like(customers.whatsapp, `%${suffix}`));
       }
     }
-    const rows = await db
-      .select({ id: bookings.id })
-      .from(bookings)
-      .innerJoin(customers, eq(bookings.customerId, customers.id))
-      .where(conditions.length === 1 ? conditions[0] : or(...conditions));
+    const rows = await withDeadline("booking lookup by contact", READ_DEADLINE_MS, () =>
+      db
+        .select({ id: bookings.id })
+        .from(bookings)
+        .innerJoin(customers, eq(bookings.customerId, customers.id))
+        .where(conditions.length === 1 ? conditions[0] : or(...conditions)),
+    );
     rows.forEach((row) => matchedIds.add(row.id));
   }
 
   if (matchedIds.size === 0) return [];
 
-  const rows = await db
-    .select({
-      id: bookings.id,
-      ref: bookings.ref,
-      groupRef: bookings.groupRef,
-      status: bookings.status,
-      scheduledAt: bookings.scheduledAt,
-      pickup: bookings.pickupLabel,
-      dropoff: bookings.dropoffLabel,
-      customerPrice: bookings.customerPrice,
-      paymentAmount: payments.amount,
-      paymentStatus: payments.status,
-    })
-    .from(bookings)
-    .leftJoin(payments, eq(payments.bookingId, bookings.id))
-    .where(inArray(bookings.id, [...matchedIds]))
-    .orderBy(desc(bookings.scheduledAt), desc(payments.createdAt))
-    .limit(50);
+  const rows = await withDeadline("matched booking details", READ_DEADLINE_MS, () =>
+    db
+      .select({
+        id: bookings.id,
+        ref: bookings.ref,
+        groupRef: bookings.groupRef,
+        status: bookings.status,
+        scheduledAt: bookings.scheduledAt,
+        pickup: bookings.pickupLabel,
+        dropoff: bookings.dropoffLabel,
+        customerPrice: bookings.customerPrice,
+        paymentAmount: payments.amount,
+        paymentStatus: payments.status,
+      })
+      .from(bookings)
+      .leftJoin(payments, eq(payments.bookingId, bookings.id))
+      .where(inArray(bookings.id, [...matchedIds]))
+      .orderBy(desc(bookings.scheduledAt), desc(payments.createdAt))
+      .limit(50),
+  );
 
   const byBooking = new Map<string, MatchedBooking>();
   for (const row of rows) {

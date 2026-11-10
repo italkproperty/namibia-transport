@@ -1,6 +1,8 @@
 import { drizzle } from "drizzle-orm/postgres-js";
 import postgres from "postgres";
 
+import { onDeadlineExceeded } from "@/lib/deadline";
+
 import * as schema from "./schema";
 
 /**
@@ -10,6 +12,7 @@ import * as schema from "./schema";
 const globalForDb = globalThis as unknown as {
   __transferSql?: ReturnType<typeof postgres>;
   __transferDb?: ReturnType<typeof buildDb>;
+  __deadlineListenerRegistered?: boolean;
 };
 
 function buildDb() {
@@ -93,6 +96,39 @@ export function getDb() {
   const db = globalForDb.__transferDb ?? buildDb();
   globalForDb.__transferDb = db;
   return db;
+}
+
+/**
+ * Abandon the current pool so the next `getDb()` opens a fresh one.
+ *
+ * Why this exists: a deadline rejecting does not cancel the query, so the one
+ * socket this instance is allowed (`max: 1`) stays busy on a statement that
+ * will never answer. Every query after it queues behind that socket; the reads
+ * die at their own deadlines and the writes — which had none — hang until the
+ * platform kills the function. That is the admin panel "crashing when making a
+ * quote", reproduced locally from one stalled connection.
+ *
+ * `end` is not awaited. We are not waiting for the dead socket to be polite;
+ * we are walking away from it. Queries still queued on the old client are
+ * rejected as it closes, which is what their catch blocks are for, and the
+ * socket itself is destroyed after a one-second grace rather than held for the
+ * remainder of `max_lifetime`.
+ */
+export function retireDb(reason: string): void {
+  const client = globalForDb.__transferSql;
+  globalForDb.__transferSql = undefined;
+  globalForDb.__transferDb = undefined;
+  if (!client) return;
+
+  console.warn(`[db] retiring the connection pool: ${reason}`);
+  void client.end({ timeout: 1 }).catch(() => undefined);
+}
+
+// Register once per process: the listener set lives in lib/deadline, and this
+// module is itself cached on globalThis, so a hot reload cannot double it.
+if (!globalForDb.__deadlineListenerRegistered) {
+  globalForDb.__deadlineListenerRegistered = true;
+  onDeadlineExceeded((error) => retireDb(error.message));
 }
 
 export { schema };

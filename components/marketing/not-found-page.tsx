@@ -24,7 +24,10 @@ export function NotFoundPage({ lostLink = false }: { lostLink?: boolean }) {
 
   return (
     <div className="flex min-h-svh flex-col">
-      <SiteHeader />
+      {/* No route menu: this element is rendered into every dynamic page's
+          tree as the not-found fallback, and the menu's query was being paid
+          by every admin page. Recovery is the job here, not navigation. */}
+      <SiteHeader routeMenu={false} />
 
       <main id="main" className="flex-1">
         <div className="mx-auto max-w-2xl px-4 py-16 sm:px-6 sm:py-24">

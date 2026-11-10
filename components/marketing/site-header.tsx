@@ -25,8 +25,20 @@ import { SITE } from "@/lib/site";
  * carries a booking CTA: a transfers business whose header cannot be used to
  * start a booking is a brochure.
  */
-export async function SiteHeader() {
-  const { routes } = await listRoutes({ activeOnly: true });
+export async function SiteHeader({
+  routeMenu = true,
+}: {
+  /**
+   * Whether to read the route catalogue for the prices menu. The 404 page
+   * passes false: Next renders the not-found boundary's element as part of
+   * every dynamic page, so a header that queries the database here costs
+   * every admin page a query for a menu nobody is looking at.
+   */
+  routeMenu?: boolean;
+} = {}) {
+  const { routes } = routeMenu
+    ? await listRoutes({ activeOnly: true })
+    : { routes: [] as Awaited<ReturnType<typeof listRoutes>>["routes"] };
   const company = getCompanyInfo();
 
   const navRoutes: NavRoute[] = routes.map((route) => ({
