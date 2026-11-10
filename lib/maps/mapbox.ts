@@ -94,6 +94,60 @@ export type StaticMapOptions = {
 };
 
 /**
+ * A static image of a whole itinerary: numbered pins at every stop and the
+ * driven route as one line. Built for the charter quote, where the traveller
+ * is looking at a week of driving and a list of six lodge names tells them
+ * far less than the shape of the loop.
+ *
+ * The geometry must already be compact — see `compactPolyline` — because the
+ * Static Images API carries it in the URL. Up to ten stops: Mapbox's `pin-s`
+ * label accepts 0–99, and the planner caps an itinerary at ten anyway.
+ */
+export function staticItineraryMapSrcSet({
+  stops,
+  encodedGeometry,
+}: {
+  stops: LatLng[];
+  encodedGeometry?: string | null;
+}): { src: string; srcSet: string; sizes: string } | null {
+  const token = publicMapboxToken();
+  if (!token || stops.length < 2 || stops.length > 10) return null;
+
+  const overlays: string[] = [];
+  if (encodedGeometry) {
+    overlays.push(
+      `path-4+${mapHex(BRAND_COLORS.brand)}-0.9(${encodeURIComponent(encodedGeometry)})`,
+    );
+  }
+  stops.forEach((stop, index) => {
+    const colour = index === stops.length - 1 ? BRAND_COLORS.brand : BRAND_COLORS.ink;
+    overlays.push(`pin-s-${index + 1}+${mapHex(colour)}(${toPair(stop)})`);
+  });
+
+  const build = (width: number) => {
+    const height = Math.round((width * 5) / 12);
+    const url = new URL(
+      `${STATIC_BASE}/streets-v12/static/${overlays.join(",")}/auto/${width}x${height}@2x`,
+    );
+    url.searchParams.set("access_token", token);
+    url.searchParams.set("padding", "60");
+    return url.toString();
+  };
+  const candidates = STATIC_MAP_WIDTHS.map((width) => ({ width, url: build(width) }));
+  // The API refuses URLs past 8,192 characters; a route that still does not
+  // fit after compaction is drawn as pins only rather than not at all.
+  if (candidates.some((c) => c.url.length > 8_000)) {
+    if (!encodedGeometry) return null;
+    return staticItineraryMapSrcSet({ stops, encodedGeometry: null });
+  }
+  return {
+    src: candidates[candidates.length - 1].url,
+    srcSet: candidates.map((c) => `${c.url} ${c.width * 2}w`).join(", "),
+    sizes: "(max-width: 640px) 100vw, 1200px",
+  };
+}
+
+/**
  * The same map at two sizes, as `srcset` candidates.
  *
  * One size was 1200×500 at 2× — a 2400px-wide PNG — on every device, which on

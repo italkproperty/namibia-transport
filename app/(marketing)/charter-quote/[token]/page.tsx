@@ -5,6 +5,7 @@ import { charterQuotes, charterQuoteVersions, charterQuotePayments } from "@/db/
 import { formatNad } from "@/lib/money";
 import { getCompanyInfo, whatsappLink } from "@/lib/company";
 import { buildPublicCharterLegs } from "@/lib/charter/public-quote";
+import { CharterRouteMap } from "@/components/charter/charter-route-map";
 import { SiteFooter } from "@/components/marketing/site-footer";
 import { startCharterPaymentAction } from "@/lib/charter/payment-actions";
 import { isLiveGatewayConfigured } from "@/lib/payments";
@@ -77,6 +78,13 @@ export default async function PublicCharterQuotePage({ params, searchParams }: {
             <div><p className="text-xs text-muted-foreground">Estimated driving time</p><p className="mt-1 text-sm font-medium">{Number.isFinite(totalMinutes) ? `${Math.floor(totalMinutes / 60)}h ${Math.round(totalMinutes % 60)}m` : "Depends on itinerary"}</p></div>
           </div>
         </section>
+        {Array.isArray(obj(snapshot.request).stops) && (
+          <CharterRouteMap
+            className="mt-6"
+            stops={obj(snapshot.request).stops as { label?: unknown; coordinates?: { lat?: unknown; lng?: unknown } }[]}
+            geometry={typeof route.geometry === "string" ? route.geometry : null}
+          />
+        )}
         <section className="mt-6">
           <h2 className="text-lg font-semibold">Itemised itinerary and pricing</h2>
           <p className="mt-1 text-sm text-muted-foreground">Each leg is priced as part of the complete charter. Amounts below are an allocation of the agreed trip total, not separate bookings.</p>

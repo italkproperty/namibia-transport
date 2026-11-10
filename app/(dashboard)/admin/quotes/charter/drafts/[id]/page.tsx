@@ -10,6 +10,7 @@ import { READ_DEADLINE_MS, withDeadline } from "@/lib/deadline";
 import { formatDate } from "@/lib/format";
 import { formatNad } from "@/lib/money";
 import { IssueCharterQuoteForm } from "@/components/admin/issue-charter-quote-form";
+import { CharterRouteMap } from "@/components/charter/charter-route-map";
 
 export const metadata: Metadata = {
   title: "Charter quote detail",
@@ -35,7 +36,7 @@ type QuoteSnapshot = {
     parkFees?: number;
     otherCosts?: number;
   };
-  route?: { totalDistanceKm?: number; totalDurationMinutes?: number; legs?: { distanceKm?: number; durationMinutes?: number }[] };
+  route?: { totalDistanceKm?: number; totalDurationMinutes?: number; geometry?: string | null; legs?: { distanceKm?: number; durationMinutes?: number }[] };
   vehicle?: { name?: string };
   settings?: { targetContributionMargin?: number; paymentFeeRate?: number };
   result?: {
@@ -189,6 +190,13 @@ export default async function CharterQuoteDraftDetailPage({
 
         <section className="rounded-xl border bg-card p-4">
           <h2 className="font-semibold">Customer itinerary</h2>
+          {stops.length >= 2 && (
+            <CharterRouteMap
+              className="mt-4"
+              stops={stops}
+              geometry={typeof route?.geometry === "string" ? route.geometry : null}
+            />
+          )}
           {stops.length ? (
             <ol className="mt-4 space-y-3">
               {stops.map((stop, index) => (

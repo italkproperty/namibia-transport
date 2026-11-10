@@ -7,7 +7,7 @@
  * illegal in a URL path, and getting that wrong yields a map that silently
  * renders without the route line.
  */
-import { staticRouteMapSrcSet, staticRouteMapUrl } from "@/lib/maps/mapbox";
+import { staticItineraryMapSrcSet, staticRouteMapSrcSet, staticRouteMapUrl } from "@/lib/maps/mapbox";
 import { BRAND_COLORS, mapHex } from "@/lib/brand-colors";
 
 let passed = 0;
@@ -130,6 +130,29 @@ check(
   "no token means no set either",
   withToken(undefined, () => staticRouteMapSrcSet({ origin: WDH, destination: WINDHOEK })) === null,
 );
+
+
+// The charter quote draws every stop in travel order with the road between.
+console.log("\nitinerary map");
+{
+  const SWAKOP = { lat: -22.6792, lng: 14.5272 };
+  const trip = withToken("pk.test", () =>
+    staticItineraryMapSrcSet({ stops: [WDH, WINDHOEK, SWAKOP], encodedGeometry: "_p~iF~ps|U_ulLnnqC_mqNvxq`@" })
+  )!;
+  const url = trip ? decodeURIComponent(trip.src) : "";
+  check("an itinerary map is built", trip !== null);
+  check("stops are numbered in travel order", url.includes("pin-s-1+") && url.includes("pin-s-2+") && url.includes("pin-s-3+"));
+  check("the last stop is the one in brand colour", url.includes(`pin-s-3+${mapHex(BRAND_COLORS.brand)}(14.527200,-22.679200)`), url);
+  check("the road is drawn as a path", url.includes("path-4+"));
+  check("two sizes, phone and desktop", trip.srcSet.includes(" 1280w") && trip.srcSet.includes(" 2400w"));
+  check("one stop is not an itinerary", withToken("pk.test", () => staticItineraryMapSrcSet({ stops: [WDH] })) === null);
+  check("no token, no map", withToken(undefined, () => staticItineraryMapSrcSet({ stops: [WDH, WINDHOEK] })) === null);
+
+  // A geometry that cannot fit the URL falls back to pins rather than nothing.
+  const huge = "a".repeat(9000);
+  const pinsOnly = withToken("pk.test", () => staticItineraryMapSrcSet({ stops: [WDH, WINDHOEK], encodedGeometry: huge }))!;
+  check("an oversized path degrades to pins only", pinsOnly !== null && !pinsOnly.src.includes("path-4") && pinsOnly.src.includes("pin-s-1"));
+}
 
 console.log(`\n${passed} passed, ${failed} failed\n`);
 process.exit(failed === 0 ? 0 : 1);

@@ -155,17 +155,17 @@ function calculationSigningKey(): string {
 
 /** Bind the server-verified route and cost snapshot to this admin session. */
 function signCalculation(payload: SignedCalculationPayload): string {
-  // Mapbox overview geometry can be large for multi-day Namibia itineraries.
-  // It is useful for map display, but not needed to verify the deterministic
-  // price or save the route legs. Excluding it keeps the hidden server-action
-  // field comfortably below request-size limits.
+  // The route geometry used to be dropped here because Mapbox's full overview
+  // for a multi-day itinerary ran to tens of kilobytes. It is now compacted
+  // at the source (charter-routing.ts) to a few kilobytes, which is what lets
+  // the draft and the customer's quote show the route on a map. Snapped
+  // waypoints are still dropped: nothing reads them after pricing.
   const compactPayload: SignedCalculationPayload = {
     ...payload,
     calculated: {
       ...payload.calculated,
       route: {
         ...payload.calculated.route,
-        geometry: null,
         snappedWaypoints: [],
       },
     },

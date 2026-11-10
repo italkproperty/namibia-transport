@@ -1,3 +1,4 @@
+import { compactPolyline } from "@/lib/maps/polyline";
 import "server-only";
 
 import type { LatLng } from "./types";
@@ -318,7 +319,9 @@ export async function routeCharterItinerary(
     retrievedAt: new Date().toISOString(),
     totalDistanceKm: Math.round((route.distance / 1000) * 10) / 10,
     totalDurationMinutes: Math.round(route.duration / 60),
-    geometry: route.geometry ?? null,
+    // Compacted here so it can live in the signed calculation and the saved
+    // snapshot, and be drawn by the Static Images API from a URL.
+    geometry: route.geometry ? compactPolyline(route.geometry) : null,
     legs,
     snappedWaypoints: (body.waypoints ?? []).flatMap((waypoint) => {
       const coords = waypoint.location;
