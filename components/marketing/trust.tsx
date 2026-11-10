@@ -253,6 +253,9 @@ export async function ReviewsSection() {
             </blockquote>
             <p className="text-muted-foreground mt-3 text-xs">
               {review.authorName}
+              {/* Where a review was left is a fact a reader can check, and a
+                  Google review carries more weight than one we transcribed. */}
+              {review.source === "google" && <span> · Google review</span>}
             </p>
           </li>
         ))}
