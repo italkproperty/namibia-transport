@@ -5,6 +5,7 @@ import { desc, eq, inArray, like, or, type SQL } from "drizzle-orm";
 import { getDb, isDatabaseConfigured } from "@/db";
 import { bookings, customers, payments } from "@/db/schema";
 import { READ_DEADLINE_MS, withDeadline } from "@/lib/deadline";
+import { anthropicErrorReason, anthropicKeyRefusedMessage } from "@/lib/admin/anthropic-errors";
 import { getAdminGateState } from "@/lib/admin/auth";
 import { PLACE_NODES } from "@/lib/network/nodes";
 import { routeItineraryIntelligence } from "@/lib/network/place-resolution";
@@ -492,10 +493,10 @@ export async function analyseQuoteConversation(
       });
 
       if (response.status === 401) {
+        // See anthropicKeyRefusedMessage: the key is present and refused.
         return {
           ok: false,
-          message:
-            "Claude rejected the API key. Check that ANTHROPIC_API_KEY_TRANSPORT is present in Vercel Production and redeploy.",
+          message: anthropicKeyRefusedMessage(anthropicErrorReason(body), requestId),
         };
       }
       if (response.status === 402) {

@@ -1,5 +1,6 @@
 "use server";
 
+import { anthropicErrorReason, anthropicKeyRefusedMessage } from "@/lib/admin/anthropic-errors";
 import { getAdminGateState } from "@/lib/admin/auth";
 
 export type CharterConversationIntake = {
@@ -108,7 +109,13 @@ export async function analyseCharterConversationAction(
         contentType: response.headers.get("content-type"),
         detail: detail.slice(0, 300),
       });
-      if (response.status === 401) return { ok: false, message: "Claude rejected the API key. Check ANTHROPIC_API_KEY_TRANSPORT in Vercel." };
+      if (response.status === 401) {
+        // The key reached Anthropic and was refused — "invalid x-api-key" on a
+        // variable that is set. Telling the operator to "check Vercel" sent
+        // them to confirm a value that was present all along; the fix is a new
+        // key, and the message has to say so.
+        return { ok: false, message: anthropicKeyRefusedMessage(anthropicErrorReason(detail), requestId) };
+      }
       if (response.status === 402) return { ok: false, message: "Claude API billing or credits are unavailable for this account." };
       if (response.status === 403) return { ok: false, message: "The Claude API key does not have permission to use the configured model." };
       if (response.status === 429) return { ok: false, message: "Claude is rate-limited or the account has reached its usage limit. Retry shortly." };
