@@ -1,5 +1,5 @@
 import { RouteMapCanvas } from "@/components/maps/route-map-canvas";
-import { staticRouteMapUrl } from "@/lib/maps/mapbox";
+import { staticRouteMapSrcSet } from "@/lib/maps/mapbox";
 import type { RouteView } from "@/lib/maps/types";
 import { formatDuration, shortPlace } from "@/lib/format";
 
@@ -35,13 +35,13 @@ export function RouteMapFigure({
     return null;
   }
 
-  const src = staticRouteMapUrl({
+  const image = staticRouteMapSrcSet({
     origin: { lat: originLat, lng: originLng },
     destination: { lat: destinationLat, lng: destinationLng },
     encodedGeometry: route.routeGeometry,
   });
 
-  if (!src) return null;
+  if (!image) return null;
 
   const from = shortPlace(route.originLabel);
   const to = route.destinationLabel;
@@ -59,7 +59,7 @@ export function RouteMapFigure({
             is the whole feature. */}
         {interactive ? (
           <RouteMapCanvas
-            src={src}
+            image={image}
             alt={`Map of the route from ${from} to ${to}`}
             priority={priority}
             geometry={route.routeGeometry}
@@ -73,7 +73,9 @@ export function RouteMapFigure({
              signs its own URLs; next/image would strip the token and re-host
              a tile we are licensed to hot-link. */
           <img
-            src={src}
+            src={image.src}
+            srcSet={image.srcSet}
+            sizes={image.sizes}
             alt={`Map of the route from ${from} to ${to}`}
             width={1200}
             height={500}

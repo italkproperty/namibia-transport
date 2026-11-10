@@ -15,7 +15,7 @@ import { InteractiveRouteMap } from "@/components/maps/interactive-route-map";
  * the thing being looked at, and stops the moment it is not.
  */
 export function RouteMapCanvas({
-  src,
+  image,
   alt,
   priority,
   geometry,
@@ -24,7 +24,7 @@ export function RouteMapCanvas({
   originLabel,
   destinationLabel,
 }: {
-  src: string;
+  image: { src: string; srcSet: string; sizes: string };
   alt: string;
   priority: boolean;
   geometry: string | null;
@@ -34,11 +34,11 @@ export function RouteMapCanvas({
   destinationLabel: string;
 }) {
   const [covered, setCovered] = React.useState(false);
-  const [shownSrc, setShownSrc] = React.useState(src);
+  const [shown, setShown] = React.useState(image);
 
   React.useEffect(() => {
-    if (!covered) setShownSrc(src);
-  }, [src, covered]);
+    if (!covered) setShown(image);
+  }, [image, covered]);
 
   return (
     <>
@@ -46,7 +46,9 @@ export function RouteMapCanvas({
           its own URLs; next/image would strip the token and re-host a tile
           we are licensed to hot-link. */}
       <img
-        src={shownSrc}
+        src={shown.src}
+        srcSet={shown.srcSet}
+        sizes={shown.sizes}
         alt={alt}
         width={1200}
         height={500}

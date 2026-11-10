@@ -94,6 +94,39 @@ export type StaticMapOptions = {
 };
 
 /**
+ * The same map at two sizes, as `srcset` candidates.
+ *
+ * One size was 1200×500 at 2× — a 2400px-wide PNG — on every device, which on
+ * a phone is a quarter-megabyte download for a picture 360px wide. Phones are
+ * most of the traffic and the map is the first thing that moves after a price
+ * appears, so this was the lag an operator could see. The browser now picks
+ * the 640-wide image when the figure is narrower than that and the full one
+ * only on a wide screen. Mapbox renders the same route either way.
+ */
+export const STATIC_MAP_WIDTHS = [640, 1200] as const;
+
+export function staticRouteMapSrcSet(
+  options: Omit<StaticMapOptions, "width" | "height">,
+): { src: string; srcSet: string; sizes: string } | null {
+  const candidates = STATIC_MAP_WIDTHS.map((width) => {
+    const url = staticRouteMapUrl({
+      ...options,
+      width,
+      height: Math.round((width * 5) / 12),
+    });
+    return url ? { width, url } : null;
+  });
+  if (candidates.some((c) => c === null)) return null;
+  const list = candidates as { width: number; url: string }[];
+  return {
+    src: list[list.length - 1].url,
+    // Retina is on, so each candidate carries twice its layout width.
+    srcSet: list.map((c) => `${c.url} ${c.width * 2}w`).join(", "),
+    sizes: "(max-width: 640px) 100vw, 1200px",
+  };
+}
+
+/**
  * A static image of one route — no JavaScript, no map library, just an <img>.
  *
  * Route pages are read far more often than they are interacted with, so a

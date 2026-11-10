@@ -7,7 +7,7 @@
  * illegal in a URL path, and getting that wrong yields a map that silently
  * renders without the route line.
  */
-import { staticRouteMapUrl } from "@/lib/maps/mapbox";
+import { staticRouteMapSrcSet, staticRouteMapUrl } from "@/lib/maps/mapbox";
 import { BRAND_COLORS, mapHex } from "@/lib/brand-colors";
 
 let passed = 0;
@@ -114,6 +114,22 @@ const plain = withToken("pk.test", () =>
   staticRouteMapUrl({ origin: WDH, destination: WINDHOEK, retina: false })
 )!;
 check("retina can be turned off", plain.includes("/1200x500?") || plain.includes("/1200x500"));
+
+
+// The map is the first thing that moves after a price appears, and on a phone
+// it was a 2400px PNG. Two sizes, the small one for the narrow screen.
+console.log("\nstatic route map sizes");
+const set = withToken("pk.test", () =>
+  staticRouteMapSrcSet({ origin: WDH, destination: WINDHOEK })
+)!;
+check("a phone-sized candidate exists", set.srcSet.includes("/640x267@2x") && set.srcSet.includes(" 1280w"));
+check("the full-size candidate is still there", set.srcSet.includes("/1200x500@2x") && set.srcSet.includes(" 2400w"));
+check("the default src is the full-size image", set.src.includes("/1200x500@2x"));
+check("sizes lets a narrow screen take the small one", set.sizes.startsWith("(max-width: 640px) 100vw"));
+check(
+  "no token means no set either",
+  withToken(undefined, () => staticRouteMapSrcSet({ origin: WDH, destination: WINDHOEK })) === null,
+);
 
 console.log(`\n${passed} passed, ${failed} failed\n`);
 process.exit(failed === 0 ? 0 : 1);
