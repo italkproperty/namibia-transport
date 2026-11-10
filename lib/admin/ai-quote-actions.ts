@@ -430,7 +430,14 @@ export async function analyseQuoteConversation(
           system,
           messages,
           output_config: {
-            effort: "high",
+            // "medium", not "high": this is extraction into a fixed schema
+            // from a short conversation, not a long-horizon task, and on
+            // Sonnet 5.5 the effort levels were recalibrated so that medium
+            // is the recommended starting point for multistep work. High
+            // was the main reason an analysis took a minute and tripped the
+            // sixty-second abort; the extraction itself does not need it.
+            // Revert to "high" if the brief quality visibly drops.
+            effort: "medium",
             format: {
               type: "json_schema",
               schema: OUTPUT_SCHEMA,

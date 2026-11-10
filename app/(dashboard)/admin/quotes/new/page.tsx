@@ -18,10 +18,15 @@ export const metadata: Metadata = {
 };
 
 export const dynamic = "force-dynamic";
-/** Fail inside half a minute, not at the platform's five: a page that has
- *  not answered by then is stuck behind a dead connection, and the
- *  operator needs an error they can act on, not a 504 later. */
-export const maxDuration = 30;
+/**
+ * Two minutes, not the thirty seconds the other admin pages get, because the
+ * AI quote assistant's server action runs under this page's budget and a
+ * Claude call on a long WhatsApp thread can legitimately take a minute. The
+ * database work on this page is bounded separately (6s reads, 15s writes),
+ * so a dead connection still fails fast; only the model call is allowed the
+ * time.
+ */
+export const maxDuration = 120;
 
 export default async function NewQuotePage() {
   const [vehicleClasses, bankReady, pending, pricing] = await Promise.all([
