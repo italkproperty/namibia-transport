@@ -7,9 +7,11 @@ import { getDb, isDatabaseConfigured } from "@/db";
 import { charterQuoteVersions, charterQuotes } from "@/db/schema";
 import { WRITE_DEADLINE_MS, withDeadline } from "@/lib/deadline";
 import { getAdminGateState } from "@/lib/admin/auth";
+import { benchmarkRunningCost, defaultCharterProfile, type RunningCostBenchmark } from "@/lib/charter/defaults";
 import { priceCharterItinerary } from "@/lib/charter/itinerary-costing";
 import { getCharterCostSettings } from "@/lib/charter/settings";
 import { listVehicleClasses } from "@/lib/maps";
+import { getPricingConfig, profileFor } from "@/lib/pricing/settings";
 import { routeCharterItinerary, searchCharterDestinations, type ResolvedDestination } from "@/lib/maps/charter-routing";
 
 export type CharterSearchResult =
@@ -39,8 +41,25 @@ export type CharterDraftRequest = {
   otherCosts: number;
 };
 
+/** The vehicle figures a price was built on, and where they came from. */
+export type CharterAssumptions = {
+  source: "stored" | "default";
+  fuelType: "diesel" | "petrol";
+  litresPer100Km: number;
+  fuelPricePerLitre: number;
+  nonFuelRunningCostPerKm: number;
+  benchmark: RunningCostBenchmark;
+};
+
 export type CharterPriceState =
-  | { ok: true; result: ReturnType<typeof priceCharterItinerary>; vehicleName: string; request: CharterDraftRequest; signedCalculation: string }
+  | {
+      ok: true;
+      result: ReturnType<typeof priceCharterItinerary>;
+      vehicleName: string;
+      request: CharterDraftRequest;
+      signedCalculation: string;
+      assumptions: CharterAssumptions;
+    }
   | { ok: false; message: string }
   | null;
 
@@ -74,15 +93,14 @@ function validateStops(value: unknown): ResolvedDestination[] {
 }
 
 async function calculateRequest(request: CharterDraftRequest) {
-  const [settings, classes] = await Promise.all([getCharterCostSettings(), listVehicleClasses()]);
+  const [settings, classes, pricing] = await Promise.all([
+    getCharterCostSettings(),
+    listVehicleClasses(),
+    getPricingConfig(),
+  ]);
   const vehicle = classes.find((item) => item.id === request.vehicleClassId);
   if (!vehicle) throw new Error("Select a valid vehicle class.");
-  // Emergency code-level fallback for the SUV while the pricing screen's
-  // database save is unreliable. These match the values entered on the
-  // operator's pricing screen (6.4 L/100 km, N$27/litre, N$0/km other costs),
-  // using diesel as the selected operating assumption. No database or
-  // published airport-transfer fare is changed by this fallback.
-  const isSuv = vehicle.slug === "suv-4x4" || /suv|4x4/i.test(vehicle.name);
+  const publicProfile = profileFor(pricing, vehicle.slug);
   const configuredProfile = settings.profiles.find((item) => item.vehicleClassId === request.vehicleClassId);
   // Reject obviously malformed stored fuel assumptions. A 1,991 km itinerary
   // at 38.5 L/100 km produces 767 L, which is not a credible default for this
@@ -96,14 +114,13 @@ async function calculateRequest(request: CharterDraftRequest) {
     configuredProfile.nonFuelRunningCostPerKm <= 100
       ? configuredProfile
       : null;
-  const profile = storedProfile ?? (isSuv ? {
-    vehicleClassId: vehicle.id,
-    fuelType: "diesel" as const,
-    litresPer100Km: 6.4,
-    fuelPricePerLitre: 27,
-    nonFuelRunningCostPerKm: 0,
-  } : null);
-  if (!profile) throw new Error(`No charter cost profile is saved for ${vehicle.name}. Go to Admin → Pricing and save its fuel and running-cost assumptions first.`);
+  // No saved profile: derive one from the public fare model rather than from
+  // a literal. The literal this replaced (6.4 L/100 km, N$0/km wear) costed a
+  // 1,478 km Fortuner itinerary at N$2,553 of fuel and nothing else — see
+  // lib/charter/defaults.ts. The planner says when defaults are in use.
+  const profile = storedProfile ?? defaultCharterProfile(vehicle, publicProfile);
+  const profileSource: "stored" | "default" = storedProfile ? "stored" : "default";
+  const benchmark = benchmarkRunningCost(profile, publicProfile);
   const route = await routeCharterItinerary(request.stops);
   const result = priceCharterItinerary({
     route,
@@ -120,7 +137,7 @@ async function calculateRequest(request: CharterDraftRequest) {
     targetContributionMargin: settings.targetContributionMargin,
     paymentFeeRate: settings.paymentFeeRate,
   });
-  return { settings, vehicle, profile, route, result };
+  return { settings, vehicle, profile, profileSource, benchmark, route, result };
 }
 
 type SignedCalculationPayload = {
@@ -202,7 +219,21 @@ export async function priceCharterItineraryAction(_previous: CharterPriceState, 
     };
     const calculated = await calculateRequest(request);
     const signedCalculation = signCalculation({ version: 1, issuedAt: Date.now(), request, calculated });
-    return { ok: true, result: calculated.result, vehicleName: calculated.vehicle.name, request, signedCalculation };
+    return {
+      ok: true,
+      result: calculated.result,
+      vehicleName: calculated.vehicle.name,
+      request,
+      signedCalculation,
+      assumptions: {
+        source: calculated.profileSource,
+        fuelType: calculated.profile.fuelType,
+        litresPer100Km: calculated.profile.litresPer100Km,
+        fuelPricePerLitre: calculated.profile.fuelPricePerLitre,
+        nonFuelRunningCostPerKm: calculated.profile.nonFuelRunningCostPerKm,
+        benchmark: calculated.benchmark,
+      },
+    };
   } catch (error) {
     return { ok: false, message: error instanceof Error ? error.message : "The charter itinerary could not be priced." };
   }

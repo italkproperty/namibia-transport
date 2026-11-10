@@ -219,6 +219,14 @@ export function CharterQuotePlanner({ vehicles }: { vehicles: VehicleOption[] })
             <div className="flex justify-between gap-3 border-t pt-2"><span>Estimated payment fee</span><span>{formatNad(state.result.suggested.paymentFee.toFixed(2))}</span></div>
             <div className="flex justify-between gap-3 font-medium"><span>Contribution margin target met</span><span>{state.result.belowTargetMargin ? "No — review required" : "Yes"}</span></div>
           </div>
+          <p className="text-xs text-muted-foreground">
+            Vehicle running cost {formatNad(state.assumptions.benchmark.charterPerKm.toFixed(2))}/km
+            ({state.assumptions.litresPer100Km} L/100 km {state.assumptions.fuelType} at {formatNad(state.assumptions.fuelPricePerLitre.toFixed(2))}/L, plus {formatNad(state.assumptions.nonFuelRunningCostPerKm.toFixed(2))}/km wear).
+            {" "}The public fares charge this class {formatNad(state.assumptions.benchmark.publicTarPerKm.toFixed(2))}/km on tar and {formatNad(state.assumptions.benchmark.publicGravelPerKm.toFixed(2))}/km on gravel.
+          </p>
+          {state.assumptions.source === "default" && <p className="rounded-md border border-amber-400/50 bg-amber-50 p-3 text-sm text-amber-900">No charter cost profile is saved for {state.vehicleName}, so this price uses figures derived from the public fare model. Save the real consumption, fuel price and wear under Admin → Pricing before relying on it.</p>}
+          {state.assumptions.benchmark.belowPublic && <p className="rounded-md border border-amber-400/50 bg-amber-50 p-3 text-sm text-amber-900">This quote runs the vehicle for less per kilometre than a public transfer in the same class. Fuel and wear are under-recovered; check the profile under Admin → Pricing before sending.</p>}
+          {state.request.positioningKm === 0 && <p className="rounded-md border border-amber-400/50 bg-amber-50 p-3 text-sm text-amber-900">Empty positioning is 0 km. The driver&rsquo;s drive to the first stop and home after the last are not in this price unless the itinerary already starts and ends at base.</p>}
           {state.result.belowTargetMargin && <p className="rounded-md border border-amber-400/50 bg-amber-50 p-3 text-sm text-amber-900">This price is below the configured target margin. Do not send it without reviewing the economics.</p>}
           <p className="text-xs text-muted-foreground">Routing source: Mapbox. Retrieved {new Date(state.result.route.retrievedAt).toLocaleString()}. Saving creates a private draft and immutable version-1 cost/price snapshot. It does not approve, issue, or send the quote.</p>
           <form action={saveAction} className="space-y-3 border-t pt-4">
