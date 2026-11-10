@@ -3,6 +3,7 @@ import { desc, eq } from "drizzle-orm";
 import { getDb, isDatabaseConfigured } from "@/db";
 import { charterQuotes, charterQuoteVersions, charterQuotePayments } from "@/db/schema";
 import { formatNad } from "@/lib/money";
+import { getCompanyInfo, whatsappLink } from "@/lib/company";
 import { buildPublicCharterLegs } from "@/lib/charter/public-quote";
 import { SiteFooter } from "@/components/marketing/site-footer";
 import { startCharterPaymentAction } from "@/lib/charter/payment-actions";
@@ -153,9 +154,9 @@ export default async function PublicCharterQuotePage({ params, searchParams }: {
           {paymentStatus !== "received" && !bank && (
             <p className="mt-3 text-sm text-muted-foreground">Bank-transfer details are temporarily unavailable. Please contact Namibia Transport before making a payment.</p>
           )}
-          <a className="mt-3 inline-flex rounded-md border px-4 py-2 text-sm font-medium" href={"https://wa.me/264817278410?text=" + encodeURIComponent("Hello Namibia Transport, I am reviewing charter proposal " + quote.quoteNumber + " for " + formatNad(quote.total) + ". Please assist with payment and booking confirmation.")} target="_blank" rel="noopener noreferrer">Contact us on WhatsApp</a>
+          <a className="mt-3 inline-flex rounded-md border px-4 py-2 text-sm font-medium" href={whatsappLink(getCompanyInfo().whatsapp ?? getCompanyInfo().phone ?? "", "Hello Namibia Transport, I am reviewing charter proposal " + quote.quoteNumber + " for " + formatNad(quote.total) + ". Please assist with payment and booking confirmation.")} target="_blank" rel="noopener noreferrer">Contact us on WhatsApp</a>
         </section>
-        <p className="mt-6 text-xs text-muted-foreground">This link is private and expires on {dateText(quote.validUntil.toISOString())}. Internal operating costs and margin are not shown.</p>
+        <p className="mt-6 text-xs text-muted-foreground">This link is private to you and the price on it holds until {dateText(quote.validUntil.toISOString())}. After that, ask us for a fresh quote.</p>
       </main>
       <SiteFooter />
     </div>
