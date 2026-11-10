@@ -261,7 +261,8 @@ def row(r, label, value=None, note=None, fmt=None, editable=True):
 
 heading(2, "COMPANY")
 row(3, "Trading name", "Namibia Transport")
-row(4, "Name shown on the invoice", "Namibia Transport")
+row(4, "Name shown on the invoice", "Chrimson Investments CC, trading as Namibia Transport",
+    "The legal entity, because an accounts department files the invoice under it. The bank beneficiary below must match.")
 row(5, "Company registration no.", "", "Fill in. Leave blank and the line is hidden on the invoice.")
 row(6, "VAT registration no.", "", "Fill in ONLY if you are VAT registered. Leave blank and the line is hidden.")
 row(7, "Address", "Windhoek, Namibia")

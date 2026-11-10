@@ -48,7 +48,7 @@ function check(name: string, condition: boolean, detail = "") {
 console.log("the bank details block");
 
 const sample: BankDetails = {
-  accountName: "Namibia Transport (Pty) Ltd",
+  accountName: "Chrimson Investments CC",
   accountNumber: "64285820625",
   branchCode: "282672",
   swift: "FIRNNANX",
@@ -91,7 +91,7 @@ const saved = {
   number: process.env.BANK_ACCOUNT_NUMBER,
   branch: process.env.BANK_BRANCH_CODE,
 };
-process.env.BANK_ACCOUNT_NAME = "Namibia Transport (Pty) Ltd";
+process.env.BANK_ACCOUNT_NAME = "Chrimson Investments CC";
 process.env.BANK_ACCOUNT_NUMBER = "64285820625";
 delete process.env.BANK_BRANCH_CODE;
 check("a missing branch code hides the whole block", getBankDetails() === null);

@@ -268,7 +268,7 @@ which is why it takes longer than the distance suggests — times computed at 10
 </div>
 
 <footer>
-  <div><b>Namibia Transport</b> · {DATA['address']} · Reg. {DATA['registration']}<br>
+  <div><b>Namibia Transport</b>, a trading name of Chrimson Investments CC · Reg. {DATA['registration']} · {DATA['address']}<br>
   Fixed-price ground transport across Namibia. Trips are fulfilled by independent Namibian
   partner drivers we select and brief.</div>
   <div style="text-align:right;white-space:nowrap"><b>WhatsApp</b> {DATA['whatsapp']}<br>
