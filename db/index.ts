@@ -52,6 +52,19 @@ function buildDb() {
       // admin read deadline and is short enough to fail inside the function's own budget, so the catch
       // blocks run and the page can say what broke.
       connect_timeout: 5,
+      // Temporary wire-level trace. Production shows the same reads dying at
+      // their deadline on an instance whose other reads answer in under a
+      // second, and the next request after the pool is retired being clean.
+      // That is either queueing behind one connection or a connection that
+      // goes silent on some statements — opposite fixes — and only the
+      // moment each statement is actually written to the socket, and on
+      // which connection, can tell them apart. One terse line per query;
+      // remove once the diagnosis is in.
+      debug: (connection, query) => {
+        console.info(
+          `[db] #${connection} -> ${query.replace(/\s+/g, " ").slice(0, 70)}`,
+        );
+      },
       // Per serverless instance, not per deployment. Vercel runs many of these
       // at once and they all share one pooler, so a generous number here is
       // multiplied by however many instances are warm.
