@@ -67,15 +67,25 @@ function notify(error: DeadlineExceeded): void {
   }
 }
 
+/**
+ * A read that answered, but slowly enough to matter, is logged with its
+ * duration. Without this the only signal production gives is the deadline
+ * firing, which cannot tell "the database never answered" from "the database
+ * answered in seven seconds" — and those have opposite fixes. The threshold
+ * keeps a healthy instance quiet.
+ */
+const SLOW_READ_MS = 1_000;
+
 export async function withDeadline<T>(
   label: string,
   ms: number,
   work: () => Promise<T>,
 ): Promise<T> {
   let timer: ReturnType<typeof setTimeout> | undefined;
+  const started = Date.now();
 
   try {
-    return await Promise.race([
+    const result = await Promise.race([
       work(),
       new Promise<never>((_, reject) => {
         timer = setTimeout(() => {
@@ -85,6 +95,11 @@ export async function withDeadline<T>(
         }, ms);
       }),
     ]);
+    const elapsed = Date.now() - started;
+    if (elapsed >= SLOW_READ_MS) {
+      console.warn(`[deadline] ${label} answered in ${elapsed}ms (budget ${ms}ms)`);
+    }
+    return result;
   } finally {
     if (timer) clearTimeout(timer);
   }
