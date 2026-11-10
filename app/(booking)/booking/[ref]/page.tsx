@@ -38,6 +38,7 @@ import {
   TRANSFER_NOTE,
 } from "@/lib/payments/bank";
 import { getTransferState } from "@/lib/payments/transfer";
+import { invoiceLinksFor } from "@/lib/invoices/issue";
 import {
   getLatestPayment,
   reconcileBookingPayment,
@@ -111,6 +112,11 @@ export default async function BookingConfirmationPage({ params }: PageProps) {
    * click id and counting it twice is worse than counting it late.
    */
   const group = booking.groupRef ? await getQuoteGroup(booking.groupRef) : null;
+  // The invoice, once money has arrived. Keyed the way it was issued: on the
+  // itinerary for a leg of one, on the booking's own reference otherwise.
+  const invoiceLink = isPaid
+    ? (await invoiceLinksFor([booking.groupRef ?? booking.ref])).get(booking.groupRef ?? booking.ref) ?? null
+    : null;
   const conversion = conversionFor({
     ref: booking.ref,
     groupRef: booking.groupRef,
@@ -171,6 +177,17 @@ export default async function BookingConfirmationPage({ params }: PageProps) {
             <p className="text-muted-foreground mt-2 text-sm">
               Quote this any time you message us.
             </p>
+            {invoiceLink && (
+              <p className="mt-3 text-sm">
+                <a
+                  href={invoiceLink.url}
+                  className="font-medium underline underline-offset-4"
+                >
+                  Invoice {invoiceLink.invoiceNumber}
+                </a>
+                <span className="text-muted-foreground"> · open or save as PDF</span>
+              </p>
+            )}
 
             {/* The driver, once there is one. This is the answer to the only
                 question an arriving traveller actually has, so it sits above

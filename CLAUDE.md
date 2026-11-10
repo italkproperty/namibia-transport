@@ -297,7 +297,18 @@ verification are one release unit. A green build with an unapplied Supabase migr
 *Keep this short and current. Three questions only: what works, what is broken, what is
 next. The archaeology belongs in git, not here.*
 
-**Works.** The itinerary builder prices a trip in every vehicle class at once and saves the
+**Works.** An invoice follows every confirmed payment: numbered `NT-INV-<year>-<seq>`
+from a database sequence, one per paid itinerary, booking or charter, at a private link
+like a quote, emailed when there is an address, printed to PDF from the browser. Issued
+from all four confirmation paths (operator "money received", gateway reconcile on a booking
+and on an itinerary, charter gateway return) and by hand from `/admin/bookings` for anything
+paid before it existed. A charter paid by bank transfer can now be marked received on its
+draft page — before, only the gateway could mark a charter paid. VAT, once registered, is
+carved out of the paid total, never added on top. `tests/invoices.test.ts`. Needs the
+invoices block at the bottom of `db/manual/RUN-ME.sql`.
+A charter draft and the customer's quote page draw the itinerary on a map — numbered stops,
+the road between them — from a polyline compacted to fit a static-map URL.
+The itinerary builder prices a trip in every vehicle class at once and saves the
 one chosen onto every leg, so a quote can never name a vehicle the fare was not computed
 for. Hosea Kutako → Sossusvlei Lodge → Hosea Kutako with three nights: N$14,700 in a
 sedan, N$17,950 in the SUV.
@@ -336,7 +347,8 @@ Action ships without an authorisation check.
    second leg sharing a `group_ref`, which is what made a real client email to ask whether
    his return was included. The model-priced itinerary builder does it correctly; the
    manual form is the one to bring up to it.
-1. `db/manual/RUN-ME.sql` has two unrun blocks at the bottom (both 24 September): the
+1. `db/manual/RUN-ME.sql` has three unrun blocks at the bottom: the invoices table and
+   sequence (10 November), without which no invoice is issued and the admin says so; and two from 24 September: the
    `customers` change, without which an email-only booking is accepted by the code and
    refused by the database; and `pricing_settings` plus the vehicle-class cost columns,
    without which `/admin/pricing` cannot save. Neither changes a price on its own.

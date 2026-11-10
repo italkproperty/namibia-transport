@@ -1,3 +1,4 @@
+import { issueInvoiceForCharter } from "@/lib/invoices/issue";
 import { NextResponse, type NextRequest } from "next/server";
 import { and, desc, eq } from "drizzle-orm";
 import { getDb, isDatabaseConfigured } from "@/db";
@@ -49,6 +50,10 @@ export async function GET(request: NextRequest) {
           },
           updatedAt: new Date(),
         }).where(eq(charterQuotePayments.id, payment.id));
+        if (status === "paid") {
+          const invoice = await issueInvoiceForCharter(quote.id);
+          if (!invoice.ok) console.error(`[charter-payment] ${quote.quoteNumber} paid but no invoice: ${invoice.error}`);
+        }
         pageUrl.searchParams.set("payment", status === "paid" ? "received" : status === "pending" ? "pending" : "contact");
       } else {
         pageUrl.searchParams.set("payment", "pending");

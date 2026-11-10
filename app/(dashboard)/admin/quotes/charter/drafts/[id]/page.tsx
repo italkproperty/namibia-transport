@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { desc, eq } from "drizzle-orm";
+import { and, desc, eq } from "drizzle-orm";
 
 import { AdminShell } from "@/components/admin/shell";
 import { getDb, isDatabaseConfigured } from "@/db";
@@ -11,6 +11,9 @@ import { formatDate } from "@/lib/format";
 import { formatNad } from "@/lib/money";
 import { IssueCharterQuoteForm } from "@/components/admin/issue-charter-quote-form";
 import { CharterRouteMap } from "@/components/charter/charter-route-map";
+import { ConfirmCharterTransferButton } from "@/components/invoices/invoice-controls";
+import { invoiceLinkForCharter } from "@/lib/invoices/issue";
+import { charterQuotePayments } from "@/db/schema";
 
 export const metadata: Metadata = {
   title: "Charter quote detail",
@@ -156,6 +159,23 @@ export default async function CharterQuoteDraftDetailPage({
     ? siteOrigin + "/q/" + quote.publicToken
     : null;
 
+  // Money and paper. Read softly: a missing ledger table must not take the
+  // draft page down, it just means nothing can be recorded yet.
+  let paidPayment: { provider: string; paidAt: Date | null } | undefined;
+  try {
+    [paidPayment] = await withDeadline("charter payment state", READ_DEADLINE_MS, () =>
+      getDb()
+        .select({ provider: charterQuotePayments.provider, paidAt: charterQuotePayments.paidAt })
+        .from(charterQuotePayments)
+        .where(and(eq(charterQuotePayments.quoteId, quote.id), eq(charterQuotePayments.status, "paid")))
+        .orderBy(desc(charterQuotePayments.paidAt))
+        .limit(1),
+    );
+  } catch (error) {
+    console.error("[charter] payment ledger unavailable on the draft page", error);
+  }
+  const invoiceLink = paidPayment ? await invoiceLinkForCharter(quote.id) : null;
+
   return (
     <AdminShell active="/admin/quotes">
       <div className="space-y-6">
@@ -276,6 +296,34 @@ export default async function CharterQuoteDraftDetailPage({
           quoteId={quote.id}
           existingUrl={existingCustomerUrl}
         />
+
+        <section className="rounded-xl border bg-card p-4">
+          <h2 className="font-semibold">Payment and invoice</h2>
+          {paidPayment ? (
+            <div className="mt-2 space-y-2 text-sm">
+              <p>
+                Paid{paidPayment.paidAt ? ` on ${formatDate(paidPayment.paidAt)}` : ""} by {paidPayment.provider === "bank_transfer" ? "bank transfer" : paidPayment.provider}.
+              </p>
+              {invoiceLink ? (
+                <p>
+                  Invoice{" "}
+                  <a href={invoiceLink.url} target="_blank" rel="noopener noreferrer" className="font-medium underline underline-offset-4">{invoiceLink.invoiceNumber}</a>
+                  <span className="text-muted-foreground"> · the customer sees the same link on their quote page</span>
+                </p>
+              ) : (
+                <p className="text-muted-foreground">Paid, but no invoice is on file. Press the button to issue one.</p>
+              )}
+              {!invoiceLink && <ConfirmCharterTransferButton quoteId={quote.id} />}
+            </div>
+          ) : quote.status === "sent" ? (
+            <div className="mt-2 space-y-3 text-sm">
+              <p className="text-muted-foreground">When the transfer shows on the bank statement, record it here. That marks the quote paid for the customer, and issues and emails the invoice.</p>
+              <ConfirmCharterTransferButton quoteId={quote.id} />
+            </div>
+          ) : (
+            <p className="mt-2 text-sm text-muted-foreground">A payment can be recorded once the quote has been issued to the customer.</p>
+          )}
+        </section>
 
         <section className="rounded-xl border bg-card p-4">
           <h2 className="font-semibold">Version history</h2>

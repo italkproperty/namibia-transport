@@ -999,10 +999,72 @@ export const reviews = pgTable(
 );
 
 /* -------------------------------------------------------------------------- */
+/* Invoices                                                                    */
+/* -------------------------------------------------------------------------- */
+
+/**
+ * A tax invoice for money that has arrived.
+ *
+ * One row per paid thing — a booking group, a single booking, a charter —
+ * issued the moment the payment is confirmed and never edited after. The
+ * amounts are copied here rather than read back from the bookings, because
+ * an invoice is a record of what was paid on the day, and a booking row is
+ * edited, cancelled and re-priced long after. `lines` holds the itemisation
+ * as it was printed.
+ *
+ * `invoice_number` is drawn from `invoice_number_seq` in the insert itself
+ * (see lib/invoices/issue.ts), so two confirmations in the same second get
+ * different numbers and a gap in the sequence means a transaction rolled
+ * back, not that an invoice was deleted — rows here are never deleted.
+ */
+export const invoices = pgTable(
+  "invoices",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    invoiceNumber: text("invoice_number").notNull(),
+    /** "booking" for transfers and itineraries, "charter" for a charter quote. */
+    kind: text("kind").notNull(),
+    /** The itinerary, or the single booking's own ref when it has no group. */
+    groupRef: text("group_ref"),
+    charterQuoteId: uuid("charter_quote_id").references(() => charterQuotes.id, {
+      onDelete: "restrict",
+    }),
+    /** The private URL. Unguessable, like a quote link. */
+    publicToken: text("public_token").notNull(),
+    customerName: text("customer_name").notNull(),
+    customerEmail: text("customer_email"),
+    customerWhatsapp: text("customer_whatsapp"),
+    /** [{ description, quantity, unitAmount, amount }] as printed. */
+    lines: jsonb("lines").notNull(),
+    subtotal: money("subtotal").notNull(),
+    vatRate: numeric("vat_rate", { precision: 4, scale: 3 }).notNull().default("0"),
+    vatAmount: money("vat_amount").notNull().default("0"),
+    total: money("total").notNull(),
+    currency: currency(),
+    /** "bank_transfer" or the gateway's name. */
+    paymentMethod: text("payment_method").notNull(),
+    paymentReference: text("payment_reference"),
+    paidAt: timestamp("paid_at", { withTimezone: true }).notNull(),
+    issuedAt: timestamp("issued_at", { withTimezone: true }).notNull().defaultNow(),
+    emailedAt: timestamp("emailed_at", { withTimezone: true }),
+    ...timestamps,
+  },
+  (t) => [
+    uniqueIndex("invoices_number_key").on(t.invoiceNumber),
+    uniqueIndex("invoices_token_key").on(t.publicToken),
+    // One invoice per paid thing. Partial, so the nullable column does not
+    // collapse every charter onto one row.
+    uniqueIndex("invoices_group_ref_key").on(t.groupRef).where(sql`group_ref IS NOT NULL`),
+    uniqueIndex("invoices_charter_key").on(t.charterQuoteId).where(sql`charter_quote_id IS NOT NULL`),
+  ],
+);
+
+/* -------------------------------------------------------------------------- */
 /* Inferred types                                                              */
 /* -------------------------------------------------------------------------- */
 
 export type Route = typeof routes.$inferSelect;
+export type Invoice = typeof invoices.$inferSelect;
 export type NewRoute = typeof routes.$inferInsert;
 export type VehicleClass = typeof vehicleClasses.$inferSelect;
 export type NewVehicleClass = typeof vehicleClasses.$inferInsert;

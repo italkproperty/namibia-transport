@@ -6,6 +6,7 @@ import { formatNad } from "@/lib/money";
 import { getCompanyInfo, whatsappLink } from "@/lib/company";
 import { buildPublicCharterLegs } from "@/lib/charter/public-quote";
 import { CharterRouteMap } from "@/components/charter/charter-route-map";
+import { invoiceLinkForCharter } from "@/lib/invoices/issue";
 import { SiteFooter } from "@/components/marketing/site-footer";
 import { startCharterPaymentAction } from "@/lib/charter/payment-actions";
 import { isLiveGatewayConfigured } from "@/lib/payments";
@@ -47,6 +48,7 @@ export default async function PublicCharterQuotePage({ params, searchParams }: {
     console.error("[charter-payment] payment ledger unavailable; bank transfer remains available", error);
   }
   const paymentStatus = payment ?? (latestPayment?.status === "paid" ? "received" : undefined);
+  const invoiceLink = latestPayment?.status === "paid" ? await invoiceLinkForCharter(quote.id) : null;
   const liveCheckoutAvailable = isLiveGatewayConfigured();
   const bank = getBankDetails();
   const transferLines = bank ? bankTransferLines(bank, quote.quoteNumber) : null;
@@ -114,7 +116,15 @@ export default async function PublicCharterQuotePage({ params, searchParams }: {
         <section className="mt-6 rounded-xl border p-4">
           <h2 className="font-semibold">Payment and confirmation</h2>
           {paymentStatus === "received" ? (
-            <p className="mt-2 text-sm" role="status">PayToday reports that your payment was received. Namibia Transport will verify the transaction and issue your operational booking confirmation separately. This proposal page is not itself a booking confirmation.</p>
+            <div className="mt-2 space-y-2 text-sm" role="status">
+              <p>{latestPayment?.status === "paid" ? "Your payment has been received." : "PayToday reports that your payment was received."} Namibia Transport will issue your operational booking confirmation separately. This proposal page is not itself a booking confirmation.</p>
+              {invoiceLink && (
+                <p>
+                  <a href={invoiceLink.url} className="font-medium underline underline-offset-4">Invoice {invoiceLink.invoiceNumber}</a>
+                  <span className="text-muted-foreground"> · open or save as PDF</span>
+                </p>
+              )}
+            </div>
           ) : payment === "pending" ? (
             <p className="mt-2 text-sm" role="status">We have not yet received a final payment confirmation from PayToday. Please allow a moment and contact us if the status does not update. Do not pay a second time while this is being checked.</p>
           ) : payment === "failed" || payment === "cancelled" ? (

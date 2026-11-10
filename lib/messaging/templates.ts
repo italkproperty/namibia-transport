@@ -349,3 +349,45 @@ export function assignmentHtml(details: AssignmentDetails): string {
   </table>
 </body></html>`;
 }
+
+/* ------------------------------------------------------------- invoice */
+
+export type InvoiceEmailDetails = {
+  invoiceNumber: string;
+  fullName: string;
+  total: string;
+  currency: string;
+  url: string;
+  paidOn: string;
+  /** One line: what the money paid for. */
+  summary: string;
+};
+
+export function invoiceSubject(details: InvoiceEmailDetails): string {
+  return `${details.invoiceNumber} — your invoice from Namibia Transport`;
+}
+
+export function invoiceText(details: InvoiceEmailDetails): string {
+  return [
+    `Hi ${details.fullName},`,
+    "",
+    `Thank you — we have received your payment of ${details.currency} ${details.total} for ${details.summary}, on ${details.paidOn}.`,
+    "",
+    `Your invoice is ${details.invoiceNumber}. Open or save it here:`,
+    details.url,
+    "",
+    "The link is private to you. Reply to this email if anything on it needs correcting.",
+    "",
+    "Namibia Transport",
+  ].join("\n");
+}
+
+export function invoiceHtml(details: InvoiceEmailDetails): string {
+  return [
+    `<p>Hi ${esc(details.fullName)},</p>`,
+    `<p>Thank you — we have received your payment of <strong>${esc(details.currency)} ${esc(details.total)}</strong> for ${esc(details.summary)}, on ${esc(details.paidOn)}.</p>`,
+    `<p>Your invoice is <strong>${esc(details.invoiceNumber)}</strong>. <a href="${esc(details.url)}">Open or save it here</a>.</p>`,
+    `<p style="color:#666;font-size:13px">The link is private to you. Reply to this email if anything on it needs correcting.</p>`,
+    `<p>Namibia Transport</p>`,
+  ].join("\n");
+}

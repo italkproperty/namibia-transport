@@ -1,3 +1,4 @@
+import { issueInvoiceForBooking } from "@/lib/invoices/issue";
 import "server-only";
 
 import { and, desc, eq, inArray, ne, sql } from "drizzle-orm";
@@ -340,6 +341,11 @@ export async function confirmTransfer(
         eq(bookings.status, "pending_payment"),
       ),
     );
+
+  // Money confirmed is money to invoice. Never allowed to fail the
+  // confirmation: the invoice can be issued again from the booking.
+  const invoice = await issueInvoiceForBooking(booking.id);
+  if (!invoice.ok) console.error(`[payments] transfer confirmed on ${booking.id} but no invoice: ${invoice.error}`);
 
   return { ok: true };
 }

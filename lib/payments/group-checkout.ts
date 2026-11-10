@@ -1,5 +1,6 @@
 "use server";
 
+import { issueInvoiceForBooking } from "@/lib/invoices/issue";
 import "server-only";
 
 import { and, asc, desc, eq } from "drizzle-orm";
@@ -213,6 +214,15 @@ export async function reconcileGroupPayment(
       .update(bookings)
       .set({ status: "confirmed", updatedAt: new Date() })
       .where(and(eq(bookings.groupRef, groupRef), eq(bookings.status, "pending_payment")));
+    const [anyLeg] = await db
+      .select({ id: bookings.id })
+      .from(bookings)
+      .where(eq(bookings.groupRef, groupRef))
+      .limit(1);
+    if (anyLeg) {
+      const invoice = await issueInvoiceForBooking(anyLeg.id);
+      if (!invoice.ok) console.error(`[payments] itinerary ${groupRef} paid but no invoice: ${invoice.error}`);
+    }
   }
 }
 

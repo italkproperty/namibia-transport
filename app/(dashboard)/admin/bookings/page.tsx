@@ -12,6 +12,8 @@ import { ShareBookingLink } from "@/components/admin/share-booking-link";
 import { BookingRowActions } from "@/components/admin/booking-actions";
 import { PaymentReconciliationMonitor } from "@/components/admin/payment-reconciliation-monitor";
 import { PendingTransfers } from "@/components/admin/pending-transfers";
+import { IssueInvoiceButton } from "@/components/invoices/invoice-controls";
+import { invoiceLinksFor } from "@/lib/invoices/issue";
 import { TravellerDetails } from "@/components/admin/traveller-details";
 import { AdminShell } from "@/components/admin/shell";
 import { Badge } from "@/components/ui/badge";
@@ -195,9 +197,10 @@ export default async function AdminBookingsPage({ searchParams }: PageProps) {
 
   // Money a traveller says they have sent. Above everything else on the page
   // because it is the only item here with somebody waiting on the other end.
-  const [pendingTransfers, submittedDetails] = await Promise.all([
+  const [pendingTransfers, submittedDetails, invoiceLinks] = await Promise.all([
     listPendingTransfers(),
     listSubmittedDetails(),
+    invoiceLinksFor(rows.map((row) => row.groupRef ?? row.ref)),
   ]);
 
   /**
@@ -541,6 +544,7 @@ export default async function AdminBookingsPage({ searchParams }: PageProps) {
                   <TableHead>Return</TableHead>
                   <TableHead>Driver</TableHead>
                   <TableHead>Share</TableHead>
+                  <TableHead>Invoice</TableHead>
                   <TableHead className="text-right">Void</TableHead>
                 </TableRow>
               </TableHeader>
@@ -660,6 +664,28 @@ export default async function AdminBookingsPage({ searchParams }: PageProps) {
                             : null
                         }
                       />
+                    </TableCell>
+                    <TableCell>
+                      {(() => {
+                        const invoice = invoiceLinks.get(row.groupRef ?? row.ref);
+                        if (invoice) {
+                          return (
+                            <a
+                              href={invoice.url}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="tabular text-xs font-medium underline underline-offset-4"
+                            >
+                              {invoice.invoiceNumber}
+                            </a>
+                          );
+                        }
+                        // Confirmed or later means money arrived; a missing
+                        // invoice there is a gap to close, not a quiet state.
+                        return row.status === "confirmed" || row.status === "assigned" || row.status === "completed"
+                          ? <IssueInvoiceButton bookingId={row.id} />
+                          : <span className="text-muted-foreground text-xs">—</span>;
+                      })()}
                     </TableCell>
                     <TableCell className="text-right">
                       <BookingRowActions

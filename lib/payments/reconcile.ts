@@ -1,3 +1,4 @@
+import { issueInvoiceForBooking } from "@/lib/invoices/issue";
 import "server-only";
 
 import { and, desc, eq, ne } from "drizzle-orm";
@@ -211,6 +212,10 @@ export async function reconcileBookingPayment(
       .update(bookings)
       .set({ status: "confirmed", updatedAt: new Date() })
       .where(and(eq(bookings.id, booking.id), eq(bookings.status, "pending_payment")));
+  }
+  if (status === "paid") {
+    const invoice = await issueInvoiceForBooking(booking.id);
+    if (!invoice.ok) console.error(`[payments] gateway payment on ${bookingRef} but no invoice: ${invoice.error}`);
   }
 
   return { payment: updated ?? payment, changed: true };

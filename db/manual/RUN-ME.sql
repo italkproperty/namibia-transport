@@ -371,3 +371,50 @@ COMMIT;
  *            ('bookings','details_updated_at')
  *          );
  */
+
+-- ---------------------------------------------------------------------------
+-- 10 November 2026 — invoices.
+--
+-- A tax invoice for money that has arrived: one per paid booking group, single
+-- booking or charter, issued when the payment is confirmed, never edited. The
+-- number comes from the sequence inside the insert, so no two invoices can
+-- share one. Idempotent, like everything above.
+-- ---------------------------------------------------------------------------
+CREATE SEQUENCE IF NOT EXISTS "invoice_number_seq" START 1;
+
+CREATE TABLE IF NOT EXISTS "invoices" (
+  "id" uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  "invoice_number" text NOT NULL,
+  "kind" text NOT NULL CHECK ("kind" IN ('booking', 'charter')),
+  "group_ref" text,
+  "charter_quote_id" uuid REFERENCES "charter_quotes"("id") ON DELETE RESTRICT,
+  "public_token" text NOT NULL,
+  "customer_name" text NOT NULL,
+  "customer_email" text,
+  "customer_whatsapp" text,
+  "lines" jsonb NOT NULL,
+  "subtotal" numeric(10,2) NOT NULL,
+  "vat_rate" numeric(4,3) NOT NULL DEFAULT 0,
+  "vat_amount" numeric(10,2) NOT NULL DEFAULT 0,
+  "total" numeric(10,2) NOT NULL,
+  "currency" char(3) NOT NULL DEFAULT 'NAD',
+  "payment_method" text NOT NULL,
+  "payment_reference" text,
+  "paid_at" timestamptz NOT NULL,
+  "issued_at" timestamptz NOT NULL DEFAULT now(),
+  "emailed_at" timestamptz,
+  "created_at" timestamptz NOT NULL DEFAULT now(),
+  "updated_at" timestamptz NOT NULL DEFAULT now()
+);
+
+CREATE UNIQUE INDEX IF NOT EXISTS "invoices_number_key" ON "invoices" ("invoice_number");
+CREATE UNIQUE INDEX IF NOT EXISTS "invoices_token_key" ON "invoices" ("public_token");
+CREATE UNIQUE INDEX IF NOT EXISTS "invoices_group_ref_key" ON "invoices" ("group_ref") WHERE "group_ref" IS NOT NULL;
+CREATE UNIQUE INDEX IF NOT EXISTS "invoices_charter_key" ON "invoices" ("charter_quote_id") WHERE "charter_quote_id" IS NOT NULL;
+
+/*
+ * Check it worked — this should return 1.
+ *
+ *   SELECT count(*) FROM information_schema.tables
+ *    WHERE table_schema = 'public' AND table_name = 'invoices';
+ */
