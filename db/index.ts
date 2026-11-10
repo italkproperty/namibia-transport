@@ -15,6 +15,48 @@ const globalForDb = globalThis as unknown as {
   __deadlineListenerRegistered?: boolean;
 };
 
+/**
+ * The pool's shape, exported so a test can hold it.
+ *
+ * ## Never pipeline through the transaction pooler
+ *
+ * This is the finding that explains six weeks of `/admin/bookings` timeouts
+ * and the quote page "crashing", and it took a wire-level trace in production
+ * to see. postgres.js pipelines: when a connection is busy it writes the next
+ * statement to the same socket without waiting for a reply, up to
+ * `max_pipeline` (default 100) in flight. Supabase's transaction-mode pooler
+ * (Supavisor) does not cope with that. The trace showed one statement on a
+ * socket answering in 660ms, two together answering, and four written in the
+ * same millisecond never answering at all — 5.2 seconds of silence, then every
+ * deadline on the page. A fresh socket, one statement at a time, was clean.
+ *
+ * `max_pipeline: 1` means one statement in flight per socket, ever. A page's
+ * parallel reads then each need a socket of their own, which is what `max`
+ * is for: six covers the busiest admin page's first wave. Lowering `max` to 1
+ * in October, to spare the pooler, had the opposite effect — it forced every
+ * parallel read onto one socket, which is exactly the pipelining that hangs.
+ *
+ * The other options keep sockets from being held: a warm instance that served
+ * one booking at 06:00 must not still be holding six connections at noon.
+ */
+export const POOL_OPTIONS = {
+  // Supabase's transaction pooler cannot prepare statements.
+  prepare: false,
+  // A pooler that will not accept a connection fails in five seconds, inside
+  // the six-second read deadline, so the catch blocks run and the page can
+  // say what broke instead of a 504.
+  connect_timeout: 5,
+  // One statement in flight per socket. See above — this is load-bearing.
+  max_pipeline: 1,
+  // Enough sockets for one page's parallel reads to each get their own.
+  max: 6,
+  // Release idle sockets quickly; the pooler counts them against the limit.
+  idle_timeout: 20,
+  // The pooler recycles server-side; a client that never retires a socket
+  // eventually hands a query to one that has already gone.
+  max_lifetime: 60 * 30,
+} as const;
+
 function buildDb() {
   const connectionString = process.env.DATABASE_URL;
   if (!connectionString) {
@@ -41,46 +83,15 @@ function buildDb() {
   const client =
     globalForDb.__transferSql ??
     postgres(connectionString, {
-      // Supabase's transaction pooler cannot prepare statements.
-      prepare: false,
-      // Without this a pooler that is not answering — wrong host, connection
-      // limit reached, credentials rotated — leaves the query hanging until
-      // Vercel kills the whole function. The operator gets
-      // 504 FUNCTION_INVOCATION_TIMEOUT, which says nothing about what
-      // failed, and /admin/bookings is unreachable with money waiting to be
-      // confirmed on it. Five seconds keeps connection establishment inside the six-second
-      // admin read deadline and is short enough to fail inside the function's own budget, so the catch
-      // blocks run and the page can say what broke.
-      connect_timeout: 5,
-      // Temporary wire-level trace. Production shows the same reads dying at
-      // their deadline on an instance whose other reads answer in under a
-      // second, and the next request after the pool is retired being clean.
-      // That is either queueing behind one connection or a connection that
-      // goes silent on some statements — opposite fixes — and only the
-      // moment each statement is actually written to the socket, and on
-      // which connection, can tell them apart. One terse line per query;
-      // remove once the diagnosis is in.
+      ...POOL_OPTIONS,
+      // Wire-level trace, kept for one more deploy to verify the pipelining
+      // fix on the production pooler: it should show at most one statement
+      // per socket between replies. Remove with the next change here.
       debug: (connection, query) => {
         console.info(
           `[db] #${connection} -> ${query.replace(/\s+/g, " ").slice(0, 70)}`,
         );
       },
-      // Per serverless instance, not per deployment. Vercel runs many of these
-      // at once and they all share one pooler, so a generous number here is
-      // multiplied by however many instances are warm.
-      // Vercel can keep many function instances warm. Four sockets per
-      // instance multiplies quickly under traffic and can starve Supavisor;
-      // this app's queries are short and should share one transaction-mode
-      // connection per warm instance.
-      max: 1,
-      // Without this, postgres.js holds every socket it ever opened. A warm
-      // instance that served one booking at 06:00 was still holding four
-      // connections at noon, and the pooler counts them against the limit all
-      // day. Twenty seconds is longer than any request here takes.
-      idle_timeout: 20,
-      // The pooler recycles server-side; a client that never retires a socket
-      // eventually hands a query to one that has already gone.
-      max_lifetime: 60 * 30,
     });
 
   globalForDb.__transferSql = client;

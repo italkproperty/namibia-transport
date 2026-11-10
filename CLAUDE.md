@@ -398,3 +398,15 @@ holds the line. Two more things that fell out: `db/manual/RUN-ME.sql` had `DO $`
 the builder could save a price computed for a different trip (change a stop after pricing,
 the stale total was carried into "agreed total"). It now puts the price away and disables
 Create until the itinerary is priced again.
+
+*Same day, the actual root cause, from a wire-level trace in production.* The retire-on-deadline
+above is right but it was treating the symptom. With the fix live, the same three reads on
+`/admin/bookings` still died on every request while the reads around them answered in 660ms.
+A `debug` hook on postgres.js showed why: **four statements written to one socket in the same
+millisecond, and none of them ever answered**. postgres.js pipelines onto a busy connection
+(`max_pipeline`, default 100), and Supabase's transaction-mode pooler goes silent when several
+statements arrive together. One at a time always answers. `max: 1`, set in October to spare
+the pooler, forced every page's parallel reads onto one socket and made it worse. The fix is
+`max_pipeline: 1` with `max: 6` in `db/index.ts`; `tests/pool.test.ts` holds it. **Never
+pipeline through the transaction pooler** — a future "why do we open six connections" should
+read this paragraph before touching `max`.
