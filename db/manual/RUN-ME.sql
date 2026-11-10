@@ -380,6 +380,24 @@ COMMIT;
 -- number comes from the sequence inside the insert, so no two invoices can
 -- share one. Idempotent, like everything above.
 -- ---------------------------------------------------------------------------
+-- An earlier, hand-made "invoices" table may already exist with other
+-- columns (it did in production, from a saved Supabase query). CREATE TABLE
+-- IF NOT EXISTS would skip it and the indexes below would then fail on a
+-- column it does not have. Set it aside, keeping its rows, when it is not
+-- ours — ours is recognised by "public_token".
+DO $$
+BEGIN
+  IF EXISTS (
+    SELECT 1 FROM information_schema.tables
+    WHERE table_schema = 'public' AND table_name = 'invoices'
+  ) AND NOT EXISTS (
+    SELECT 1 FROM information_schema.columns
+    WHERE table_schema = 'public' AND table_name = 'invoices' AND column_name = 'public_token'
+  ) THEN
+    EXECUTE 'ALTER TABLE "invoices" RENAME TO "invoices_legacy_20261110"';
+  END IF;
+END $$;
+
 CREATE SEQUENCE IF NOT EXISTS "invoice_number_seq" START 1;
 
 CREATE TABLE IF NOT EXISTS "invoices" (
