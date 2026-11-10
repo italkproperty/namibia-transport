@@ -54,6 +54,8 @@ export function ItineraryBuilder({ places }: { places: PlaceOption[] }) {
   const [startTime, setStartTime] = React.useState("08:00");
   const [agreedTotal, setAgreedTotal] = React.useState("");
   const [priceOverrideTouched, setPriceOverrideTouched] = React.useState(false);
+  /** The itinerary the price on screen was computed for — see `stale`. */
+  const [pricedKey, setPricedKey] = React.useState<string | null>(null);
   const [notes, setNotes] = React.useState("");
   const [legOverrides, setLegOverrides] = React.useState<Record<number, string>>({});
   const [driverPositioningOrigin, setDriverPositioningOrigin] = React.useState("windhoek");
@@ -127,12 +129,6 @@ export function ItineraryBuilder({ places }: { places: PlaceOption[] }) {
     null;
   const quote = selected?.quote ?? null;
 
-  React.useEffect(() => {
-    if (quote && !priceOverrideTouched) {
-      setAgreedTotal(String(quote.total));
-    }
-  }, [quote, priceOverrideTouched]);
-
   const effectiveLegPrices = quote
     ? quote.legs.map((leg, index) => {
         const value = Number(legOverrides[index] ?? leg.price);
@@ -150,6 +146,34 @@ export function ItineraryBuilder({ places }: { places: PlaceOption[] }) {
         nights: stop.nights,
       })),
   );
+
+  /**
+   * Everything the fare depends on, as one string: the stops and their
+   * nights, and where the driver starts and whether they return. The price
+   * panel is only true for the itinerary it was computed from. Measured
+   * before this existed: price a Swakopmund return at N$9,700, change the
+   * stop to Etosha, and the panel still read N$9,700 — and because the
+   * agreed total is filled in from the panel, that was the figure that got
+   * saved against a trip the model priced at N$12,100.
+   */
+  const pricingKey = JSON.stringify({
+    payload,
+    origin: includeDriverPositioning ? driverPositioningOrigin : "",
+    returnToBase: includeDriverPositioning && returnDriverToBase,
+  });
+  const stale = quote !== null && pricedKey !== pricingKey;
+
+  React.useEffect(() => {
+    if (!quote) return;
+    if (stale) {
+      // A number computed for a different trip must not survive into the
+      // save as an "agreed" total or a per-leg override.
+      if (!priceOverrideTouched) setAgreedTotal("");
+      setLegOverrides({});
+      return;
+    }
+    if (!priceOverrideTouched) setAgreedTotal(String(quote.total));
+  }, [quote, stale, priceOverrideTouched]);
 
   const update = (key: number, patch: Partial<Stop>) =>
     setStops((current) =>
@@ -477,7 +501,7 @@ export function ItineraryBuilder({ places }: { places: PlaceOption[] }) {
       </div>
 
       {/* ------------------------------------------------------ the price */}
-      <form action={price}>
+      <form action={price} onSubmit={() => setPricedKey(pricingKey)}>
         <input type="hidden" name="stops" value={payload} />
         <input
           type="hidden"
@@ -503,7 +527,17 @@ export function ItineraryBuilder({ places }: { places: PlaceOption[] }) {
         <p className="text-destructive text-sm">{priceState.message}</p>
       )}
 
-      {priced && quote && selected && (
+      {stale && (
+        <div className="border-warning/30 bg-warning-subtle/50 rounded-xl border p-4">
+          <p className="text-sm font-medium">The itinerary has changed since it was priced</p>
+          <p className="text-muted-foreground mt-1 text-sm leading-snug">
+            The price shown earlier was for a different trip, so it has been put
+            away. Price this itinerary again before creating the quote.
+          </p>
+        </div>
+      )}
+
+      {priced && quote && selected && !stale && (
         <section className="bg-card rounded-xl border p-4">
           {/* Every class, priced. The operator picks one and that choice is
               saved onto the legs, so the vehicle named on the quote is always
@@ -752,10 +786,22 @@ export function ItineraryBuilder({ places }: { places: PlaceOption[] }) {
           <p className="text-destructive text-sm">{saveState.message}</p>
         )}
 
-        <div>
-          <Button type="submit" disabled={saving} className="press h-11">
+        <div className="grid gap-2">
+          {/* A quote is created from what is on screen — the chosen class, the
+              agreed total, any per-leg override — so it cannot be created
+              until there is a current price on screen. */}
+          <Button
+            type="submit"
+            disabled={saving || !quote || stale}
+            className="press h-11"
+          >
             {saving ? "Creating…" : "Create the quote and get a link"}
           </Button>
+          {!quote && (
+            <p className="text-muted-foreground text-xs">
+              Price the itinerary first — the quote is created from the price on screen.
+            </p>
+          )}
         </div>
       </form>
     </div>
