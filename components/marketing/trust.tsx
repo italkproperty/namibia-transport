@@ -284,9 +284,10 @@ export async function ReviewBadge() {
       <span className="tabular font-semibold">
         {summary.average.toFixed(1)}/5
       </span>
-      <span className="text-muted-foreground">
-        from {summary.count} traveller{summary.count === 1 ? "" : "s"}
-      </span>
+      {/* The sample size is deliberately not printed. A small count reads as
+          small, and the number is a fact a reader can check on Google, where
+          the reviews are. The badge stays absent below MIN_REVIEWS_TO_DISPLAY. */}
+      <span className="text-muted-foreground">traveller rating</span>
     </p>
   );
 }
