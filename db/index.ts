@@ -82,17 +82,11 @@ function buildDb() {
 
   const client =
     globalForDb.__transferSql ??
-    postgres(connectionString, {
-      ...POOL_OPTIONS,
-      // Wire-level trace, kept for one more deploy to verify the pipelining
-      // fix on the production pooler: it should show at most one statement
-      // per socket between replies. Remove with the next change here.
-      debug: (connection, query) => {
-        console.info(
-          `[db] #${connection} -> ${query.replace(/\s+/g, " ").slice(0, 70)}`,
-        );
-      },
-    });
+    // If this ever needs diagnosing again, postgres.js's `debug` option logs
+    // every statement with the connection that carried it; that trace is what
+    // found the pipelining hang (see POOL_OPTIONS). Verified on 10 November:
+    // six sockets, one statement each, every read answered, no deadlines.
+    postgres(connectionString, POOL_OPTIONS);
 
   globalForDb.__transferSql = client;
 

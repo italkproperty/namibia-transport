@@ -74,10 +74,7 @@ function notify(error: DeadlineExceeded): void {
  * answered in seven seconds" — and those have opposite fixes. The threshold
  * keeps a healthy instance quiet.
  */
-// Temporarily 0 — every read logs its duration while the production stall is
-// being diagnosed; the wire trace in db/index.ts needs the completion times
-// to pair with. Restore to 1_000 with that trace.
-const SLOW_READ_MS = 0;
+const SLOW_READ_MS = 1_000;
 
 export async function withDeadline<T>(
   label: string,
