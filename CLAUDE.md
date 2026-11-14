@@ -12,7 +12,8 @@ gives its account to, and the only one that knows what Namibian ground transport
 costs and where it moves. Judge work against that, not against "does it ship".
 
 Live at namibiatransport.com. Every private transfer is priced per vehicle (WDH→Windhoek
-is N$650 for the whole car); passenger count and luggage select the vehicle class, never
+is N$950 for the whole car in a sedan, more in the SUV; operator-set in /admin/pricing, so
+treat this as the current figure, not a constant); passenger count and luggage select the vehicle class, never
 multiply the fare. Per-person pricing returns only with a genuine scheduled shared
 shuttle, which does not exist yet.
 
@@ -105,20 +106,15 @@ landed yet, and one unearned claim discredits the rest.
 
 ## Non-negotiable: Namibian reality
 - **Payments.** Stripe and Paddle do not serve Namibian entities — never add them, or any
-  subscription-billing library. **PayToday is not a settled choice.** It has returned 403
-  at `initialize()` since 27 August 2026 — `{"status":"unauthorized","error":"Authorization
-  error:"}` with the reason blank after the colon. PayToday say their side is correct, and
-  that is probably true *and* the 403 real: the refusal echoes our shop handle back, so
-  they know who we are and are refusing anyway. The header theory is now dead, with
-  evidence: the probe at `/admin/paytoday` ran against live credentials on 23 September
-  and every variant was refused identically — no Origin, apex, www, browser User-Agent.
-  We invented that `Origin` header, and it turned out to be neither the cause nor the
-  cure. So the 403 does not depend on the shape of our request, `PAYTODAY_HEADER_VARIANT`
-  stays unset, and re-running the probe or inventing a sixth variant is not progress —
-  the open question is theirs and is with their support desk. Until it clears, bank
-  transfer is the only way anyone can pay us, and evaluating an alternative gateway is
-  legitimate work, not disloyalty to a decision. Whatever is chosen sits behind the
-  `PaymentProvider` adapter; the stub stays the default.
+  subscription-billing library. **PayToday is live.** `PAYMENT_PROVIDER=paytoday` with the
+  keys set in production, card payment is offered on the live quote and booking pages, and
+  the operator confirms it completes end to end. It was not always so: `initialize()` 403'd
+  from 27 August 2026 for weeks, and that history (the header probes, the dead `Origin`
+  theory, `PAYTODAY_HEADER_VARIANT`) is in git, not here. Do not reopen it or write that
+  the gateway is broken unless a real card payment is observed failing in the Vercel logs.
+  Bank transfer remains a parallel channel, confirmed by a human. Any future gateway sits
+  behind the `PaymentProvider` adapter; the stub is for tests and unconfigured deployments,
+  never production.
 - **PayToday keys are server-only.** Shop Key, Shop Handle and Private Key never take a
   `NEXT_PUBLIC_` prefix and never reach a browser bundle. Their guide §3.3 forbids keys in
   client code even though their own React sample does it; we follow the disclaimer and run
@@ -361,15 +357,14 @@ Action ships without an authorisation check.
    6s deadline and the page names what did not load. If it recurs, the banner should say
    which read died; check `DATABASE_URL` is the transaction pooler and the project is not
    paused or at its connection limit.
-3. No working card gateway. PayToday has 403'd for a month; bank transfer is the only
-   channel. The header probe ran in production on 23 September and **every variant was
-   refused identically** — no Origin, apex, www, browser User-Agent. That retires the
-   header theory: the 403 does not depend on anything in the shape of our request, so
-   nothing on our side is left to change and `PAYTODAY_HEADER_VARIANT` stays unset. It is
-   now their question, and it is with them: the evidence went to
-   `PayTodaySupport@nedbank.com.na` asking what check fails in their logs, what
-   "Authorization error:" with an empty reason means, and whether API access is
-   provisioned separately from the portal and plugin. Do not re-litigate the headers.
+3. Card gateway: LIVE. PayToday is selected (`PAYMENT_PROVIDER=paytoday`) with its keys
+   set in production, so the live quote and booking pages serve "Pay securely by card"
+   alongside bank transfer, and the operator confirms card payments complete end to end.
+   The earlier `initialize()` 403 that blocked it for weeks has cleared — what resolved it
+   (keys reprovisioned, domain registered) is in git history, not here. Do NOT re-add
+   "gateway is broken / bank transfer only" to these notes or to any customer-facing copy;
+   verify against the live payment page before writing anything about payment channels.
+   If a card payment ever fails again, read it from the Vercel logs, not from this note.
 4. `MAIL_FROM` in Vercel is missing its angle brackets, so Spacemail rejected every
    confirmation email with `553 Sender address rejected`. The code now repairs a malformed
    value at runtime, but the variable is still wrong.
