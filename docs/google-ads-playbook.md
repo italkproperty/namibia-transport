@@ -75,10 +75,15 @@ Landing: `/transfers/windhoek-to-swakopmund`
 
 Keywords: "windhoek to swakopmund transfer", "windhoek to swakopmund shuttle", "windhoek swakopmund transport", "swakopmund to windhoek transfer", "transfer windhoek swakopmund", "shuttle windhoek swakopmund", "windhoek to walvis bay transfer", "windhoek to swakopmund private transfer"
 
-### Ad group 3 — Sossusvlei and charters
+### Ad group 3 — Sossusvlei, lodges and private driver
 Landing: `/destinations/sossusvlei`
 
-Keywords: "windhoek to sossusvlei transfer", "sossusvlei transfer", "transfer to sossusvlei", "sossusvlei private driver", "windhoek to sossusvlei driver", "namib desert lodge transfer", "sossusvlei lodge transfer", "sesriem transfer", "namibia private driver", "private driver namibia", "namibia driver guide"
+Keywords: "windhoek to sossusvlei transfer", "sossusvlei transfer", "transfer to sossusvlei", "sossusvlei private driver", "windhoek to sossusvlei driver", "namib desert lodge transfer", "sossusvlei lodge transfer", "sossus dune lodge transfer", "sesriem transfer", "namibia private driver", "private driver namibia", "namibia driver guide"
+
+### Ad group 4 — Etosha
+Landing: `/transfers/hosea-kutako-to-etosha`
+
+Keywords: "windhoek to etosha transfer", "etosha transfer", "transfer to etosha", "windhoek to etosha driver", "etosha national park transfer", "etosha airport transfer"
 
 ## Step 4 — negative keywords (campaign level)
 
@@ -133,7 +138,7 @@ Descriptions:
 - Pay by card or bank transfer. Support 06:00 to 22:00. Quote your reference any time.
 - Travelling the other way? We run Swakopmund to Windhoek at the same fixed price.
 
-### Group 3 — Sossusvlei and charters
+### Group 3 — Sossusvlei, lodges and private driver
 Headlines:
 - Windhoek to Sossusvlei
 - Sossusvlei Transfer
@@ -152,6 +157,25 @@ Descriptions:
 - Multi-day charter with your own driver. We quote the whole trip, not a price per seat.
 - See the price before you book. Pay by card or bank transfer. Support 06:00 to 22:00.
 - Transfers to Sossusvlei lodges and the Sesriem gate, priced from the real road distance.
+
+### Group 4 — Etosha
+Headlines:
+- Windhoek to Etosha
+- Etosha Park Transfer
+- Private Driver To Etosha
+- Fixed Price Per Vehicle
+- Your Driver, Your Pace
+- Price Shown Before You Book
+- Pay By Card Or Transfer
+- Private Car, Not A Bus
+- Book Online In Minutes
+- Namibia Private Driver
+
+Descriptions:
+- Private transfer from Windhoek to Etosha. One fixed price for the whole car.
+- Your own driver to the park gates and your lodge. See the price before you book.
+- Pay by card or bank transfer. Support 06:00 to 22:00. Quote your reference any time.
+- Priced from the real road distance to Etosha, not a guess. Book online in minutes.
 
 ## Step 6 — assets (campaign level)
 
