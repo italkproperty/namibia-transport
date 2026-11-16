@@ -1,3 +1,4 @@
+import { notifyOperatorBookingPaid } from "@/lib/booking/operator-notify";
 import { issueInvoiceForBooking } from "@/lib/invoices/issue";
 import "server-only";
 
@@ -216,6 +217,8 @@ export async function reconcileBookingPayment(
   if (status === "paid") {
     const invoice = await issueInvoiceForBooking(booking.id);
     if (!invoice.ok) console.error(`[payments] gateway payment on ${bookingRef} but no invoice: ${invoice.error}`);
+    // Money has arrived and the trip needs a driver — tell operations.
+    await notifyOperatorBookingPaid(booking.id);
   }
 
   return { payment: updated ?? payment, changed: true };

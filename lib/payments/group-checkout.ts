@@ -1,5 +1,6 @@
 "use server";
 
+import { notifyOperatorBookingPaid } from "@/lib/booking/operator-notify";
 import { issueInvoiceForBooking } from "@/lib/invoices/issue";
 import "server-only";
 
@@ -222,6 +223,7 @@ export async function reconcileGroupPayment(
     if (anyLeg) {
       const invoice = await issueInvoiceForBooking(anyLeg.id);
       if (!invoice.ok) console.error(`[payments] itinerary ${groupRef} paid but no invoice: ${invoice.error}`);
+      await notifyOperatorBookingPaid(anyLeg.id);
     }
   }
 }

@@ -1,3 +1,4 @@
+import { notifyOperatorCharterPaid } from "@/lib/booking/operator-notify";
 import { issueInvoiceForCharter } from "@/lib/invoices/issue";
 import { NextResponse, type NextRequest } from "next/server";
 import { and, desc, eq } from "drizzle-orm";
@@ -53,6 +54,7 @@ export async function GET(request: NextRequest) {
         if (status === "paid") {
           const invoice = await issueInvoiceForCharter(quote.id);
           if (!invoice.ok) console.error(`[charter-payment] ${quote.quoteNumber} paid but no invoice: ${invoice.error}`);
+          await notifyOperatorCharterPaid(quote.id);
         }
         pageUrl.searchParams.set("payment", status === "paid" ? "received" : status === "pending" ? "pending" : "contact");
       } else {
