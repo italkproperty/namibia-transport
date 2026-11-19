@@ -3,6 +3,7 @@ import "server-only";
 
 import { getDb, isDatabaseConfigured } from "@/db";
 import { DeadlineExceeded, WRITE_DEADLINE_MS, withDeadline } from "@/lib/deadline";
+import { and, eq, gte } from "drizzle-orm";
 import { bookings } from "@/db/schema";
 import { generateBookingRef } from "@/lib/booking/ref";
 import { namibianLocalToInstant } from "@/lib/booking/time";
@@ -264,6 +265,50 @@ export function departureOffset(
   return minutes;
 }
 
+/** How long after a save the same trip counts as a retry, not a new quote. */
+export const RETRY_WINDOW_MS = 15 * 60_000;
+
+type RecentLeg = {
+  ref: string;
+  groupRef: string | null;
+  scheduledAt: Date;
+  customerPrice: string;
+  journeySlug: string | null;
+};
+
+/**
+ * The group among a customer's recent quotes that is this exact trip: the same
+ * legs in the same order, leaving at the same instant, for the same total.
+ * Anything that differs — a changed price, a different day, one more stop — is
+ * a new quote and is saved as one. Pure, so the matching is tested without a
+ * database.
+ */
+export function findSameTrip(
+  recent: RecentLeg[],
+  wanted: { legSlugs: string[]; firstDeparture: Date; total: number },
+): { groupRef: string; refs: string[] } | null {
+  const groups = new Map<string, RecentLeg[]>();
+  for (const leg of recent) {
+    if (!leg.groupRef) continue;
+    groups.set(leg.groupRef, [...(groups.get(leg.groupRef) ?? []), leg]);
+  }
+  for (const [groupRef, legs] of groups) {
+    const ordered = [...legs].sort(
+      (a, b) => a.scheduledAt.getTime() - b.scheduledAt.getTime(),
+    );
+    if (ordered.length !== wanted.legSlugs.length) continue;
+    if (ordered[0].scheduledAt.getTime() !== wanted.firstDeparture.getTime()) continue;
+    if (!ordered.every((leg, i) => leg.journeySlug === wanted.legSlugs[i])) continue;
+    const cents = ordered.reduce(
+      (sum, leg) => sum + Math.round(Number(leg.customerPrice) * 100),
+      0,
+    );
+    if (cents !== Math.round(wanted.total * 100)) continue;
+    return { groupRef, refs: ordered.map((leg) => leg.ref) };
+  }
+  return null;
+}
+
 export async function saveItineraryQuote(
   input: SaveItineraryInput,
 ): Promise<SaveResult> {
@@ -340,13 +385,43 @@ export async function saveItineraryQuote(
     // for five minutes and then show the operator a 504. If the deadline
     // fires the pool is retired and this transaction is abandoned — Postgres
     // rolls back an open transaction when its connection drops.
-    const refs = await withDeadline("save itinerary quote", WRITE_DEADLINE_MS, () =>
+    const saved = await withDeadline("save itinerary quote", WRITE_DEADLINE_MS, () =>
       db.transaction(async (tx) => {
       const { customer } = await resolveCustomer(tx, {
         fullName: input.fullName,
         whatsapp: input.whatsapp || null,
         email: input.email || null,
       });
+
+      // A retry must not make a second quote. The operator's phone can lose
+      // the reply to a save that committed — "Creating…" sat for five minutes
+      // on 19 November with nothing in the server log — and the only safe
+      // thing to tell them is "press it again". So the same trip, for the same
+      // customer, at the same total, saved in the last fifteen minutes, is the
+      // quote they are asking for: hand it back instead of writing another.
+      const recent = await tx
+        .select({
+          ref: bookings.ref,
+          groupRef: bookings.groupRef,
+          scheduledAt: bookings.scheduledAt,
+          customerPrice: bookings.customerPrice,
+          journeySlug: bookings.journeySlug,
+        })
+        .from(bookings)
+        .where(
+          and(
+            eq(bookings.customerId, customer.id),
+            eq(bookings.acquisitionSource, "admin-itinerary"),
+            eq(bookings.status, "pending_payment"),
+            gte(bookings.createdAt, new Date(Date.now() - RETRY_WINDOW_MS)),
+          ),
+        );
+      const existing = findSameTrip(recent, {
+        legSlugs: quote.legs.map((leg) => journeySlug(leg.fromSlug, leg.toSlug)),
+        firstDeparture: start,
+        total,
+      });
+      if (existing) return existing;
 
       const saved: string[] = [];
       let allocated = 0;
@@ -407,11 +482,11 @@ export async function saveItineraryQuote(
         saved.push(row.ref);
       }
 
-      return saved;
+      return { groupRef, refs: saved };
       }),
     );
 
-    return { ok: true, groupRef, refs, total };
+    return { ok: true, groupRef: saved.groupRef, refs: saved.refs, total };
   } catch (error) {
     console.error("[admin] itinerary quote failed", error);
     if (error instanceof DeadlineExceeded) {

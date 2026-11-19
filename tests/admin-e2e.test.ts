@@ -270,6 +270,42 @@ async function main() {
     check("the itinerary saves", saved.ok, saved.ok ? "" : saved.message);
     if (!saved.ok) throw new Error("cannot continue without a saved quote");
 
+    // The operator's phone lost the reply and they pressed Create again.
+    const input = {
+      fullName: "E2E Traveller",
+      whatsapp: "",
+      email: `${TAG}@example.test`,
+      vehicleClassId: suv?.id ?? null,
+      stops: [
+        { slug: "hosea-kutako", nights: 0 },
+        { slug: "sossusvlei", label: "A Lodge", nights: 2 },
+        { slug: "hosea-kutako", nights: 0 },
+      ],
+      startDate: "2026-11-02",
+      startTime: "13:05",
+      passengers: 2,
+      luggageCount: 4,
+    };
+    const retried = await saveItineraryQuote(input);
+    check(
+      "a retried save returns the same quote",
+      retried.ok && retried.groupRef === saved.groupRef,
+      retried.ok ? retried.groupRef : retried.message,
+    );
+    const changed = await saveItineraryQuote({ ...input, agreedTotal: saved.total + 500 });
+    check(
+      "the same trip at a different price is a new quote",
+      changed.ok && changed.groupRef !== saved.groupRef,
+    );
+    if (changed.ok) {
+      await db.delete(bookings).where(eq(bookings.groupRef, changed.groupRef));
+    }
+    const rowsAfterRetry = await db
+      .select({ ref: bookings.ref })
+      .from(bookings)
+      .where(eq(bookings.groupRef, saved.groupRef));
+    check("the retry wrote no extra rows", rowsAfterRetry.length === 2, String(rowsAfterRetry.length));
+
     // Tag the legs so cleanup can find them however the test exits.
     await db
       .update(bookings)

@@ -13,6 +13,7 @@
  */
 import {
   departureOffset,
+  findSameTrip,
   priceItinerary,
   type QuoteStop,
 } from "@/lib/admin/itinerary-quote";
@@ -288,6 +289,53 @@ check(
     );
   })(),
 );
+
+// --- a retried save hands back the quote it already made -------------------
+{
+  const at = new Date("2027-02-24T09:30:00Z");
+  const leg = (over: Partial<Parameters<typeof findSameTrip>[0][number]> = {}) => ({
+    ref: "NT-A",
+    groupRef: "G1",
+    scheduledAt: at,
+    customerPrice: "7000.00",
+    journeySlug: "hosea-kutako-to-keetmanshoop",
+    ...over,
+  });
+  const wanted = {
+    legSlugs: ["hosea-kutako-to-keetmanshoop"],
+    firstDeparture: at,
+    total: 7000,
+  };
+  check("the same trip is found", findSameTrip([leg()], wanted)?.groupRef === "G1");
+  check(
+    "a different total is a new quote",
+    findSameTrip([leg({ customerPrice: "6500.00" })], wanted) === null,
+  );
+  check(
+    "a different departure is a new quote",
+    findSameTrip([leg({ scheduledAt: new Date("2027-02-25T09:30:00Z") })], wanted) === null,
+  );
+  check(
+    "a different road is a new quote",
+    findSameTrip([leg({ journeySlug: "windhoek-to-keetmanshoop" })], wanted) === null,
+  );
+  check(
+    "a trip with an extra leg is a new quote",
+    findSameTrip(
+      [leg(), leg({ ref: "NT-B", scheduledAt: new Date("2027-02-26T09:30:00Z"), customerPrice: "0.00" })],
+      wanted,
+    ) === null,
+  );
+  const two = findSameTrip(
+    [
+      leg({ ref: "NT-2", scheduledAt: new Date("2027-02-26T09:30:00Z"), customerPrice: "3000.00", journeySlug: "b" }),
+      leg({ ref: "NT-1", customerPrice: "4000.00", journeySlug: "a" }),
+    ],
+    { legSlugs: ["a", "b"], firstDeparture: at, total: 7000 },
+  );
+  check("legs come back in travel order", two?.refs.join() === "NT-1,NT-2");
+  check("a leg with no group is never matched", findSameTrip([leg({ groupRef: null })], wanted) === null);
+}
 
 console.log(`\n${passed} passed, ${failed} failed`);
 if (failed > 0) process.exit(1);

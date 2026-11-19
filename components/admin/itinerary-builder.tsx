@@ -18,7 +18,6 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
   priceItineraryAction,
-  saveItineraryAction,
   type PriceState,
   type SaveState,
 } from "@/lib/admin/itinerary-actions";
@@ -26,6 +25,9 @@ import { whatsappLink } from "@/lib/company";
 import { formatDuration } from "@/lib/format";
 import { formatNad } from "@/lib/money";
 import type { AIQuoteDraft } from "@/lib/admin/ai-quote-actions";
+
+/** Longer than the server's own 15-second write deadline, so its answer wins. */
+const SAVE_TIMEOUT_MS = 25_000;
 
 type Stop = { key: number; slug: string | null; label: string; nights: number };
 
@@ -116,10 +118,43 @@ export function ItineraryBuilder({ places }: { places: PlaceOption[] }) {
     PriceState,
     FormData
   >(priceItineraryAction, null);
-  const [saveState, save, saving] = React.useActionState<SaveState, FormData>(
-    saveItineraryAction,
-    null,
-  );
+  /**
+   * The save is a fetch, not a Server Action, so it can be given up on. A
+   * Server Action whose reply is lost on a mobile connection leaves the
+   * button on "Creating…" for good — five minutes of it on 19 November, with
+   * nothing in the server log — and React queues any retry behind it. A fetch
+   * is aborted after SAVE_TIMEOUT_MS and may be sent again; the server hands
+   * back the quote it already saved rather than writing a second one.
+   */
+  const [saveState, setSaveState] = React.useState<SaveState>(null);
+  const [saving, setSaving] = React.useState(false);
+  const save = async (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    if (saving) return;
+    const body = new FormData(event.currentTarget);
+    const controller = new AbortController();
+    const timer = window.setTimeout(() => controller.abort(), SAVE_TIMEOUT_MS);
+    setSaving(true);
+    setSaveState(null);
+    try {
+      const response = await fetch("/api/admin/itinerary-quote", {
+        method: "POST",
+        body,
+        signal: controller.signal,
+      });
+      setSaveState((await response.json()) as SaveState);
+    } catch {
+      setSaveState({
+        ok: false,
+        message: controller.signal.aborted
+          ? `No answer after ${SAVE_TIMEOUT_MS / 1000} seconds — the connection dropped or the database is slow. Press Create again: if the first attempt did save, you get that same quote back, not a second one.`
+          : "The request did not reach the server — check your connection and press Create again. It will not make a duplicate.",
+      });
+    } finally {
+      window.clearTimeout(timer);
+      setSaving(false);
+    }
+  };
   const [copied, setCopied] = React.useState(false);
 
   const priced = priceState?.ok ? priceState.quotes : null;
@@ -703,7 +738,7 @@ export function ItineraryBuilder({ places }: { places: PlaceOption[] }) {
       )}
 
       {/* ------------------------------------------------------- the save */}
-      <form action={save} className="grid gap-4">
+      <form onSubmit={save} className="grid gap-4">
         <input type="hidden" name="stops" value={payload} />
         <input
           type="hidden"
