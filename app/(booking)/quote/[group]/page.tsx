@@ -146,6 +146,7 @@ export default async function QuoteGroupPage({ params }: PageProps) {
                   </div>
                   <p className="text-muted-foreground mt-1.5 text-sm">
                     {formatDateTime(leg.scheduledAt)}
+                    {leg.vehicleName ? ` · ${leg.vehicleName}` : ""}
                     {leg.durationMin
                       ? ` · about ${formatDuration(leg.durationMin)}`
                       : ""}

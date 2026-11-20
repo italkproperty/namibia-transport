@@ -12,6 +12,7 @@ import { modelPayout } from "@/lib/network/fare-model";
 import { SITE } from "@/lib/site";
 import { resolveCustomer } from "@/lib/booking/customer";
 import { isUniqueViolation } from "@/lib/db-error";
+import { generateGroupRef } from "@/lib/admin/itinerary-quote";
 
 /**
  * Quotes an operator writes by hand, for the trips the model cannot price.
@@ -35,7 +36,7 @@ import { isUniqueViolation } from "@/lib/db-error";
  */
 
 export type QuoteFormState =
-  | { ok: true; ref: string; url: string }
+  | { ok: true; ref: string; url: string; legCount: number; total: string }
   | { ok: false; message: string }
   | null;
 
@@ -131,6 +132,57 @@ export async function createCustomQuote(
     return { ok: false, message: "Give the pickup date and time." };
   }
 
+  /**
+   * An optional second driving job on the same quote.
+   *
+   * "Swakopmund to a guest farm by the airport in the SUV, then the farm to
+   * the terminal at 05:00 in a sedan" is two jobs, two vehicles and two fares
+   * the client was quoted separately, and it has to be one link and one
+   * payment. Writing the second into the notes — what the return field still
+   * does — is what made a client email to ask whether his return was
+   * included. So it is a second booking sharing a group_ref, exactly as the
+   * itinerary builder stores a trip, and everything that reads a group
+   * (the quote page, payment, the invoice, dispatch) already understands it.
+   */
+  const leg2 = {
+    pickupLabel: field(formData, "leg2PickupLabel"),
+    dropoffLabel: field(formData, "leg2DropoffLabel"),
+    scheduledAtRaw: field(formData, "leg2ScheduledAt"),
+    priceRaw: field(formData, "leg2Price"),
+    vehicleClassId: field(formData, "leg2VehicleClassId"),
+  };
+  const hasLeg2 = Boolean(
+    leg2.pickupLabel || leg2.dropoffLabel || leg2.scheduledAtRaw || leg2.priceRaw,
+  );
+  let leg2Price: string | null = null;
+  let leg2ScheduledAt: Date | null = null;
+  if (hasLeg2) {
+    // Half a second leg must never be saved as a one-leg quote: the operator
+    // would send a link that silently leaves out a transfer they promised.
+    if (!leg2.pickupLabel || !leg2.dropoffLabel) {
+      return { ok: false, message: "The second leg needs both ends, or clear it entirely." };
+    }
+    leg2Price = parseMoney(leg2.priceRaw);
+    if (!leg2Price) {
+      return { ok: false, message: "The second leg needs its own fare, like 950." };
+    }
+    const [d2, t2] = leg2.scheduledAtRaw.split("T");
+    try {
+      leg2ScheduledAt = namibianLocalToInstant(d2 ?? "", t2 ?? "");
+    } catch {
+      return { ok: false, message: "Give the second leg's pickup date and time." };
+    }
+    if (leg2ScheduledAt.getTime() <= scheduledAt.getTime()) {
+      return { ok: false, message: "The second leg must leave after the first." };
+    }
+    if (returnAt) {
+      return {
+        ok: false,
+        message: "Use either the return date or a second leg, not both — the second leg is the one the traveller sees priced.",
+      };
+    }
+  }
+
   const passengers = Number(field(formData, "passengers") || "1");
   const luggageCount = Number(field(formData, "luggageCount") || "0");
 
@@ -165,48 +217,94 @@ export async function createCustomQuote(
 
     const contribution = (Number(price) - Number(payout)).toFixed(2);
 
-    let row;
-    for (let attempt = 0; attempt < 5; attempt += 1) {
-      try {
-        [row] = await db
-          .insert(bookings)
-          .values({
-            ref: generateBookingRef(),
-            customerId: customer.id,
-            vehicleClassId: vehicleClass?.id ?? null,
-            pickupLabel,
-            dropoffLabel,
-            scheduledAt,
-            passengers: Number.isFinite(passengers)
-              ? Math.max(1, passengers)
-              : 1,
-            luggageCount: Number.isFinite(luggageCount)
-              ? Math.max(0, luggageCount)
-              : 0,
-            customerPrice: price,
-            driverPayout: payout,
-            contribution,
-            isReturn: Boolean(returnAt),
-            acquisitionSource: "admin-quote",
-            status: "pending_payment",
-            notes: composedNotes || null,
-          })
-          .returning();
-        break;
-      } catch (error) {
-        const duplicate =
-          isUniqueViolation(error, "bookings_ref_key");
-        if (!duplicate || attempt === 4) throw error;
-      }
+    const people = Number.isFinite(passengers) ? Math.max(1, passengers) : 1;
+    const cases = Number.isFinite(luggageCount) ? Math.max(0, luggageCount) : 0;
+
+    const legs = [
+      {
+        vehicleClassId: vehicleClass?.id ?? null,
+        pickupLabel,
+        dropoffLabel,
+        scheduledAt,
+        customerPrice: price,
+        driverPayout: payout,
+        contribution,
+        isReturn: Boolean(returnAt),
+        notes: composedNotes || null,
+      },
+    ];
+    if (hasLeg2 && leg2Price && leg2ScheduledAt) {
+      const [leg2Class] = leg2.vehicleClassId
+        ? await db
+            .select({ id: vehicleClasses.id })
+            .from(vehicleClasses)
+            .where(eq(vehicleClasses.id, leg2.vehicleClassId))
+            .limit(1)
+        : [];
+      const leg2Payout = modelPayout(Number(leg2Price)).toFixed(2);
+      legs.push({
+        vehicleClassId: leg2Class?.id ?? null,
+        pickupLabel: leg2.pickupLabel,
+        dropoffLabel: leg2.dropoffLabel,
+        scheduledAt: leg2ScheduledAt,
+        customerPrice: leg2Price,
+        driverPayout: leg2Payout,
+        contribution: (Number(leg2Price) - Number(leg2Payout)).toFixed(2),
+        isReturn: false,
+        notes: null,
+      });
     }
 
-    if (!row) return { ok: false, message: "Could not allocate a reference." };
+    // One leg stays an ordinary booking at /pay/REF, as it always was. Two
+    // share a group_ref and are saved together or not at all: a first leg
+    // that survived a failed second would be a payable link for half the trip.
+    const groupRef = legs.length > 1 ? generateGroupRef() : null;
+    const saved = await db.transaction(async (tx) => {
+      const rows = [];
+      for (const leg of legs) {
+        let row;
+        for (let attempt = 0; attempt < 5; attempt += 1) {
+          try {
+            // A savepoint, because a unique violation otherwise aborts the
+            // whole transaction and the retry would fail on the first statement.
+            [row] = await tx.transaction((sp) =>
+              sp
+                .insert(bookings)
+                .values({
+                  ref: generateBookingRef(),
+                  groupRef,
+                  customerId: customer.id,
+                  passengers: people,
+                  luggageCount: cases,
+                  acquisitionSource: "admin-quote",
+                  status: "pending_payment",
+                  ...leg,
+                })
+                .returning(),
+            );
+            break;
+          } catch (error) {
+            const duplicate = isUniqueViolation(error, "bookings_ref_key");
+            if (!duplicate || attempt === 4) throw error;
+          }
+        }
+        if (!row) throw new Error("Could not allocate a reference.");
+        rows.push(row);
+      }
+      return rows;
+    });
+
+    const base = SITE.url.replace(/\/+$/, "");
+    const total = saved
+      .reduce((sum, row) => sum + Math.round(Number(row.customerPrice) * 100), 0);
 
     revalidatePath("/admin/bookings");
     return {
       ok: true,
-      ref: row.ref,
-      url: `${SITE.url.replace(/\/+$/, "")}/pay/${row.ref}`,
+      ref: groupRef ?? saved[0].ref,
+      legCount: saved.length,
+      total: (total / 100).toFixed(2),
+      url: groupRef ? `${base}/quote/${groupRef}` : `${base}/pay/${saved[0].ref}`,
     };
   } catch (error) {
     console.error("[admin] custom quote failed", error);

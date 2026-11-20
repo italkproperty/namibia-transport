@@ -12,6 +12,7 @@ import {
   type QuoteFormState,
 } from "@/lib/admin/quote-actions";
 import { whatsappLink } from "@/lib/company";
+import { formatNad } from "@/lib/money";
 import {
   FareReference,
   type QuotableClass,
@@ -63,6 +64,12 @@ export function QuoteForm({
           <CheckCircle2Icon className="size-5" aria-hidden />
           Quote {state.ref} created
         </p>
+        {state.legCount > 1 && (
+          <p className="mt-2 text-sm">
+            {state.legCount} legs, {formatNad(state.total)} in total, on one
+            link and one payment.
+          </p>
+        )}
         <p className="text-muted-foreground mt-2 text-sm leading-relaxed">
           This is your customer payment page. They can review the trip and open secure card checkout from the link. Bank-transfer instructions remain available separately where configured.
         </p>
@@ -120,7 +127,17 @@ export function QuoteForm({
   }
 
   return (
-    <form action={action} className="grid gap-6">
+    <form
+      // Submitted by hand rather than as `action={…}`: React resets a form
+      // after its action runs, so one refused field ("the second leg needs its
+      // own fare") used to wipe every other field the operator had typed.
+      onSubmit={(event) => {
+        event.preventDefault();
+        const data = new FormData(event.currentTarget);
+        React.startTransition(() => action(data));
+      }}
+      className="grid gap-6"
+    >
       <fieldset>
         <legend className="mb-3 text-sm font-semibold">
           Who is travelling
@@ -206,6 +223,51 @@ export function QuoteForm({
         </div>
       </fieldset>
 
+      <details className="bg-muted/40 rounded-xl border p-4">
+        <summary className="focus-ring cursor-pointer rounded text-sm font-semibold">
+          Add a second leg on the same quote
+        </summary>
+        <p className="text-muted-foreground mt-2 text-xs leading-relaxed">
+          A separate drive with its own date, vehicle and fare — an airport run
+          the next morning, say. The traveller gets one link and pays one total.
+          Leave it all blank for a single trip.
+        </p>
+        <div className="mt-4 grid gap-4 sm:grid-cols-2">
+          <Field label="Second leg: picking up from" name="leg2PickupLabel" />
+          <Field label="Second leg: going to" name="leg2DropoffLabel" />
+          <Field
+            label="Second leg: pickup date and time"
+            name="leg2ScheduledAt"
+            type="datetime-local"
+          />
+          <Field
+            label="Second leg: fare (N$)"
+            name="leg2Price"
+            inputMode="decimal"
+            placeholder="950"
+            hint="Added to the fare below to make the total."
+          />
+          {vehicleClasses.length > 0 && (
+            <div className="grid gap-1.5 sm:col-span-2">
+              <Label htmlFor="leg2VehicleClassId">Second leg: vehicle</Label>
+              <select
+                id="leg2VehicleClassId"
+                name="leg2VehicleClassId"
+                className="border-input bg-background focus-ring h-10 rounded-md border px-3 text-sm"
+                defaultValue=""
+              >
+                <option value="">Decide later</option>
+                {vehicleClasses.map((vc) => (
+                  <option key={vc.id} value={vc.id}>
+                    {vc.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
+        </div>
+      </details>
+
       <fieldset>
         <legend className="mb-3 text-sm font-semibold">The money</legend>
         <div className="grid gap-4 sm:grid-cols-2">
@@ -215,7 +277,7 @@ export function QuoteForm({
             required
             inputMode="decimal"
             placeholder="6000"
-            hint="The whole vehicle, and the whole trip including any return."
+            hint="The whole vehicle for this leg, including any return. A second leg carries its own fare."
             value={price}
             onChange={setPrice}
           />

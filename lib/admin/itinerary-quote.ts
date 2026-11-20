@@ -222,7 +222,7 @@ export type SaveResult =
   | { ok: false; message: string };
 
 /** `NT-G-XXXXXX`, so a group reference is never mistaken for a booking's. */
-function generateGroupRef(): string {
+export function generateGroupRef(): string {
   return generateBookingRef().replace("NT-", "NT-G-");
 }
 

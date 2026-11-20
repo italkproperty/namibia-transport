@@ -339,10 +339,10 @@ write paths against a real database, and a guard that fails the build if a new S
 Action ships without an authorisation check.
 
 **Broken, in order of cost.**
-0. The manual quote form still stores a return as a sentence in the notes rather than a
-   second leg sharing a `group_ref`, which is what made a real client email to ask whether
-   his return was included. The model-priced itinerary builder does it correctly; the
-   manual form is the one to bring up to it.
+0. The manual quote form's "Returning on" date still stores a return as a sentence in the
+   notes. It now also takes a real second leg (own date, vehicle and fare, shared
+   `group_ref`, one link at `/quote/<group>`), which is the route to use; the return-date
+   field should be retired into it.
 1. `db/manual/RUN-ME.sql` has three unrun blocks at the bottom: the invoices table and
    sequence (10 November), without which no invoice is issued and the admin says so; and two from 24 September: the
    `customers` change, without which an email-only booking is accepted by the code and

@@ -3,7 +3,7 @@ import "server-only";
 import { asc, eq } from "drizzle-orm";
 
 import { getDb, isDatabaseConfigured } from "@/db";
-import { bookings, customers } from "@/db/schema";
+import { bookings, customers, vehicleClasses } from "@/db/schema";
 import { READ_DEADLINE_MS, withDeadline } from "@/lib/deadline";
 
 export type QuoteGroup = {
@@ -28,6 +28,8 @@ export type QuoteGroup = {
     /** `a-to-b` node pair, so an airport leg is identified by the node rather
      *  than by a display label that may name a lodge instead. */
     journeySlug: string | null;
+    /** Null when no class was chosen; a trip may use a different car per leg. */
+    vehicleName: string | null;
     pickupDetail: string | null;
     travellerNotes: string | null;
     flightNumber: string | null;
@@ -60,9 +62,11 @@ export async function getQuoteGroup(
           booking: bookings,
           customerName: customers.fullName,
           customerWhatsapp: customers.whatsapp,
+          vehicleName: vehicleClasses.name,
         })
         .from(bookings)
         .innerJoin(customers, eq(bookings.customerId, customers.id))
+        .leftJoin(vehicleClasses, eq(bookings.vehicleClassId, vehicleClasses.id))
         .where(eq(bookings.groupRef, groupRef))
         .orderBy(asc(bookings.scheduledAt)),
     );
@@ -90,6 +94,7 @@ export async function getQuoteGroup(
         durationMin: row.booking.durationMin,
         status: row.booking.status,
         journeySlug: row.booking.journeySlug,
+        vehicleName: row.vehicleName,
         pickupDetail: row.booking.pickupDetail,
         travellerNotes: row.booking.travellerNotes,
         flightNumber: row.booking.flightNumber,
