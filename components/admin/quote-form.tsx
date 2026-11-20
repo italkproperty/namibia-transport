@@ -11,7 +11,6 @@ import {
   createCustomQuote,
   type QuoteFormState,
 } from "@/lib/admin/quote-actions";
-import type { AIQuoteDraft } from "@/lib/admin/ai-quote-actions";
 import { whatsappLink } from "@/lib/company";
 import { formatNad } from "@/lib/money";
 import {
@@ -56,62 +55,6 @@ export function QuoteForm({
   // it was priced for. These were independent fields, which is how a quote
   // came to say "Private Car" above a number computed for something else.
   const [vehicleClassId, setVehicleClassId] = React.useState("");
-
-  /**
-   * Filled by the AI assistant when a thread already contains priced,
-   * accepted legs. Uncontrolled fields are written straight to the DOM by
-   * name — the form is submitted from FormData, so what is on screen is what
-   * is saved, and the operator can still change any of it before Create.
-   */
-  const formRef = React.useRef<HTMLFormElement>(null);
-  const [filledByAI, setFilledByAI] = React.useState(false);
-  React.useEffect(() => {
-    const classFor = (vehicle: string) =>
-      vehicleClasses.find((vc) =>
-        vehicle === "suv" ? /suv|4x4/i.test(vc.name) : vehicle === "private-car" ? /car|sedan/i.test(vc.name) : false,
-      )?.id ?? "";
-    const onAgreed = (event: Event) => {
-      const draft = (event as CustomEvent<AIQuoteDraft>).detail;
-      const form = formRef.current;
-      const [first, second] = draft?.quotedLegs ?? [];
-      if (!form || !first) return;
-      const set = (name: string, value: string) => {
-        const input = form.elements.namedItem(name);
-        if (input instanceof HTMLInputElement || input instanceof HTMLSelectElement) {
-          input.value = value;
-        }
-      };
-      form.reset();
-      set("fullName", draft.customer.fullName);
-      set("email", draft.customer.email);
-      set("pickupLabel", first.pickupLabel);
-      set("dropoffLabel", first.dropoffLabel);
-      set("scheduledAt", `${first.date}T${first.time}`);
-      set("passengers", String(Math.max(1, draft.passengers || 1)));
-      set("luggageCount", String(Math.max(0, draft.luggageCount || 0)));
-      set("notes", draft.notes ?? "");
-      setWhatsapp(draft.customer.whatsapp);
-      setPrice(String(first.price));
-      setVehicleClassId(classFor(first.vehicle));
-      set("leg2PickupLabel", second?.pickupLabel ?? "");
-      set("leg2DropoffLabel", second?.dropoffLabel ?? "");
-      set("leg2ScheduledAt", second ? `${second.date}T${second.time}` : "");
-      set("leg2Price", second ? String(second.price) : "");
-      set("leg2VehicleClassId", second ? classFor(second.vehicle) : "");
-      // Both disclosures must be open or the operator creates a quote from
-      // fields they cannot see.
-      form.querySelectorAll("details").forEach((d) => {
-        if (second) d.open = true;
-      });
-      const outer = form.closest("details");
-      if (outer) outer.open = true;
-      setFilledByAI(true);
-      form.scrollIntoView({ behavior: "smooth", block: "start" });
-    };
-    window.addEventListener("namibia-transport:ai-agreed-quote", onAgreed);
-    return () =>
-      window.removeEventListener("namibia-transport:ai-agreed-quote", onAgreed);
-  }, [vehicleClasses]);
 
   if (state?.ok) {
     const message = `Hi — here is your quote from Namibia Transport. Review your trip and pay securely by card on this link: ${state.url}`;
@@ -185,7 +128,6 @@ export function QuoteForm({
 
   return (
     <form
-      ref={formRef}
       // Submitted by hand rather than as `action={…}`: React resets a form
       // after its action runs, so one refused field ("the second leg needs its
       // own fare") used to wipe every other field the operator had typed.
@@ -196,12 +138,6 @@ export function QuoteForm({
       }}
       className="grid gap-6"
     >
-      {filledByAI && (
-        <p className="border-success/30 bg-success/5 rounded-lg border p-3 text-sm">
-          Filled from the conversation. Check the names, times, vehicles and
-          both fares, then press Create.
-        </p>
-      )}
       <fieldset>
         <legend className="mb-3 text-sm font-semibold">
           Who is travelling
@@ -336,7 +272,7 @@ export function QuoteForm({
         <legend className="mb-3 text-sm font-semibold">The money</legend>
         <div className="grid gap-4 sm:grid-cols-2">
           <Field
-            label="Fare (N$)"
+            label="Fare for this leg (N$)"
             name="price"
             required
             inputMode="decimal"

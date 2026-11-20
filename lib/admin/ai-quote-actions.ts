@@ -640,12 +640,6 @@ export async function analyseQuoteConversation(
       .filter(({ stop }) => !stop.slug)
       .map(({ stop, index }) => stop.query || extractedStops[index]?.label || extractedStops[index]?.slug)
       .filter(Boolean) as string[];
-    draft.missing = [
-      ...new Set([
-        ...(draft.missing ?? []),
-        ...unresolved.map((place) => `Confirm the routing anchor for ${place}`),
-      ]),
-    ];
 
     // Quoted legs are untrusted too. Anything malformed drops the whole set:
     // a form half-filled from a bad extraction reads as a finished quote.
@@ -669,13 +663,40 @@ export async function analyseQuoteConversation(
       ? quotedLegs
       : [];
 
+    // With the legs already priced in the thread the road model is not asked
+    // for anything, so "confirm the routing anchor" is noise that buries the
+    // things the operator does need to confirm.
+    draft.missing = [
+      ...new Set([
+        ...(draft.missing ?? []),
+        ...(draft.quotedLegs.length > 0
+          ? []
+          : unresolved.map((place) => `Confirm the routing anchor for ${place}`)),
+      ]),
+    ].filter(
+      (item) =>
+        draft.quotedLegs.length === 0 ||
+        !/place catalogue|routing anchor|route needs a manual check/i.test(item),
+    );
+
     draft.existingBookingRefs = [...new Set(draft.existingBookingRefs ?? [])]
       .filter((ref) => existingBookings.some((booking) => booking.ref === ref));
+
+    // The pasted text may not carry the contact the model worked out (a
+    // forwarded thread, a number written with spaces). Look once more by the
+    // extracted contact, so an unpaid quote this customer already holds is
+    // offered for replacement instead of silently duplicated.
+    const matchedBookings =
+      existingBookings.length > 0
+        ? existingBookings
+        : await findExistingBookings(
+            [draft.customer?.email ?? "", draft.customer?.whatsapp ?? ""].join("\n"),
+          );
 
     return {
       ok: true,
       draft,
-      matchedBookings: existingBookings,
+      matchedBookings,
       assistantReply:
         typeof assistantReply === "string" && assistantReply.trim()
           ? assistantReply.trim()

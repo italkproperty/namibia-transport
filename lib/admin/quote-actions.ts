@@ -1,10 +1,10 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { eq } from "drizzle-orm";
+import { and, eq, inArray, or } from "drizzle-orm";
 
 import { getDb, isDatabaseConfigured } from "@/db";
-import { bookings, vehicleClasses } from "@/db/schema";
+import { bookings, payments, vehicleClasses } from "@/db/schema";
 import { getAdminGateState } from "@/lib/admin/auth";
 import { generateBookingRef } from "@/lib/booking/ref";
 import { namibianLocalToInstant } from "@/lib/booking/time";
@@ -13,6 +13,7 @@ import { SITE } from "@/lib/site";
 import { resolveCustomer } from "@/lib/booking/customer";
 import { isUniqueViolation } from "@/lib/db-error";
 import { generateGroupRef } from "@/lib/admin/itinerary-quote";
+import { ReplaceRefused } from "@/lib/admin/replace-refused";
 
 /**
  * Quotes an operator writes by hand, for the trips the model cannot price.
@@ -259,7 +260,59 @@ export async function createCustomQuote(
     // share a group_ref and are saved together or not at all: a first leg
     // that survived a failed second would be a payable link for half the trip.
     const groupRef = legs.length > 1 ? generateGroupRef() : null;
+
+    /**
+     * Quotes this one replaces. An operator who issued a quote with a wrong
+     * figure needs the corrected one to be the only payable link, and doing
+     * that by hand (find the row, cancel it, come back) is exactly the step
+     * that gets skipped — leaving two live prices for one trip. So the old
+     * quote is cancelled in the same transaction that writes the new one:
+     * both happen or neither does. Only an unpaid, still-pending quote can be
+     * replaced; anything else refuses the whole save.
+     */
+    let replaces: string[] = [];
+    try {
+      const parsed = JSON.parse(field(formData, "replaces") || "[]") as unknown;
+      if (Array.isArray(parsed)) {
+        replaces = parsed.map((v) => String(v).trim().toUpperCase()).filter(Boolean).slice(0, 10);
+      }
+    } catch {
+      return { ok: false, message: "The list of quotes to replace could not be read." };
+    }
+
     const saved = await db.transaction(async (tx) => {
+      if (replaces.length > 0) {
+        const old = await tx
+          .select({ id: bookings.id, ref: bookings.ref, status: bookings.status })
+          .from(bookings)
+          .where(or(inArray(bookings.groupRef, replaces), inArray(bookings.ref, replaces)));
+        if (old.length === 0) {
+          throw new ReplaceRefused("The quote to replace was not found. Untick it and create again.");
+        }
+        const notPending = old.find((row) => row.status !== "pending_payment");
+        if (notPending) {
+          throw new ReplaceRefused(
+            `${notPending.ref} is ${notPending.status.replace(/_/g, " ")}, so it cannot be replaced. Untick it and create again.`,
+          );
+        }
+        const [paid] = await tx
+          .select({ id: payments.id })
+          .from(payments)
+          .where(and(inArray(payments.bookingId, old.map((row) => row.id)), eq(payments.status, "paid")))
+          .limit(1);
+        if (paid) {
+          throw new ReplaceRefused("Money has arrived against the old quote, so it cannot be replaced.");
+        }
+        await tx
+          .update(bookings)
+          .set({
+            status: "cancelled",
+            cancellationReason: "Replaced by a corrected quote.",
+            updatedAt: new Date(),
+          })
+          .where(inArray(bookings.id, old.map((row) => row.id)));
+      }
+
       const rows = [];
       for (const leg of legs) {
         let row;
@@ -299,6 +352,7 @@ export async function createCustomQuote(
       .reduce((sum, row) => sum + Math.round(Number(row.customerPrice) * 100), 0);
 
     revalidatePath("/admin/bookings");
+    for (const ref of replaces) revalidatePath(`/quote/${ref}`);
     return {
       ok: true,
       ref: groupRef ?? saved[0].ref,
@@ -307,6 +361,7 @@ export async function createCustomQuote(
       url: groupRef ? `${base}/quote/${groupRef}` : `${base}/pay/${saved[0].ref}`,
     };
   } catch (error) {
+    if (error instanceof ReplaceRefused) return { ok: false, message: error.message };
     console.error("[admin] custom quote failed", error);
     return {
       ok: false,

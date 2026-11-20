@@ -113,7 +113,9 @@ export default async function NewQuotePage() {
           </div>
         )}
 
-        <AIQuoteAssistant />
+        <AIQuoteAssistant
+          vehicleClasses={vehicleClasses.map((vc) => ({ id: vc.id, name: vc.name }))}
+        />
 
         <ItineraryBuilder places={places} />
 
