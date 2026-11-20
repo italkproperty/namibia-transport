@@ -281,6 +281,59 @@ export function AIQuoteAssistant() {
             </form>
           </div>
 
+          {(displayDraft.quotedLegs?.length ?? 0) > 0 && (
+            <div className="border-success/30 bg-success/5 rounded-lg border p-3">
+              <p className="text-xs font-semibold">
+                Already priced in this conversation
+              </p>
+              <ul className="mt-2 grid gap-1.5 text-sm">
+                {displayDraft.quotedLegs.map((leg, index) => (
+                  <li key={index} className="flex flex-wrap justify-between gap-x-4">
+                    <span className="min-w-0">
+                      {leg.pickupLabel} → {leg.dropoffLabel}
+                      <span className="text-muted-foreground block text-xs">
+                        {leg.date} · {leg.time}
+                        {leg.vehicle === "suv" ? " · SUV / 4x4" : leg.vehicle === "private-car" ? " · Private car" : ""}
+                      </span>
+                    </span>
+                    <span className="tabular font-semibold">{formatNad(leg.price)}</span>
+                  </li>
+                ))}
+              </ul>
+              <p className="tabular mt-2 border-t pt-2 text-sm font-semibold">
+                Total{" "}
+                {formatNad(
+                  displayDraft.quotedLegs.reduce((sum, leg) => sum + leg.price, 0),
+                )}
+              </p>
+              {displayDraft.quotedLegs.length <= 2 ? (
+                <Button
+                  type="button"
+                  className="press mt-3"
+                  onClick={() =>
+                    window.dispatchEvent(
+                      new CustomEvent("namibia-transport:ai-agreed-quote", {
+                        detail: activeDraft ?? displayDraft,
+                      }),
+                    )
+                  }
+                >
+                  <ClipboardPasteIcon className="size-4" aria-hidden />
+                  Fill the quote at these prices
+                </Button>
+              ) : (
+                <p className="text-muted-foreground mt-2 text-xs">
+                  More than two priced legs — use the itinerary builder below
+                  and set each leg&apos;s price there.
+                </p>
+              )}
+              <p className="text-muted-foreground mt-2 text-xs">
+                Copied from the thread, not calculated. Check them against what
+                you sent before you press Create.
+              </p>
+            </div>
+          )}
+
           <div className="flex flex-wrap gap-2">
             <Button type="button" onClick={() => applyDraft(activeDraft ?? displayDraft)} className="press">
               <ClipboardPasteIcon className="size-4" aria-hidden />
