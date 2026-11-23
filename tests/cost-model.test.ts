@@ -85,13 +85,58 @@ const BEFORE: [string, string, number][] = [
   ["windhoek", "swakopmund", 3800],
   ["windhoek", "sossusvlei", 6700],
   ["windhoek", "etosha-okaukuejo", 5750],
-  ["swakopmund", "sossusvlei", 7400],
+  // Up from 7,400 on 23 November 2026: the car now has to get to Swakopmund.
+  ["swakopmund", "sossusvlei", 8500],
 ];
 
 for (const [from, to, expected] of BEFORE) {
   const now = modelCost(road(from, to)).price;
   check(`${from} → ${to} is still ${expected}`, now === expected, String(now));
 }
+
+/* ------------------------------------------------ the car has to get there */
+
+/**
+ * The fare that was sold at a loss. Swakopmund to the airport was priced as
+ * 401 km with the passenger aboard and nothing for the Windhoek driver's run
+ * down to the coast. These hold the correction: a pickup away from the base
+ * pays for the empty run to it, a pickup at the base does not, and a journey
+ * no longer costs wildly less in one direction than the other.
+ */
+console.log("\nthe empty run to the pickup is paid for");
+
+const fromBase = modelCost(road("windhoek", "swakopmund"));
+const toBase = modelCost(road("swakopmund", "windhoek"));
+check("a pickup at the base carries no positioning", fromBase.positioningKm === 0);
+check(
+  "a coastal pickup carries part of the run down",
+  toBase.positioningKm > 100 && toBase.positioningKm < road("windhoek", "swakopmund").km,
+  String(toBase.positioningKm),
+);
+check(
+  "THE RULE: Swakopmund to the airport is no longer priced below the way out",
+  modelCost(road("swakopmund", "hosea-kutako")).price >=
+    modelCost(road("hosea-kutako", "swakopmund")).price,
+  `${modelCost(road("swakopmund", "hosea-kutako")).price}`,
+);
+check(
+  "the airport is next door to the base, so its pickups barely move",
+  modelCost(road("hosea-kutako", "swakopmund")).positioningKm < 10,
+);
+{
+  const out = modelCost(road("windhoek", "sossusvlei")).price;
+  const back = modelCost(road("sossusvlei", "windhoek")).price;
+  check(
+    "THE RULE: a lodge run costs about the same in both directions",
+    Math.abs(out - back) / out < 0.15,
+    `${out} out, ${back} back`,
+  );
+}
+check(
+  "a local hop far from the base is not sold at the airport-run floor",
+  modelCost(road("walvis-bay-airport", "swakopmund")).price > 1000,
+  String(modelCost(road("walvis-bay-airport", "swakopmund")).price),
+);
 
 /* ------------------------------------------- the dimension a class may move */
 

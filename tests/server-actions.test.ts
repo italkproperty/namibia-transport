@@ -66,6 +66,14 @@ const DELIBERATELY_OPEN: Record<string, string> = {
     "the traveller accepting their own quotation, keyed on its reference",
   startCheckout:
     "sends a traveller to the gateway for their own booking; the amount is read off the row",
+  getOrCreateGroupCheckout:
+    "opens the gateway for a traveller's own itinerary, keyed on its unguessable group reference. The amount is summed from the booking rows; the browser sends none.",
+  startGroupCheckout:
+    "the form action around getOrCreateGroupCheckout; same reference, same server-side amount.",
+  reconcileGroupPayment:
+    "re-reads payment status from the gateway and marks paid only when the amount matches the rows. A stranger calling it can only cause a check that would have happened anyway.",
+  startCharterPaymentAction:
+    "sends a traveller to the gateway for their own charter quote, keyed on its private token; the amount is read off the saved quote.",
   declareTransferAction:
     "the traveller saying they have paid. It cannot mark anything paid — only an operator behind the gate can — and the amount is read off the booking.",
 };
@@ -99,7 +107,19 @@ for (const file of files) {
     // The gate has to be near the top — a check buried after a write has
     // already let the write happen.
     const head = lines.slice(index, index + 16).join("\n");
-    if (!GATE.test(head)) ungated.push(`${name} (${file})`);
+    if (GATE.test(head)) return;
+
+    // A thin exported wrapper that only adds a deadline or a catch around a
+    // private function of the same file is gated if that function is. Follow
+    // one hop, and only to a function that is not itself exported: the gate
+    // must still be the first thing the real work does.
+    const delegate = /\b(\w+Unsafe)\(/.exec(head)?.[1];
+    if (delegate) {
+      const at = lines.findIndex((l) => new RegExp(`^async function ${delegate}\\b`).test(l));
+      if (at >= 0 && GATE.test(lines.slice(at, at + 16).join("\n"))) return;
+    }
+
+    ungated.push(`${name} (${file})`);
   });
 }
 

@@ -27,4 +27,16 @@ assert.equal(modelJourney("windhoek", "rosh-pinah-zinc-mine"), null, "mine gate 
 
 assert.deepEqual(searchNodes("place that does not exist"), [], "unknown places are not mapped to a guessed node");
 
+// Ranking: the limit cuts the list, so order decides what a traveller is offered.
+const etoshaTop = searchNodes("Etosha", 5).map((node) => node.slug);
+assert.ok(
+  etoshaTop.includes("etosha-okaukuejo") && etoshaTop.includes("etosha-namutoni"),
+  `typing the park's name offers the park first, got ${etoshaTop.join(", ")}`,
+);
+assert.equal(searchNodes("Sossusvlei", 3)[0]?.slug, "sossusvlei", "a priced place outranks lodges that merely mention it");
+assert.ok(
+  [...new Set(searchNodes("", 200).map((node) => node.slug))].every((slug) => /^[a-z0-9-]+$/.test(slug)),
+  "every slug is url-safe",
+);
+
 console.log("Journey place search tests passed.");

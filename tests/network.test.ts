@@ -237,10 +237,14 @@ for (const [slug, origin, destination] of PUBLISHED) {
   const fare = modelFare(road);
   const publishedPrice = Number(published.fixedPrice);
 
+  // Direction matters. A published fare above the model is the operator
+  // choosing a margin: the airport run is sold at N$950 against a modelled
+  // N$650, on purpose. A published fare far below the model is a route sold
+  // under what it costs to run, and that is the one this exists to catch.
   check(
-    `${slug}: modelled fare within 12% of published`,
-    within(fare.price, publishedPrice, 0.12),
-    `N$${fare.price} vs N$${publishedPrice} (${drift(fare.price, publishedPrice)})`,
+    `${slug}: published fare is not more than 15% under the model`,
+    publishedPrice >= fare.price * 0.85,
+    `N$${fare.price} modelled vs N$${publishedPrice} published (${drift(fare.price, publishedPrice)})`,
   );
 }
 
@@ -295,14 +299,16 @@ check("price, payout and contribution always reconcile", splitOk);
 
 console.log("\nthe empty return leg");
 
-// The whole reason for modelling rather than listing: the same road costs
-// different money in each direction, because on the way out the car comes home
-// empty and on the way back it comes home to a market.
+// A lodge run costs about the same whichever way the passenger is travelling:
+// out, the car comes home empty; back, it drove out empty to collect them.
+// This used to assert the way back was much cheaper, which was the model
+// forgetting that the car has to get there, and a fare was sold on it.
 const toEtosha = modelJourney("windhoek", "etosha-okaukuejo")!;
 const fromEtosha = modelJourney("etosha-okaukuejo", "windhoek")!;
 check(
-  "the same road is dearer away from the market than towards it",
-  Number(toEtosha.route.fixedPrice) > Number(fromEtosha.route.fixedPrice),
+  "the same road costs about the same in both directions",
+  Math.abs(Number(toEtosha.route.fixedPrice) - Number(fromEtosha.route.fixedPrice)) /
+    Number(toEtosha.route.fixedPrice) < 0.15,
   `out N$${toEtosha.route.fixedPrice}, back N$${fromEtosha.route.fixedPrice}`,
 );
 check(

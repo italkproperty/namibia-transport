@@ -49,20 +49,37 @@ const base = {
 
 /* --------------------------------------------------- one channel, either */
 
-console.log("a booking needs one contact channel, not a specific one");
+console.log("the public card checkout needs a mobile number and an email");
 
-check(
-  "WhatsApp alone is accepted",
-  bookingFormSchema.safeParse({ ...base, whatsapp: "+264 81 278 4828" }).success,
-);
-check(
-  "THE RULE: email alone is accepted — no WhatsApp required",
-  bookingFormSchema.safeParse({ ...base, email: "ping@example.com" }).success,
-  JSON.stringify(
-    bookingFormSchema.safeParse({ ...base, email: "ping@example.com" }).error
-      ?.issues[0],
-  ),
-);
+/**
+ * This block used to assert that either channel alone was enough, and the
+ * form was then deliberately changed: the card gateway needs an email for the
+ * receipt and a mobile number for the cardholder, so the public form asks for
+ * both (commits "require email for public card checkout" and "require mobile
+ * number for public PayToday checkout"). The assertions were never updated and
+ * sat red, which stopped `npm test` before most of the suites ran.
+ *
+ * The rule that survives is narrower and still matters: the number is a
+ * mobile number, not specifically a WhatsApp account, and an operator-written
+ * quote still needs only one channel (tests/admin-e2e covers that path).
+ */
+{
+  const onlyNumber = bookingFormSchema.safeParse({ ...base, whatsapp: "+264 81 278 4828" });
+  check(
+    "a number without an email is refused, and the error names the email",
+    !onlyNumber.success && onlyNumber.error.issues.some((i) => i.path.includes("email")),
+  );
+  const onlyEmail = bookingFormSchema.safeParse({ ...base, email: "ping@example.com" });
+  check(
+    "an email without a number is refused, and the error names the number",
+    !onlyEmail.success && onlyEmail.error.issues.some((i) => i.path.includes("whatsapp")),
+  );
+  check(
+    "THE RULE: the number is asked for as a mobile number, never as WhatsApp only",
+    !onlyEmail.success &&
+      onlyEmail.error.issues.every((i) => !/whatsapp/i.test(i.message) || /mobile/i.test(i.message)),
+  );
+}
 check(
   "both together are accepted",
   bookingFormSchema.safeParse({

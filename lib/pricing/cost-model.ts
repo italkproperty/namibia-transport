@@ -1,4 +1,4 @@
-import { SPEED_KMH, type Road, type Surface } from "@/lib/network/roads";
+import { findRoad, SPEED_KMH, type Road, type Surface } from "@/lib/network/roads";
 
 /**
  * What a journey costs, by vehicle class, from its parts.
@@ -118,6 +118,16 @@ export const BASELINE_PROFILE: VehicleCostProfile = {
 
 /* -------------------------------------------------------------- the output */
 
+/**
+ * Where the cars are. Every partner driver we dispatch today starts the day in
+ * Windhoek, so a pickup anywhere else begins with a drive nobody is paying for.
+ *
+ * A constant rather than a setting because it is a fact about the fleet, not a
+ * price lever. When a driver is genuinely based on the coast this becomes a
+ * list and the positioning run is measured from the nearest one.
+ */
+export const DRIVER_BASE = "windhoek";
+
 export type CostBreakdown = {
   /** One-way distance, as driven. */
   km: number;
@@ -127,6 +137,12 @@ export type CostBreakdown = {
   dutyHours: number;
   /** 1.0 when the return is fully paid for, 2.0 when it is entirely empty. */
   returnFactor: number;
+  /**
+   * Kilometres charged for getting an empty car to the pickup: the distance
+   * from the driver base, times the chance no car is already there. Zero for a
+   * pickup at the base itself.
+   */
+  positioningKm: number;
   nights: number;
 
   /* The three dimensions, kept apart so a price can be explained. */
@@ -153,11 +169,28 @@ function roundUpToStep(amount: number, step: number): number {
 /**
  * Prices one journey for one vehicle class.
  *
- * `backhaul` is the destination's: the origin's does not matter because the
- * car is already there. A return factor of 2 means this fare carries the whole
- * empty return; 1.15 means the car is dropping someone in Windhoek and will be
- * earning again within the hour. It remains the single largest lever on a
- * long transfer — larger than fuel, wear and the driver's day combined.
+ * A return factor of 2 means this fare carries the whole empty return; 1.15
+ * means the car is dropping someone in Windhoek and will be earning again
+ * within the hour. It remains the single largest lever on a long transfer —
+ * larger than fuel, wear and the driver's day combined.
+ *
+ * ## The car is not already there
+ *
+ * This used to say the origin's backhaul "does not matter because the car is
+ * already there", and that sentence cost real money. Swakopmund to the airport
+ * was published at N$3,400 — the 401 km with the passenger aboard, and nothing
+ * for the 356 km a Windhoek driver covers to reach the hotel. A concierge
+ * accepted and paid that fare on 21 November 2026 before anyone noticed the
+ * model had priced half the trip.
+ *
+ * So the empty run to the pickup is costed the same way as the empty run home,
+ * and from the same judgement. A place's `backhaul` is the chance a car there
+ * finds a fare; read from the other side it is the chance a car is already
+ * there when a fare appears. One number, two ends of the same event — using a
+ * different one for each would mean the model disagrees with itself about how
+ * busy Swakopmund is. Windhoek pickups cost nothing extra (the base), the
+ * airport almost nothing, the coast about half the run down, a lodge nearly
+ * all of it.
  */
 export function modelCost(
   road: Road,
@@ -167,12 +200,28 @@ export function modelCost(
   const backhaul = Math.min(1, Math.max(0, road.destination.backhaul));
   const returnFactor = 2 - backhaul;
 
-  const drivenTarKm = road.tarKm * returnFactor;
-  const drivenGravelKm = road.gravelKm * returnFactor;
+  // The empty run from the base to the pickup, weighted by the chance that no
+  // car is already there. An unknown road to the origin costs nothing rather
+  // than failing the quote: the journey itself is still priced.
+  const positioning =
+    road.origin.slug === DRIVER_BASE
+      ? null
+      : findRoad(DRIVER_BASE, road.origin.slug);
+  const positioningShare = positioning
+    ? 1 - Math.min(1, Math.max(0, road.origin.backhaul))
+    : 0;
+  const positioningTarKm = (positioning?.tarKm ?? 0) * positioningShare;
+  const positioningGravelKm = (positioning?.gravelKm ?? 0) * positioningShare;
+
+  const drivenTarKm = road.tarKm * returnFactor + positioningTarKm;
+  const drivenGravelKm = road.gravelKm * returnFactor + positioningGravelKm;
 
   const drivingHours =
     road.tarKm / SPEED_KMH.tar + road.gravelKm / SPEED_KMH.gravel;
-  const dutyHours = drivingHours * returnFactor + constants.handlingHours;
+  const positioningHours =
+    positioningTarKm / SPEED_KMH.tar + positioningGravelKm / SPEED_KMH.gravel;
+  const dutyHours =
+    drivingHours * returnFactor + positioningHours + constants.handlingHours;
 
   // A twenty-hour round trip is two nights away, not one.
   const nights = Math.max(
@@ -202,6 +251,7 @@ export function modelCost(
     drivenKm: drivenTarKm + drivenGravelKm,
     dutyHours,
     returnFactor,
+    positioningKm: positioningTarKm + positioningGravelKm,
     nights,
     runningCost,
     timeCost,

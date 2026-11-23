@@ -210,7 +210,15 @@ assignment and cancellation and cannot be trusted to remember.
 
 ## The road model
 49 places and 62 road segments, so any of 2,352 ordered pairs can be priced from cost
-rather than a price list. It is the moat, and most of the platform derives from it: the
+rather than a price list. `PLACE_NODES` is those 49 and nothing else. `SEARCH_PLACES` is a
+separate catalogue of 77 named lodges and sights with approximate pins and no roads: a
+traveller may search them, but none is priced until it is anchored to a node, and the
+resolver states the gap rather than swallowing it. The two were once one array, and
+everything that assumed "a node can be priced" broke quietly.
+
+A modelled fare pays for three drives: the empty run from the driver base (Windhoek) to
+the pickup, the journey, and the empty run home. Each empty run is weighted by the place's
+`backhaul`. The first was missing until 23 November 2026 and a fare was sold on it. It is the moat, and most of the platform derives from it: the
 `/journey` quote surface, the dispatch calendar and its marginal-offer engine, the
 self-drive planner, park-gate feasibility from sunrise/sunset, rain-season closures,
 160 leg pages at `/drive/<a>-to-<b>`, and 24 destination pages at `/destinations/<place>`.
@@ -384,7 +392,13 @@ answer "which queries found us". Fixing `MAIL_FROM`. The PayToday domain registr
 Rotating the database password and PayToday keys exposed in chat in an earlier session —
 still unconfirmed, and a leaked credential is either rotated or it is live.
 
-**Next.** Whatever unblocks the money path, in the order above.
+**Next.** `docs/platform-plan.md` holds the audit of 23 November 2026 and the phased plan:
+phase 1 (the empty run to the pickup, the node/catalogue split, the resolver, a green test
+gate) is done; phase 2 is a verified `places` table so every lodge is priced to the door by
+measurement. `npm test` now passes end to end — it had been stopping at the fifth of
+forty-five suites for weeks, so keep it green: a red suite hides every suite after it.
+The public booking form requires a mobile number and an email (card checkout needs both);
+operator-written quotes still need only one channel.
 
 *10 November 2026 — the admin "crash when making a quote", found and fixed.* The Vercel
 error log had the answer: `Task timed out after 300 seconds` on `/admin/quotes/new`, and

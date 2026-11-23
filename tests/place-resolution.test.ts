@@ -67,5 +67,37 @@ check(
   String(trip.totalDrivingMinutes),
 );
 
+// --- the places real enquiries named ---------------------------------------
+check(
+  "letters u and f survive normalising (they were being deleted)",
+  resolvePlace("Hosea Kutako Airport").slug === "hosea-kutako" &&
+    resolvePlace("Fish River Canyon").slug === "fish-river-canyon",
+);
+check(
+  "Etango Ranch Guest Farm is anchored to the airport, and says so",
+  resolvePlace("Etango Ranch Guest Farm").slug === "hosea-kutako" &&
+    resolvePlace("Etango Ranch Guest Farm").matchedBy === "alias",
+);
+check(
+  "the Swakopmund Hotel is in Swakopmund",
+  resolvePlace("Swakopmund Hotel and Entertainment Centre").slug === "swakopmund",
+);
+{
+  const okonjima = resolvePlace("Okonjima Lodge");
+  check(
+    "a catalogued lodge with no road is anchored to the nearest node, never to itself",
+    okonjima.slug === "otjiwarongo" && okonjima.matchedBy === "nearest_node",
+    JSON.stringify(okonjima),
+  );
+  check(
+    "THE RULE: and the gap to the lodge is stated, not swallowed",
+    /straight line/.test(okonjima.note ?? "") && okonjima.confidence !== "high",
+  );
+}
+check(
+  "a place nobody has catalogued is still not guessed",
+  resolvePlace("Somewhere Lodge That Does Not Exist").slug === null,
+);
+
 console.log(`\n${passed} passed, ${failed} failed`);
 process.exit(failed === 0 ? 0 : 1);

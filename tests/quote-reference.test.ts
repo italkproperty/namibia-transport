@@ -111,18 +111,15 @@ check(
   `${sedan.outbound} / ${sedan.inbound}`,
 );
 check(
-  "THE RULE: the way home is cheaper than the way out",
-  sedan.inbound < sedan.outbound,
+  // Was "the way home is cheaper": true only while the model forgot the car
+  // has to reach the pickup. The legs now cost about the same.
+  "THE RULE: the way home costs about what the way out does",
+  Math.abs(sedan.inbound - sedan.outbound) / sedan.outbound < 0.15,
   `${sedan.inbound} vs ${sedan.outbound}`,
 );
 check(
   "the total is the two legs added",
   sedan.total === sedan.outbound + sedan.inbound,
-);
-check(
-  "and it is materially below doubling the outbound",
-  sedan.total < sedan.outbound * 2,
-  `${sedan.total} vs ${sedan.outbound * 2} if doubled`,
 );
 
 const oneWay = quote("hosea-kutako", "sossusvlei", false)!;

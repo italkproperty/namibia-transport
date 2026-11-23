@@ -82,12 +82,25 @@ check(
 
 console.log("\nthe fare never multiplies by the party");
 
-// The published airport fare is N$850 per vehicle and must never scale by party size.
-check("WDH -> Windhoek, sedan: N$850 whatever the party", price(airport, sedan) === 850);
-check("WDH -> Windhoek, SUV: N$1,190 whatever the party", price(airport, suv) === 1190);
+// The published airport fare is whatever the catalogue says. It has moved
+// from 650 to 850 to 950, and each move left a literal here red, which stopped
+// `npm test` at this suite and hid every suite after it. What must hold is the
+// shape: one fare for the vehicle, the SUV at 1.4x, a 30% contribution.
+const airportFare = Number(airport.fixedPrice);
 check(
-  "the airport route keeps a 30% contribution at N$850",
-  Number(airport.defaultDriverPayout) === 595,
+  `WDH -> Windhoek, sedan: the published N$${airportFare} whatever the party`,
+  price(airport, sedan) === airportFare,
+  String(price(airport, sedan)),
+);
+check(
+  "WDH -> Windhoek, SUV: 1.4x the sedan whatever the party",
+  price(airport, suv) === Math.round(airportFare * 1.4),
+  String(price(airport, suv)),
+);
+check(
+  "the airport route keeps a 30% contribution",
+  Number(airport.defaultDriverPayout) === Math.round(airportFare * 0.7),
+  String(airport.defaultDriverPayout),
 );
 check("WDH -> Swakopmund, sedan: N$4,200", price(swakop, sedan) === 4200);
 check("WDH -> Swakopmund, SUV: N$5,880", price(swakop, suv) === 5880);

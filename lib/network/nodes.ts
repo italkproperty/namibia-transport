@@ -93,7 +93,24 @@ const BACKHAUL = {
   terminus: 0.15,
 } as const;
 
-export const PLACE_NODES: PlaceNode[] = [
+/**
+ * Every place a traveller can search for, priced or not.
+ *
+ * Two different things used to share one exported list, and that broke more
+ * than it showed. The road model has 49 nodes joined by measured roads; then
+ * 79 lodges, gates and sights were added to the same array with approximate
+ * pins and no roads, flagged `searchOnly`. Everything written against "a node
+ * is a place the model can price" — the admin stop picker, the AI assistant's
+ * resolver, the reachability test, the itinerary planner — silently started
+ * receiving places it could not route. An operator could pick Namib Desert
+ * Lodge and be told there was "no road between two consecutive stops".
+ *
+ * So the list is split where it is defined. `PLACE_NODES` is the road model
+ * and nothing else. `SEARCH_PLACES` is the catalogue of named destinations a
+ * traveller may type, each of which must be anchored to a node before any
+ * price is shown for it.
+ */
+const EVERY_PLACE: PlaceNode[] = [
   /* ------------------------------------------------------------- central */
   {
     slug: "hosea-kutako",
@@ -154,6 +171,8 @@ export const PLACE_NODES: PlaceNode[] = [
     lat: -27.95,
     lng: 16.766667,
     backhaul: BACKHAUL.terminus,
+    // No measured road reaches it yet, so it cannot be priced.
+    searchOnly: true,
   },
   {
     slug: "rosh-pinah-zinc-mine",
@@ -529,7 +548,7 @@ export const PLACE_NODES: PlaceNode[] = [
     searchOnly: true,
   },
   {
-    slug: "onko shi-camp",
+    slug: "onkoshi-camp",
     name: "Onkoshi Camp",
     region: "north",
     lat: -18.7,
@@ -877,7 +896,6 @@ export const PLACE_NODES: PlaceNode[] = [
     lat: -22.1167,
     lng: 14.2833,
     backhaul: BACKHAUL.terminus,
-    searchOnly: true,
   },
 
   /* --------------------------------------------------------------- namib */
@@ -891,7 +909,6 @@ export const PLACE_NODES: PlaceNode[] = [
     lat: -24.7272,
     lng: 15.3444,
     backhaul: BACKHAUL.terminus,
-    searchOnly: true,
   },
   {
     slug: "solitaire",
@@ -900,7 +917,6 @@ export const PLACE_NODES: PlaceNode[] = [
     lat: -23.8931,
     lng: 16.0064,
     backhaul: BACKHAUL.terminus,
-    searchOnly: true,
   },
   {
     slug: "maltahohe",
@@ -909,7 +925,6 @@ export const PLACE_NODES: PlaceNode[] = [
     lat: -24.8333,
     lng: 16.9833,
     backhaul: BACKHAUL.terminus,
-    searchOnly: true,
   },
   {
     slug: "helmeringhausen",
@@ -918,7 +933,6 @@ export const PLACE_NODES: PlaceNode[] = [
     lat: -25.8667,
     lng: 16.8167,
     backhaul: BACKHAUL.terminus,
-    searchOnly: true,
   },
 
   /* ---------------------------------------------------------- damaraland */
@@ -929,7 +943,6 @@ export const PLACE_NODES: PlaceNode[] = [
     lat: -21.83,
     lng: 15.195,
     backhaul: BACKHAUL.terminus,
-    searchOnly: true,
   },
   {
     slug: "uis",
@@ -938,7 +951,6 @@ export const PLACE_NODES: PlaceNode[] = [
     lat: -21.2333,
     lng: 14.8667,
     backhaul: BACKHAUL.terminus,
-    searchOnly: true,
   },
   {
     slug: "khorixas",
@@ -947,7 +959,6 @@ export const PLACE_NODES: PlaceNode[] = [
     lat: -20.3667,
     lng: 14.9667,
     backhaul: BACKHAUL.terminus,
-    searchOnly: true,
   },
   {
     slug: "twyfelfontein",
@@ -956,7 +967,6 @@ export const PLACE_NODES: PlaceNode[] = [
     lat: -20.5936,
     lng: 14.3722,
     backhaul: BACKHAUL.terminus,
-    searchOnly: true,
   },
   {
     slug: "karibib",
@@ -992,7 +1002,6 @@ export const PLACE_NODES: PlaceNode[] = [
     lat: -20.5167,
     lng: 17.2333,
     backhaul: BACKHAUL.terminus,
-    searchOnly: true,
   },
   {
     slug: "outjo",
@@ -1011,7 +1020,6 @@ export const PLACE_NODES: PlaceNode[] = [
     lat: -19.1833,
     lng: 15.9167,
     backhaul: BACKHAUL.terminus,
-    searchOnly: true,
   },
   {
     slug: "etosha-namutoni",
@@ -1021,7 +1029,6 @@ export const PLACE_NODES: PlaceNode[] = [
     lat: -18.81,
     lng: 16.98,
     backhaul: BACKHAUL.terminus,
-    searchOnly: true,
   },
   {
     slug: "otavi",
@@ -1064,7 +1071,6 @@ export const PLACE_NODES: PlaceNode[] = [
     lat: -18.1167,
     lng: 21.5667,
     backhaul: BACKHAUL.terminus,
-    searchOnly: true,
   },
   {
     slug: "kongola",
@@ -1073,7 +1079,6 @@ export const PLACE_NODES: PlaceNode[] = [
     lat: -17.7833,
     lng: 23.3333,
     backhaul: BACKHAUL.terminus,
-    searchOnly: true,
   },
   {
     slug: "katima-mulilo",
@@ -1108,7 +1113,6 @@ export const PLACE_NODES: PlaceNode[] = [
     lat: -26.6667,
     lng: 16.25,
     backhaul: BACKHAUL.terminus,
-    searchOnly: true,
   },
   {
     slug: "luderitz",
@@ -1117,7 +1121,6 @@ export const PLACE_NODES: PlaceNode[] = [
     lat: -26.6481,
     lng: 15.1594,
     backhaul: BACKHAUL.terminus,
-    searchOnly: true,
   },
   {
     slug: "fish-river-canyon",
@@ -1127,7 +1130,6 @@ export const PLACE_NODES: PlaceNode[] = [
     lat: -27.5833,
     lng: 17.6167,
     backhaul: BACKHAUL.terminus,
-    searchOnly: true,
   },
   {
     slug: "grunau",
@@ -1136,7 +1138,6 @@ export const PLACE_NODES: PlaceNode[] = [
     lat: -27.7333,
     lng: 18.4,
     backhaul: BACKHAUL.terminus,
-    searchOnly: true,
   },
   {
     slug: "noordoewer",
@@ -1146,7 +1147,6 @@ export const PLACE_NODES: PlaceNode[] = [
     lat: -28.75,
     lng: 17.6167,
     backhaul: BACKHAUL.terminus,
-    searchOnly: true,
   },
 
   /* ------------------- Kaokoland, the Owambo north, Erongo and Ai-Ais
@@ -1170,7 +1170,6 @@ export const PLACE_NODES: PlaceNode[] = [
     lat: -19.8833,
     lng: 13.9333,
     backhaul: BACKHAUL.terminus,
-    searchOnly: true,
   },
   {
     slug: "sesfontein",
@@ -1179,7 +1178,6 @@ export const PLACE_NODES: PlaceNode[] = [
     lat: -19.1333,
     lng: 13.6167,
     backhaul: BACKHAUL.terminus,
-    searchOnly: true,
   },
   {
     slug: "opuwo",
@@ -1196,7 +1194,6 @@ export const PLACE_NODES: PlaceNode[] = [
     lat: -17.0,
     lng: 13.2333,
     backhaul: BACKHAUL.terminus,
-    searchOnly: true,
   },
   {
     slug: "ruacana",
@@ -1205,7 +1202,6 @@ export const PLACE_NODES: PlaceNode[] = [
     lat: -17.4167,
     lng: 14.2167,
     backhaul: BACKHAUL.terminus,
-    searchOnly: true,
   },
   {
     slug: "oshakati",
@@ -1239,16 +1235,33 @@ export const PLACE_NODES: PlaceNode[] = [
     lat: -27.9167,
     lng: 17.4833,
     backhaul: BACKHAUL.terminus,
-    searchOnly: true,
   },
 ];
+
+/** The road model: places joined by measured roads, and so priceable. */
+export const PLACE_NODES: PlaceNode[] = EVERY_PLACE.filter(
+  (place) => !place.searchOnly,
+);
+
+/** Named destinations with an approximate pin and no road of their own. */
+export const SEARCH_PLACES: PlaceNode[] = EVERY_PLACE.filter(
+  (place) => place.searchOnly,
+);
 
 export const NODES_BY_SLUG = new Map(
   PLACE_NODES.map((node) => [node.slug, node]),
 );
 
+/** A node of the road model. Never a search-only destination. */
 export function findNode(slug: string): PlaceNode | null {
   return NODES_BY_SLUG.get(slug) ?? null;
+}
+
+const PLACES_BY_SLUG = new Map(EVERY_PLACE.map((place) => [place.slug, place]));
+
+/** Any searchable place, priced or not. Check `searchOnly` before routing it. */
+export function findPlace(slug: string): PlaceNode | null {
+  return PLACES_BY_SLUG.get(slug) ?? null;
 }
 
 /** Common traveller spellings and shorthand, normalised for autocomplete. */
@@ -1360,17 +1373,43 @@ function normaliseSearch(value: string): string {
 export function searchNodes(query: string, limit = 10): PlaceNode[] {
   const q = normaliseSearch(query);
   if (!q) return PLACE_NODES.slice(0, Math.max(0, limit));
-  return PLACE_NODES.filter((node) => {
-    const aliases = NODE_SEARCH_ALIASES[node.slug] ?? [];
-    const searchable = [
+
+  /**
+   * Ranked, because the limit cuts the list. Unranked, "Etosha" returned
+   * twelve lodges that merely sit in the region called "North & Etosha" and
+   * the limit dropped both Etosha gates off the end — a traveller typed the
+   * name of the park and was not offered the park. A match on the place's own
+   * name beats a match on its region, and a place we can price beats one we
+   * can only take an enquiry for.
+   */
+  const scored: { node: PlaceNode; score: number }[] = [];
+  for (const node of EVERY_PLACE) {
+    const names = [
       node.name,
       node.shortName ?? "",
       node.slug.replace(/-/g, " "),
-      REGION_LABELS[node.region],
-      ...aliases,
-    ].map(normaliseSearch);
-    return searchable.filter(Boolean).some((candidate) => candidate.includes(q) || q.includes(candidate));
-  }).slice(0, Math.max(0, limit));
+      ...(NODE_SEARCH_ALIASES[node.slug] ?? []),
+    ]
+      .map(normaliseSearch)
+      .filter(Boolean);
+
+    let score = Infinity;
+    for (const name of names) {
+      if (name === q) score = Math.min(score, 0);
+      else if (name.startsWith(q)) score = Math.min(score, 1);
+      else if (name.includes(q) || q.includes(name)) score = Math.min(score, 2);
+    }
+    if (score === Infinity && normaliseSearch(REGION_LABELS[node.region]).includes(q)) {
+      score = 4;
+    }
+    if (score === Infinity) continue;
+    scored.push({ node, score: score + (node.searchOnly ? 0.5 : 0) });
+  }
+
+  return scored
+    .sort((a, b) => a.score - b.score)
+    .slice(0, Math.max(0, limit))
+    .map((entry) => entry.node);
 }
 
 /** What to call a place in a sentence: the short form when there is one. */

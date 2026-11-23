@@ -90,6 +90,8 @@ const base = {
   luggageCount: 1,
   fullName: "Test Traveller",
   whatsapp: "+264811234567",
+  // The public form has required an email since card checkout went live.
+  email: "traveller@example.test",
   customerType: "tourist" as const,
   pickupLabel: "Arrivals hall",
   dropoffLabel: "Windhoek Country Club Resort",
