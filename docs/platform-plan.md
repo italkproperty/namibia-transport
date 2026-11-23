@@ -85,16 +85,21 @@ The concierge enquiry is the template: two or three legs, different days, one pa
 - Uptime: a paid hosting plan (done), a database plan that cannot be throttled, and an
   external check that pages someone when the site or the payment page is down.
 
-## Yours to decide
+## Decided on 23 November 2026
 
-1. **Coastal backhaul.** The model assumes a 55% chance a car at the coast finds, or already
-   is, a paying fare. With today's volume that is generous. At 30%, Swakopmund → airport is
-   about N$5,150 instead of N$4,550. It is one number in `lib/network/nodes.ts`.
-2. **Local trips far from Windhoek.** Walvis Bay airport → Swakopmund is now N$1,900, because
-   a Windhoek car has to get there. That is honest and uncompetitive. The real answer is a
-   coastal partner driver, not a lower price.
-3. **Published Sossusvlei fare.** Hosea Kutako → Sossusvlei is published at N$6,500 against a
-   modelled N$7,300.
-4. **Cancellation terms.** Emails have said 72 and 48 hours; the site says 24.
-5. **Contact rule.** The public form requires a mobile number and an email for card checkout;
-   CLAUDE.md said one channel is enough. The form's rule is the live one.
+1. **Coastal backhaul is 30%**, not 55%. Swakopmund → airport is N$5,150.
+2. **Hosea Kutako → Sossusvlei is N$7,300.** The catalogue is updated; the live database
+   needs the one-line update in the reply that shipped this.
+3. **Cancellation follows the emails**: free more than 48 hours before pickup, 50% inside
+   that. The emails said "more than 72 hours: free" and "within 48 hours: 50%"; 48 is the one
+   boundary both sentences are true under. It is one number in
+   `lib/booking/payment-policy.ts`, read by every page that states it.
+
+## Still yours to decide
+
+1. **Airport → coast fares.** At 30% the model says Hosea Kutako → Swakopmund costs N$5,000
+   to sell and Walvis Bay N$5,400; they are published at N$4,200 and N$4,400. The test suite
+   prints both on every run until they are repriced or the assumption changes.
+2. **Local trips far from Windhoek.** Walvis Bay airport → Swakopmund is now N$2,700, because
+   a Windhoek car has to get there. The real answer is a coastal partner driver.
+3. **Contact rule.** The public form requires a mobile number and an email for card checkout.

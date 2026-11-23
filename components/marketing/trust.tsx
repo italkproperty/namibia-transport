@@ -1,3 +1,4 @@
+import { CANCELLATION } from "@/lib/booking/payment-policy";
 import {
   MessageCircleIcon,
   PhoneIcon,
@@ -35,7 +36,7 @@ const CONTINGENCIES = [
   {
     question: "What if I need to change my booking?",
     answer:
-      "Message us. Changes are free more than 24 hours before pickup, and we will always try to accommodate later ones.",
+      `Message us. Changes are free more than ${CANCELLATION.freeUntilHours} hours before pickup, and we will always try to accommodate later ones.`,
   },
   {
     question: "What if nobody comes at all?",

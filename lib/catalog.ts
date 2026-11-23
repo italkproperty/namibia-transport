@@ -206,8 +206,10 @@ export const CATALOG_ROUTES: NewRoute[] = [
     originLabel: "Hosea Kutako International Airport (WDH)",
     destinationLabel: "Sossusvlei",
     category: "airport",
-    fixedPrice: "6500.00",
-    defaultDriverPayout: "4550.00",
+    // 7,300 from 23 November 2026: the published 6,500 sat 11% under what the
+    // cost model says the trip takes to run.
+    fixedPrice: "7300.00",
+    defaultDriverPayout: "5110.00",
     isActive: true,
     distanceKm: "380.00",
     durationMin: 330,

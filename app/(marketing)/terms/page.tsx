@@ -5,7 +5,7 @@ import { SiteHeader } from "@/components/marketing/site-header";
 import { getCompanyInfo } from "@/lib/company";
 import { listRoutes } from "@/lib/maps";
 import { SITE } from "@/lib/site";
-import { PAYMENT_POLICY } from "@/lib/booking/payment-policy";
+import { CANCELLATION, PAYMENT_POLICY } from "@/lib/booking/payment-policy";
 
 export const metadata: Metadata = {
   title: "Booking terms & cancellation policy",
@@ -16,7 +16,7 @@ export const metadata: Metadata = {
 /**
  * Plain-language terms a traveller can actually read before booking a
  * transfer from another country. Legal review before launch is expected —
- * the substance (24h free cancellation, delay handling, our re-assignment
+ * the substance (free cancellation window, delay handling, our re-assignment
  * duty) is the operating standard the founder confirms, not boilerplate.
  */
 export default async function TermsPage() {
@@ -61,11 +61,11 @@ export default async function TermsPage() {
             <Section title="Cancellation and refunds">
               <ul className="list-disc space-y-1.5 pl-5">
                 <li>
-                  <strong>More than 24 hours before pickup:</strong> free
+                  <strong>More than {CANCELLATION.freeUntilHours} hours before pickup:</strong> free
                   cancellation. Anything already paid is refunded in full.
                 </li>
                 <li>
-                  <strong>Within 24 hours of pickup:</strong> 50% of the fare is
+                  <strong>Within {CANCELLATION.freeUntilHours} hours of pickup:</strong> {CANCELLATION.lateFeePercent}% of the fare is
                   payable, reflecting the driver time reserved for you.
                 </li>
                 <li>

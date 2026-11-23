@@ -20,7 +20,7 @@
  */
 import { readFileSync } from "node:fs";
 
-import { PAYMENT_POLICY } from "@/lib/booking/payment-policy";
+import { CANCELLATION, PAYMENT_POLICY } from "@/lib/booking/payment-policy";
 import { QUOTE_VALID_DAYS } from "@/lib/booking/validity";
 
 let passed = 0;
@@ -186,8 +186,12 @@ check(
 );
 check(
   "free cancellation is promised at the window the terms state",
-  /24h before/.test(PAYMENT_POLICY.cancellationChip) &&
-    /More than 24 hours before pickup/i.test(terms),
+  PAYMENT_POLICY.cancellationChip.includes(`${CANCELLATION.freeUntilHours}h before`) &&
+    /More than \{CANCELLATION\.freeUntilHours\} hours before pickup/.test(terms),
+);
+check(
+  "THE RULE: no page types the window as a number of its own",
+  !/\b(24|48|72) hours (before|of) pickup/i.test(terms),
 );
 
 /* --------------------------------------------------- paying is possible */

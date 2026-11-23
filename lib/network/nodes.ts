@@ -86,7 +86,13 @@ const BACKHAUL = {
   /** Windhoek and Hosea Kutako: the market. A car here will find work. */
   hub: 0.85,
   /** Swakopmund and Walvis Bay: the second market, roughly half the depth. */
-  coastal: 0.55,
+  /**
+   * Was 0.55. Lowered on 23 November 2026 by the operator: at today's volume a
+   * car at the coast rarely finds, or already is, a paying fare — the one
+   * Swakopmund pickup this was tested against needed a driver sent from
+   * Windhoek. Raise it again when coastal trips start pairing.
+   */
+  coastal: 0.3,
   /** Trunk-road towns with their own economy — Otjiwarongo, Keetmanshoop. */
   town: 0.35,
   /** Lodges, gates, borders. The car goes back empty and we must price for it. */

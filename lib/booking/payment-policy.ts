@@ -35,6 +35,26 @@ import { QUOTE_VALID_DAYS } from "@/lib/booking/validity";
  * same drift in a new place.
  */
 
+/**
+ * The cancellation window, in one place.
+ *
+ * It was 24 hours on the terms page while the operator's emails to an agent
+ * said "more than 72 hours: free" and "within 48 hours: 50%". Two sets of
+ * terms for one booking is the dispute, already written. The emails are the
+ * rule from 23 November 2026.
+ *
+ * Those two sentences leave 48 to 72 hours unstated. The boundary is set at
+ * 48 because it is the only one both sentences are true under: nobody who was
+ * told "free more than 72 hours out" is charged, and nobody is charged in a
+ * window the email did not name. To make it 72, change this one number.
+ */
+export const CANCELLATION = {
+  /** Cancel earlier than this many hours before pickup and nothing is owed. */
+  freeUntilHours: 48,
+  /** Share of the fare payable inside that window. */
+  lateFeePercent: 50,
+} as const;
+
 export const PAYMENT_POLICY = {
   /**
    * The whole policy in one sentence. Use this wherever a traveller is
@@ -46,7 +66,7 @@ export const PAYMENT_POLICY = {
   confirmsChip: "Payment confirms your vehicle",
 
   /** Chip-length, unchanged and backed by the cancellation terms. */
-  cancellationChip: "Free cancellation up to 24h before",
+  cancellationChip: `Free cancellation up to ${CANCELLATION.freeUntilHours}h before`,
 
   /**
    * The strongest sentence we have, and it is backed: the cancellation section

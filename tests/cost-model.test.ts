@@ -82,11 +82,14 @@ console.log("\nthe baseline prices did not move");
 
 const BEFORE: [string, string, number][] = [
   ["hosea-kutako", "windhoek", 650],
-  ["windhoek", "swakopmund", 3800],
+  // Up from 3,800 on 23 November 2026: the operator set the coast's backhaul
+  // to 30%, so more of the empty run home from Swakopmund is paid for.
+  ["windhoek", "swakopmund", 4400],
   ["windhoek", "sossusvlei", 6700],
   ["windhoek", "etosha-okaukuejo", 5750],
-  // Up from 7,400 on 23 November 2026: the car now has to get to Swakopmund.
-  ["swakopmund", "sossusvlei", 8500],
+  // Up from 7,400: the car has to get to Swakopmund, and at 30% it mostly
+  // gets there empty.
+  ["swakopmund", "sossusvlei", 9150],
 ];
 
 for (const [from, to, expected] of BEFORE) {
