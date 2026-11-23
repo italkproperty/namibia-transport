@@ -47,3 +47,6 @@ next-env.d.ts
 # is where Node resolves playwright from, not because they belong to the
 # project — they are written, run once against a local build, and deleted.
 /.*.mjs
+
+# Throwaway probes written while investigating; never part of the suite.
+tests/_*.ts
