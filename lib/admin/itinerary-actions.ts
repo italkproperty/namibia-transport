@@ -1,5 +1,6 @@
 "use server";
 
+import { ensureVerifiedPlaces } from "@/lib/places/queries";
 import { revalidatePath } from "next/cache";
 
 import { getAdminGateState } from "@/lib/admin/auth";
@@ -136,6 +137,7 @@ export async function priceItineraryAction(
     return { ok: false, message: "Sign in first." };
   }
 
+  await ensureVerifiedPlaces();
   const stops = parseStops(String(formData.get("stops") ?? "[]"));
   const positioning = parseDriverPositioning(
     String(formData.get("driverPositioningOrigin") ?? "").trim(),
@@ -193,6 +195,7 @@ export async function saveItineraryAction(
   }
 
   const field = (key: string) => String(formData.get(key) ?? "").trim();
+  await ensureVerifiedPlaces();
 
   const fullName = field("fullName");
   const whatsapp = field("whatsapp");

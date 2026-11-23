@@ -1097,3 +1097,43 @@ export type DriverStatus = (typeof driverStatusEnum.enumValues)[number];
 export type AssignmentStatus = (typeof assignmentStatusEnum.enumValues)[number];
 export type CustomerType = (typeof customerTypeEnum.enumValues)[number];
 export type PaymentStatus = (typeof paymentStatusEnum.enumValues)[number];
+
+/**
+ * Places an operator has pinned and measured: lodges, guest farms, hotels.
+ *
+ * The road model prices between 49 towns, gates and airports. A traveller asks
+ * for a lodge. Until now the gap was closed by hand on every enquiry — pick
+ * the nearest town, type the lodge's name over it, remember the last stretch.
+ * A row here closes it once: the pin, the node the access drive starts from,
+ * and the measured length of that drive. From then on the place is priced to
+ * the door everywhere a town is.
+ *
+ * Nothing in this table is typed from memory. `access_km` comes from a
+ * Directions measurement of the pin an operator confirmed on a map, or from a
+ * figure the operator entered and is recorded as having entered.
+ */
+export const places = pgTable(
+  "places",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    slug: text("slug").notNull(),
+    name: text("name").notNull(),
+    lat: numeric("lat", { precision: 9, scale: 6 }).notNull(),
+    lng: numeric("lng", { precision: 9, scale: 6 }).notNull(),
+    /** A slug from the built-in road model. Checked in code, not by a key. */
+    anchorSlug: text("anchor_slug").notNull(),
+    accessKm: numeric("access_km", { precision: 7, scale: 2 }).notNull(),
+    /** "tar" or "gravel". Gravel unless the operator says otherwise. */
+    accessSurface: text("access_surface").notNull().default("gravel"),
+    /** Where `access_km` came from: "mapbox" (measured) or "operator" (entered). */
+    measuredBy: text("measured_by").notNull().default("operator"),
+    /** No trip to or from here is sold below this. Null for none. */
+    minimumFare: money("minimum_fare"),
+    isActive: boolean("is_active").notNull().default(true),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [uniqueIndex("places_slug_key").on(t.slug)],
+);
+
+export type Place = typeof places.$inferSelect;

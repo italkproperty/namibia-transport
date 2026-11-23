@@ -218,7 +218,17 @@ everything that assumed "a node can be priced" broke quietly.
 
 A modelled fare pays for three drives: the empty run from the driver base (Windhoek) to
 the pickup, the journey, and the empty run home. Each empty run is weighted by the place's
-`backhaul`. The first was missing until 23 November 2026 and a fare was sold on it. It is the moat, and most of the platform derives from it: the
+`backhaul`. The first was missing until 23 November 2026 and a fare was sold on it.
+
+**Verified places** are how a lodge becomes priceable. An operator pins one at
+`/admin/places`, Directions measures the drive from the nearest node, and the row in the
+`places` table becomes a real node with exactly one road: its access drive. They are
+applied at runtime by `ensureVerifiedPlaces()` (server) and `applyVerifiedPlaces()`
+(browser, from a prop), and deliberately kept out of `PLACE_NODES` so verifying a guest
+farm never generates a page. Call `ensureVerifiedPlaces()` at the top of anything new that
+prices or resolves a place; forgetting costs that path the lodge, never a wrong price.
+Nothing in that table is typed from memory: a distance is measured, or recorded as entered
+by an operator. It is the moat, and most of the platform derives from it: the
 `/journey` quote surface, the dispatch calendar and its marginal-offer engine, the
 self-drive planner, park-gate feasibility from sunrise/sunset, rain-season closures,
 160 leg pages at `/drive/<a>-to-<b>`, and 24 destination pages at `/destinations/<place>`.
@@ -351,7 +361,8 @@ Action ships without an authorisation check.
    notes. It now also takes a real second leg (own date, vehicle and fare, shared
    `group_ref`, one link at `/quote/<group>`), which is the route to use; the return-date
    field should be retired into it.
-1. `db/manual/RUN-ME.sql` has three unrun blocks at the bottom: the invoices table and
+1. `db/manual/RUN-ME.sql` has a places block (24 November) at the very bottom, without
+   which `/admin/places` says so and no lodge is priced to the door. Also possibly unrun: the invoices table and
    sequence (10 November), without which no invoice is issued and the admin says so; and two from 24 September: the
    `customers` change, without which an email-only booking is accepted by the code and
    refused by the database; and `pricing_settings` plus the vehicle-class cost columns,
@@ -394,8 +405,10 @@ still unconfirmed, and a leaked credential is either rotated or it is live.
 
 **Next.** `docs/platform-plan.md` holds the audit of 23 November 2026 and the phased plan:
 phase 1 (the empty run to the pickup, the node/catalogue split, the resolver, a green test
-gate) is done; phase 2 is a verified `places` table so every lodge is priced to the door by
-measurement. `npm test` now passes end to end — it had been stopping at the fifth of
+gate) is done; phase 2 (the verified `places` table, `/admin/places`, lodges priced to the
+door on the public quote, the booking path, the builder and the assistant) is built and
+waits on the SQL and on an operator verifying the first places. Phase 3 is multi-leg trips
+a traveller builds themselves. `npm test` now passes end to end — it had been stopping at the fifth of
 forty-five suites for weeks, so keep it green: a red suite hides every suite after it.
 The public booking form requires a mobile number and an email (card checkout needs both);
 operator-written quotes still need only one channel.

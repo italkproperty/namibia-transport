@@ -436,3 +436,39 @@ CREATE UNIQUE INDEX IF NOT EXISTS "invoices_charter_key" ON "invoices" ("charter
  *   SELECT count(*) FROM information_schema.tables
  *    WHERE table_schema = 'public' AND table_name = 'invoices';
  */
+
+
+/* ---------------------------------------------------------------------------
+ * 24 November 2026 — verified places.
+ *
+ * Lodges, guest farms and hotels an operator has pinned and measured, so they
+ * are priced to the door. Without this table /admin/places says so and the
+ * site prices exactly as it did before: towns, gates and airports only.
+ * ------------------------------------------------------------------------- */
+
+CREATE TABLE IF NOT EXISTS "places" (
+  "id" uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  "slug" text NOT NULL,
+  "name" text NOT NULL,
+  "lat" numeric(9,6) NOT NULL,
+  "lng" numeric(9,6) NOT NULL,
+  "anchor_slug" text NOT NULL,
+  "access_km" numeric(7,2) NOT NULL,
+  "access_surface" text NOT NULL DEFAULT 'gravel',
+  "measured_by" text NOT NULL DEFAULT 'operator',
+  "minimum_fare" numeric(10,2),
+  "is_active" boolean NOT NULL DEFAULT true,
+  "created_at" timestamptz NOT NULL DEFAULT now(),
+  "updated_at" timestamptz NOT NULL DEFAULT now(),
+  CONSTRAINT "places_access_km_positive" CHECK ("access_km" > 0),
+  CONSTRAINT "places_surface_known" CHECK ("access_surface" IN ('tar', 'gravel'))
+);
+
+CREATE UNIQUE INDEX IF NOT EXISTS "places_slug_key" ON "places" ("slug");
+
+/*
+ * Check it worked — this should return 1.
+ *
+ *   SELECT count(*) FROM information_schema.tables
+ *    WHERE table_schema = 'public' AND table_name = 'places';
+ */

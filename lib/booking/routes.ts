@@ -2,6 +2,7 @@ import "server-only";
 
 import { getRouteBySlug, listRoutes } from "@/lib/maps";
 import type { RouteView } from "@/lib/maps";
+import { ensureVerifiedPlaces } from "@/lib/places/queries";
 import {
   modelJourneyBySlug,
   withCuratedCeiling,
@@ -25,6 +26,9 @@ export async function resolveBookableRoute(
   const curated = await getRouteBySlug(slug);
   if (curated) return curated;
 
+  // A journey to a verified lodge is priced from the road model like any
+  // other, once the model has been told about the lodge.
+  await ensureVerifiedPlaces();
   const journey = modelJourneyBySlug(slug);
   if (!journey) return null;
 

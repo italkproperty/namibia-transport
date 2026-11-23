@@ -80,6 +80,16 @@ export type PlaceNode = {
   isAirport?: boolean;
   /** Search-only POI; never use its approximate pin for route matching or pricing. */
   searchOnly?: boolean;
+  /**
+   * Set on a verified place: a lodge, guest farm or hotel an operator has
+   * pinned and measured. It is a real node of the road model with exactly one
+   * road, its access drive from `anchor`.
+   */
+  verified?: {
+    anchor: string;
+    /** No trip to or from here is sold below this. Null when unset. */
+    minimumFare: number | null;
+  };
 };
 
 const BACKHAUL = {
@@ -1258,9 +1268,35 @@ export const NODES_BY_SLUG = new Map(
   PLACE_NODES.map((node) => [node.slug, node]),
 );
 
-/** A node of the road model. Never a search-only destination. */
+/**
+ * Verified places, loaded from the database at runtime.
+ *
+ * Kept apart from `PLACE_NODES` on purpose. The 49 built-in nodes generate the
+ * leg pages, the destination pages and the homepage map, and none of those
+ * should grow a page because an operator verified a guest farm. But a verified
+ * place must be *priceable* everywhere a node is — the public quote, the
+ * booking path, the admin builder, the AI resolver — and the one thing all of
+ * those share is `findNode` and `findRoad`. So that is where it is added.
+ */
+let VERIFIED = new Map<string, PlaceNode>();
+
+/** Replace the set of verified places. Called by `applyVerifiedPlaces`. */
+export function setVerifiedNodes(nodes: PlaceNode[]): void {
+  VERIFIED = new Map(
+    nodes
+      // A built-in node always wins its slug; a place cannot shadow a town.
+      .filter((node) => !NODES_BY_SLUG.has(node.slug))
+      .map((node) => [node.slug, node]),
+  );
+}
+
+export function verifiedNodes(): PlaceNode[] {
+  return [...VERIFIED.values()];
+}
+
+/** A node of the road model, built in or verified. Never search-only. */
 export function findNode(slug: string): PlaceNode | null {
-  return NODES_BY_SLUG.get(slug) ?? null;
+  return NODES_BY_SLUG.get(slug) ?? VERIFIED.get(slug) ?? null;
 }
 
 const PLACES_BY_SLUG = new Map(EVERY_PLACE.map((place) => [place.slug, place]));
@@ -1389,7 +1425,18 @@ export function searchNodes(query: string, limit = 10): PlaceNode[] {
    * can only take an enquiry for.
    */
   const scored: { node: PlaceNode; score: number }[] = [];
-  for (const node of EVERY_PLACE) {
+  // A verified place replaces the catalogue entry of the same name: it is the
+  // same lodge, now priced, and offering both would ask the traveller to
+  // choose between "quote required" and a fare for one building.
+  const verified = [...VERIFIED.values()];
+  const verifiedNames = new Set(verified.map((node) => normaliseSearch(node.name)));
+  const everything = [
+    ...verified,
+    ...EVERY_PLACE.filter(
+      (place) => !(place.searchOnly && verifiedNames.has(normaliseSearch(place.name))),
+    ),
+  ];
+  for (const node of everything) {
     const names = [
       node.name,
       node.shortName ?? "",

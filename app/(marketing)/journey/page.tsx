@@ -8,6 +8,7 @@ import { TRIP_KEYS } from "@/lib/booking/trip-params";
 import { listRoutes, listVehicleClasses } from "@/lib/maps";
 import { parseJourneySlug } from "@/lib/network/journey";
 import { findNode } from "@/lib/network/nodes";
+import { ensureVerifiedPlaces } from "@/lib/places/queries";
 import { SITE } from "@/lib/site";
 
 /**
@@ -42,10 +43,13 @@ function one(value: string | string[] | undefined): string | undefined {
 }
 
 export default async function JourneyPage({ searchParams }: PageProps) {
-  const [{ routes }, vehicleClasses, params] = await Promise.all([
+  const [{ routes }, vehicleClasses, params, verified] = await Promise.all([
     listRoutes({ activeOnly: true }),
     listVehicleClasses(),
     searchParams,
+    // Applied to the road model before the pair below is looked up, so a
+    // link to a verified lodge resolves like a link to a town.
+    ensureVerifiedPlaces(),
   ]);
 
   // Accepts either an explicit pair or the route slug the booking page hands
@@ -83,6 +87,7 @@ export default async function JourneyPage({ searchParams }: PageProps) {
               vehicleClasses={vehicleClasses}
               initialFrom={from}
               initialTo={to}
+              verifiedPlaces={verified.places}
             />
           </div>
 

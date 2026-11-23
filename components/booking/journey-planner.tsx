@@ -16,7 +16,19 @@ import {
   withCuratedCeiling,
   type Journey,
 } from "@/lib/network/journey";
-import { nodeLabel, nodesByRegion, REGION_LABELS, searchNodes } from "@/lib/network/nodes";
+import {
+  nodeLabel,
+  PLACE_NODES,
+  REGION_LABELS,
+  SEARCH_PLACES,
+  searchNodes,
+  verifiedNodes,
+  type PlaceNode,
+} from "@/lib/network/nodes";
+import {
+  applyVerifiedPlaces,
+  type VerifiedPlace,
+} from "@/lib/network/verified-places";
 import { describeRoads, describeVia } from "@/lib/network/roads";
 
 /**
@@ -38,7 +50,14 @@ export function JourneyPlanner({
   vehicleClasses,
   initialFrom,
   initialTo,
+  verifiedPlaces,
 }: {
+  /**
+   * Lodges and guest farms an operator has pinned and measured. Applied to the
+   * road model here, with the same list the server applied, so the fare the
+   * browser shows is the fare the server will charge.
+   */
+  verifiedPlaces: VerifiedPlace[];
   /** Curated routes. Where one covers the pair, its price wins. */
   routes: RouteView[];
   vehicleClasses: VehicleClassView[];
@@ -53,7 +72,19 @@ export function JourneyPlanner({
   const [estimateLoading, setEstimateLoading] = React.useState(false);
   const [estimateError, setEstimateError] = React.useState<string | null>(null);
 
-  const groups = React.useMemo(() => nodesByRegion(), []);
+  // Before anything below prices or looks up a place.
+  applyVerifiedPlaces(verifiedPlaces);
+
+  /**
+   * Everything a traveller can pick: verified places first, then the road
+   * model, then catalogued destinations that are still quote-only.
+   */
+  const pickable = React.useMemo(
+    () => [...verifiedNodes(), ...PLACE_NODES, ...SEARCH_PLACES],
+    // verifiedNodes() reads what applyVerifiedPlaces just set.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [verifiedPlaces],
+  );
 
   /**
    * A curated route for this pair beats the model every time. A price we have
@@ -83,9 +114,8 @@ export function JourneyPlanner({
       setEstimateError(null);
       return;
     }
-    const nodes = groups.flatMap((group) => group.nodes);
-    const origin = externalFrom ?? nodes.find((node) => node.slug === from);
-    const destination = externalTo ?? nodes.find((node) => node.slug === to);
+    const origin = externalFrom ?? pickable.find((node) => node.slug === from);
+    const destination = externalTo ?? pickable.find((node) => node.slug === to);
     if (!origin || !destination) return;
     let cancelled = false;
     const controller = new AbortController();
@@ -103,7 +133,7 @@ export function JourneyPlanner({
       .catch((error: unknown) => { if (!cancelled && !(error instanceof DOMException && error.name === "AbortError")) setEstimateError(error instanceof Error ? error.message : "Could not calculate this route."); })
       .finally(() => { if (!cancelled) setEstimateLoading(false); });
     return () => { cancelled = true; controller.abort(); };
-  }, [route, externalFrom, externalTo, from, to, groups]);
+  }, [route, externalFrom, externalTo, from, to, pickable]);
 
   /** The same drive in the other direction, for the note below the quote. */
   const reverse = React.useMemo(() => {
@@ -145,7 +175,7 @@ export function JourneyPlanner({
             onChange={(slug) => { setFrom(slug); setExternalFrom(null); }}
             onExternalChange={setExternalFrom}
             externalValue={externalFrom}
-            groups={groups}
+            allNodes={pickable}
           />
 
           <button
@@ -164,7 +194,7 @@ export function JourneyPlanner({
             onChange={(slug) => { setTo(slug); setExternalTo(null); }}
             onExternalChange={setExternalTo}
             externalValue={externalTo}
-            groups={groups}
+            allNodes={pickable}
           />
         </div>
 
@@ -331,7 +361,7 @@ function PlacePicker({
   onChange,
   onExternalChange,
   externalValue,
-  groups,
+  allNodes,
 }: {
   id: string;
   label: string;
@@ -339,12 +369,8 @@ function PlacePicker({
   onChange: (slug: string) => void;
   onExternalChange: (place: ExternalPlace | null) => void;
   externalValue: ExternalPlace | null;
-  groups: ReturnType<typeof nodesByRegion>;
+  allNodes: PlaceNode[];
 }) {
-  const allNodes = React.useMemo(
-    () => groups.flatMap((group) => group.nodes),
-    [groups],
-  );
   const selected = allNodes.find((node) => node.slug === value);
   const [query, setQuery] = React.useState(
     selected ? nodeLabel(selected) : value,
@@ -510,7 +536,7 @@ function PlacePicker({
               <span className="min-w-0">
                 <span className="block truncate text-sm">{nodeLabel(node)}</span>
                 <span className="text-muted-foreground block text-xs">
-                  {node.searchOnly ? "Destination · quote required" : node.isAirport ? "Airport" : "Road-network place"} · {REGION_LABELS[node.region]}
+                  {node.searchOnly ? "Destination · quote required" : node.verified ? "Lodge or guest farm · priced to the door" : node.isAirport ? "Airport" : "Road-network place"} · {REGION_LABELS[node.region]}
                 </span>
               </span>
               {node.slug === value && <CheckIcon className="text-brand size-4 shrink-0" aria-hidden />}

@@ -1,3 +1,4 @@
+import { ensureVerifiedPlaces } from "@/lib/places/queries";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { PencilIcon } from "lucide-react";
@@ -72,6 +73,7 @@ export default async function BookPage({ searchParams }: PageProps) {
    * and a curated route are the same thing, which is the point of giving them
    * the same shape.
    */
+  await ensureVerifiedPlaces();
   const requestedSlug = firstValue(params[TRIP_KEYS.route]);
   const journey =
     requestedSlug && !routes.some((r) => r.slug === requestedSlug)

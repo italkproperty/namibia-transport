@@ -11,6 +11,7 @@ import { listVehicleClasses } from "@/lib/maps";
 import { getPricingConfig, profileFor } from "@/lib/pricing/settings";
 import { REGION_LABELS, PLACE_NODES } from "@/lib/network/nodes";
 import { isBankTransferConfigured } from "@/lib/payments/bank";
+import { ensureVerifiedPlaces } from "@/lib/places/queries";
 
 export const metadata: Metadata = {
   title: "New quote",
@@ -48,6 +49,24 @@ export default async function NewQuotePage() {
     ),
   }));
 
+  const verified = await ensureVerifiedPlaces();
+  // The itinerary builder prices on the server, which knows verified places.
+  // The fare reference in the manual form prices in the browser from the
+  // built-in model, so it is given the built-in places only.
+  const builderPlaces = [
+    ...verified.places.map((place) => ({
+      slug: place.slug,
+      name: place.name,
+      region: "Lodges and guest farms",
+      isAirport: false,
+    })),
+    ...PLACE_NODES.map((node) => ({
+      slug: node.slug,
+      name: node.name,
+      region: REGION_LABELS[node.region],
+      isAirport: node.isAirport,
+    })),
+  ];
   const places = PLACE_NODES.map((node) => ({
     slug: node.slug,
     name: node.name,
@@ -117,7 +136,7 @@ export default async function NewQuotePage() {
           vehicleClasses={vehicleClasses.map((vc) => ({ id: vc.id, name: vc.name }))}
         />
 
-        <ItineraryBuilder places={places} />
+        <ItineraryBuilder places={builderPlaces} />
 
         {/* The builder handles a single leg as a two-stop trip, so this is for
             the other case: a fare already settled on a call, where the model's

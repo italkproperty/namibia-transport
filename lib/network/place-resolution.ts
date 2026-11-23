@@ -1,4 +1,4 @@
-import { findNode, PLACE_NODES, SEARCH_PLACES, type PlaceNode } from "./nodes";
+import { findNode, PLACE_NODES, SEARCH_PLACES, verifiedNodes, type PlaceNode } from "./nodes";
 import { findRoad } from "./roads";
 
 export type ResolvedPlace = {
@@ -88,7 +88,9 @@ function normalise(value: string): string {
 function nodeFromQuery(query: string): PlaceNode | null {
   const value = normalise(query);
   if (!value) return null;
-  return PLACE_NODES.find((node) => [node.slug, node.name, node.shortName ?? ""].some((candidate) => normalise(candidate) === value)) ?? null;
+  // Verified places first: "Etango Ranch Guest Farm" should resolve to the
+  // farm itself once it has been pinned, not to the airport it sits beside.
+  return [...verifiedNodes(), ...PLACE_NODES].find((node) => [node.slug, node.name, node.shortName ?? ""].some((candidate) => normalise(candidate) === value)) ?? null;
 }
 
 /** How far a destination may sit from the road model and still be anchored. */

@@ -240,9 +240,20 @@ export function modelCost(
   const rawDriverNeed = runningCost + timeCost + overnightCost;
   const driverNeed = Math.max(profile.minimumDriverNeed, rawDriverNeed);
 
-  const price = roundUpToStep(
-    driverNeed / (1 - constants.contributionRate),
-    constants.priceStep,
+  // A verified place may carry a floor of its own: "nothing to or from this
+  // guest farm is sold below the airport fare". It is the operator's number
+  // for a short hop whose real cost is the car coming out from town, which a
+  // two-kilometre road cannot show.
+  const placeFloor = Math.max(
+    road.origin.verified?.minimumFare ?? 0,
+    road.destination.verified?.minimumFare ?? 0,
+  );
+  const price = Math.max(
+    roundUpToStep(
+      driverNeed / (1 - constants.contributionRate),
+      constants.priceStep,
+    ),
+    placeFloor > 0 ? roundUpToStep(placeFloor, constants.priceStep) : 0,
   );
   const payout = modelPayout(price, constants.contributionRate);
 

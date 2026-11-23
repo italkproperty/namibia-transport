@@ -363,6 +363,38 @@ export type Road = {
  */
 const roadCache = new Map<string, Road | null>();
 
+/**
+ * Access roads to verified places: one measured drive each, from the place's
+ * anchor node. Held apart from `ROAD_EDGES` for the same reason the places are
+ * held apart from `PLACE_NODES`, and replaced as a set.
+ *
+ * "The graph never changes at runtime" stopped being true the day an operator
+ * could verify a lodge, so replacing the set clears the cache above.
+ */
+let ACCESS: Map<string, Link[]> = new Map();
+
+export function setAccessRoads(edges: RoadEdge[]): void {
+  const map = new Map<string, Link[]>();
+  const add = (from: string, link: Link) => {
+    const existing = map.get(from);
+    if (existing) existing.push(link);
+    else map.set(from, [link]);
+  };
+  for (const edge of edges) {
+    add(edge.from, { to: edge.to, km: edge.km, surface: edge.surface, road: edge.road });
+    add(edge.to, { to: edge.from, km: edge.km, surface: edge.surface, road: edge.road });
+  }
+  ACCESS = map;
+  roadCache.clear();
+}
+
+function linksFrom(slug: string): Link[] {
+  const builtIn = ADJACENCY.get(slug);
+  const access = ACCESS.get(slug);
+  if (!access) return builtIn ?? [];
+  return builtIn ? [...builtIn, ...access] : access;
+}
+
 export function findRoad(originSlug: string, destinationSlug: string): Road | null {
   const key = `${originSlug}>${destinationSlug}`;
   const cached = roadCache.get(key);
@@ -398,7 +430,7 @@ function computeRoad(originSlug: string, destinationSlug: string): Road | null {
     if (current === destination.slug) break;
     settled.add(current);
 
-    for (const link of ADJACENCY.get(current) ?? []) {
+    for (const link of linksFrom(current)) {
       const cost = currentCost + link.km / SPEED_KMH[link.surface];
       if (cost < (best.get(link.to) ?? Infinity)) {
         best.set(link.to, cost);

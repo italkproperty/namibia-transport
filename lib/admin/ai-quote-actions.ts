@@ -9,6 +9,7 @@ import { anthropicErrorReason, anthropicKeyRefusedMessage } from "@/lib/admin/an
 import { getAdminGateState } from "@/lib/admin/auth";
 import { PLACE_NODES } from "@/lib/network/nodes";
 import { routeItineraryIntelligence } from "@/lib/network/place-resolution";
+import { ensureVerifiedPlaces } from "@/lib/places/queries";
 
 const MAX_CONVERSATION_CHARS = 30_000;
 const MODEL = process.env.ANTHROPIC_MODEL_TRANSPORT?.trim() || "claude-sonnet-5-5";
@@ -624,6 +625,7 @@ export async function analyseQuoteConversation(
       label: String(stop.label ?? "").slice(0, 120).trim(),
       nights: Math.max(0, Math.floor(Number(stop.nights) || 0)),
     }));
+    await ensureVerifiedPlaces();
     const corrected = routeItineraryIntelligence(
       extractedStops.map((stop) => ({
         place: stop.label || stop.slug,

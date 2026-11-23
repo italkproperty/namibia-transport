@@ -57,7 +57,7 @@ Ordered by money at risk, then by minutes saved per enquiry.
   nearest priced node with the straight-line gap stated, never silently.
 - Test gate green end to end.
 
-### Phase 2 — every lodge priceable, by measurement (next)
+### Phase 2 — every lodge priceable, by measurement (built 24 November 2026)
 The gap between "anchored to the nearest town" and "priced to the door" is the access road.
 77 catalogued places have approximate pins, and 53 more have GPS-referenced positions in
 `docs/map-coordinates.json`. Nothing here should be typed from memory: a pin placed by eye
@@ -69,6 +69,11 @@ once put Sossusvlei a hundred kilometres into the Kalahari.
   the anchor price plus "we confirm the last stretch", instead of a dead end.
 - Target: the 50 most-requested lodges verified first (Sesriem and Sossusvlei lodges, Etango,
   Namib Desert Lodge, the Etosha camps), measured from enquiry and search logs.
+
+Built: the `places` table, `/admin/places` (pin, measure, confirm, save), and verified
+places priced to the door on `/journey`, the booking path, the itinerary builder and the
+AI assistant. A place may carry its own minimum fare, for a guest farm minutes from an
+airport. Still to do, by an operator: run the SQL, then verify the first fifty.
 
 ### Phase 3 — the traveller builds the trip themselves
 The concierge enquiry is the template: two or three legs, different days, one payment.
